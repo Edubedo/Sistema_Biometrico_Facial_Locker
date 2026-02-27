@@ -1,0 +1,68 @@
+{
+  "lockers": {
+    "1": {
+      "status": "libre",
+      "user": null,
+      "since": null
+    },
+    "2": {
+      "status": "libre",
+      "user": null,
+      "since": null
+    },
+    "3": {
+      "status": "libre",
+      "user": null,
+      "since": null
+    },
+    "4": {
+      "status": "libre",
+      "user": null,
+      "since": null
+    },
+    "5": {
+      "status": "libre",
+      "user": null,
+      "since": null
+    },
+    "6": {
+      "status": "libre",
+      "user": null,
+      "since": null
+    },
+    "7": {
+      "status": "libre",
+      "user": null,
+      "since": null
+    },
+    "8": {
+      "status": "libre",
+      "user": null,
+      "since": null
+    },
+    "9": {
+      "status": "libre",
+      "user": null,
+      "since": null
+    },
+    "10": {
+      "status": "libre",
+      "user": null,
+      "since": null
+    },
+    "11": {
+      "status": "libre",
+      "user": null,
+      "since": null
+    },
+    "12": {
+      "status": "libre",
+      "user": null,
+      "since": null
+    }
+  },
+  "face_users": {},
+  "admins": {
+    "admin": "ac9689e2272427085e35b9d3e3e8bed88cb3434828b43b86fc0596cad4c6e270"
+  }
+}

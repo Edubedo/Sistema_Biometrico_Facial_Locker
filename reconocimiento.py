@@ -1,14 +1,10 @@
-#OpenCV module
 import cv2
-#Modulo para leer directorios y rutas de archivos
 import os
-#OpenCV trabaja con arreglos de numpy
 import numpy
-#Se importa la lista de personas con acceso al laboratorio
 from listaPermitidos import flabianos
 flabs=flabianos()
 
-# Parte 1: Creando el entrenamiento del modelo
+# Creando el entrenamiento del modelo
 print('Formando...')
 
 dir_faces = 'att_faces/orl_faces'

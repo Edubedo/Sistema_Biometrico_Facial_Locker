@@ -1,10 +1,6 @@
-#OpenCV module
 import cv2
-#Modulo para leer directorios y rutas de archivos
 import os
-#OpenCV trabaja con arreglos de numpy
 import numpy
-#Obtener el nombre de la persona que estamos capturando
 import sys
 nombre = sys.argv[1]
 
