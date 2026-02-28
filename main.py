@@ -51,7 +51,6 @@ from biometria.biometria import *
 DB_PATH   = r"C:\Users\ezesc\Desktop\rasp\lockers.db"
 
 
-
 # Dimensiones de imagen para el modelo LBPH
 IMG_W, IMG_H = 112, 92
 
