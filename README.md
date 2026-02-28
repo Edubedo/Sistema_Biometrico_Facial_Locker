@@ -7,7 +7,7 @@ Este proyecto implementa un sistema de apertura y registro de lockers para tiend
 ```
 capture.py                  # Script para capturar imágenes de entrenamiento de rostros
 reconocimiento.py           # Script para reconocimiento facial en consola
-locker_gui.py               # Interfaz gráfica para el sistema de lockers
+main.py               # Interfaz gráfica para el sistema de lockers
 listaPermitidos.py          # Clase para gestionar lista de personas permitidas (opcional)
 haarcascade_frontalface_default.xml  # Clasificador de rostros de OpenCV
 haarcascade_frontalface_alt.xml      # Clasificador alternativo
@@ -47,14 +47,14 @@ Uso:
 python reconocimiento.py
 ```
 
-### 3. locker_gui.py
+### 3. main.py
 Interfaz gráfica con dos botones:
 - **Nuevo locker**: Solicita el nombre, captura el rostro y registra un nuevo locker.
 - **Abrir mi locker**: Solicita reconocimiento facial y abre el locker solo si el rostro coincide con uno registrado.
 
 Uso:
 ```bash
-python locker_gui.py
+python main.py
 ```
 
 Las imágenes de cada usuario se guardan en la carpeta `lockers_faces/NombreUsuario/`.
