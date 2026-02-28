@@ -35,7 +35,10 @@ from views.style.style import STYLE
 from views.style.widgets.widgets import _step_bullet, lbl, sep_line, CamWidget, AutoTimer
 
 # Views
-from views.cliente.home import HomePage, GuardarPage, RetirarPage, ResultPage
+from views.cliente.home import HomePage
+from views.cliente.guardar import GuardarPage 
+from views.cliente.retirar import RetirarPage
+from views.cliente.resultado import ResultPage
 
 from views.admin.adminPage import  AdminPage
 from views.admin.loginPage import AdminLoginPage
