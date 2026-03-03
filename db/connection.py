@@ -1,6 +1,9 @@
+import os
+from dotenv import load_dotenv
 import sqlite3
-DB_PATH   = r"C:\Users\ezesc\Desktop\rasp\lockers.db"
+load_dotenv()  
 
+DB_PATH = os.getenv("DB_PATH")
 
 def connectionDB():
     """Devuelve una conexion SQLite con row_factory activado."""

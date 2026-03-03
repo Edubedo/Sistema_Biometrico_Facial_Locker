@@ -1,14 +1,7 @@
+import os
+from dotenv import load_dotenv
 import sys
 import os
-import cv2
-import json
-import datetime
-import importlib.util
-import site
-import shutil
-import sqlite3
-import pathlib
-import numpy as np
 
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -16,12 +9,6 @@ from PyQt5.QtWidgets import (
     QSizePolicy, QSpacerItem, QScrollArea, QGridLayout,
     QMessageBox, QInputDialog, QComboBox
 )
-from PyQt5.QtCore import Qt, QThread, pyqtSignal
-from PyQt5.QtGui import QImage
-# Importaciones
-from db.connection import connectionDB
-from utils.helpers import  hash_password, db_get_locker_num_by_id
-
 # db models
 from db.models.lockers import *
 from db.models.sesiones import *
@@ -46,9 +33,9 @@ from views.admin.loginPage import AdminLoginPage
 # Biometrico
 from biometria.biometria import *
 
+load_dotenv()  
 
-# Ruta de la base de datos SQLite (cambiar si se mueve el archivo)
-DB_PATH   = r"C:\Users\ezesc\Desktop\rasp\lockers.db"
+DB_PATH = os.getenv("DB_PATH")
 
 
 # Dimensiones de imagen para el modelo LBPH

@@ -26,6 +26,7 @@ lockers_faces/              # Carpeta donde se guardan los rostros de cada locke
 Instalación de dependencias:
 ```bash
 pip install opencv-contrib-python numpy
+pip install python-dotenv
 ```
 
 ## Scripts y Funcionalidad

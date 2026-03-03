@@ -109,6 +109,7 @@ class AdminLoginPage(QWidget):
         self.err_lbl.setText("")
         self.user_inp.clear(); self.pass_inp.clear()
         self.login_ok.emit(admin)
+        
 
     def reset(self):
         self.user_inp.clear(); self.pass_inp.clear(); self.err_lbl.setText("")

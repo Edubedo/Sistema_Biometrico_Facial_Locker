@@ -23,6 +23,7 @@ credentials.py
 # directorios #
 
 /__pycache__/*
+/__locker_faces__/*
 /att_faces/*
 
 # imagenes #
