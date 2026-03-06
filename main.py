@@ -1,25 +1,16 @@
 import os
-from dotenv import load_dotenv
 import sys
-import os
+
+from dotenv import load_dotenv
 
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QLabel, QLineEdit, QFrame, QStackedWidget,
-    QSizePolicy, QSpacerItem, QScrollArea, QGridLayout,
-    QMessageBox, QInputDialog, QComboBox
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QVBoxLayout,
+    QStackedWidget,
 )
-# db models
-from db.models.lockers import *
-from db.models.sesiones import *
-from db.models.usuarios import *
-from db.models.intentos_acceso import *
-
-# Style
-from views.style.style import STYLE
-
-# Widgets
-from views.style.widgets.widgets import _step_bullet, lbl, sep_line, CamWidget, AutoTimer
+from db.models.usuarios import db_count_active_admins, db_register_admin
 
 # Views
 from views.cliente.home import HomePage
@@ -30,19 +21,12 @@ from views.cliente.resultado import ResultPage
 from views.admin.adminPage import  AdminPage
 from views.admin.loginPage import AdminLoginPage
 
-# Biometrico
-from biometria.biometria import *
+from biometria.biometria import train_model
 
 load_dotenv()  
 
 DB_PATH = os.getenv("DB_PATH")
 
-
-# Dimensiones de imagen para el modelo LBPH
-IMG_W, IMG_H = 112, 92
-
-# Segundos de espera en pantalla de resultado antes de volver al inicio
-AUTO_HOME_SEC = 6
 
 class MainWindow(QMainWindow):
     # Indices del QStackedWidget
@@ -57,9 +41,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Sistema de Lockers - Supermercado")
         self.setMinimumSize(1050, 680)
-        self.setStyleSheet(STYLE)
 
-        cw = QWidget(); cw.setObjectName("page")
+        cw = QWidget()
         self.setCentralWidget(cw)
         ml = QVBoxLayout(cw); ml.setContentsMargins(0, 0, 0, 0); ml.setSpacing(0)
 

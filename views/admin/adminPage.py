@@ -1,42 +1,40 @@
-import sys
-import os
-import cv2
-import json
-import datetime
-import importlib.util
-import site
-import shutil
-import sqlite3
-import pathlib
-import numpy as np
-
-from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QLabel, QLineEdit, QFrame, QStackedWidget,
-    QSizePolicy, QSpacerItem, QScrollArea, QGridLayout,
-    QMessageBox, QInputDialog, QComboBox
-)
-from PyQt5.QtCore import Qt, QThread, pyqtSignal
-from PyQt5.QtGui import QImage
-# Importaciones
-from db.connection import connectionDB
-from utils.helpers import  hash_password, db_get_locker_num_by_id
-from views.style.widgets.widgets import _step_bullet, lbl, sep_line, CamWidget, AutoTimer
-
-from db.models.usuarios import *
-from db.models.intentos_acceso import *
+from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QStackedWidget
 
 from views.admin.lockersPanel import _AdminLockersPanel 
 from views.admin.sesionesPanel import _AdminSesionesPanel 
 from views.admin.usuariosPanel import _AdminUsersPanel 
 from views.admin.logPanel import _AdminLogPanel 
+from views.style.widgets.widgets import lbl, sep_line
+
+STYLE = """
+QWidget#admin_page { background: #060d1a; color: #c8dff5; }
+QLabel#h2 { color: #e2f0ff; font-size: 22px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
+QLabel#badge_blue {
+    background: #071833; color: #4d8ec4; border: 1px solid #1a4a8a; border-radius: 14px;
+    padding: 3px 12px; font-size: 10px; font-family: 'Courier New'; letter-spacing: 2px;
+}
+QFrame#sep { background: #0f2035; min-height: 1px; max-height: 1px; }
+QPushButton#btn_sm {
+    background: #0a1628; color: #4d8ec4; border: 1px solid #1a3a5c; border-radius: 8px;
+    padding: 8px 18px; font-size: 12px; font-family: 'Segoe UI',sans-serif;
+}
+QPushButton#btn_sm:hover { color: #c8dff5; border-color: #4d8ec4; }
+QPushButton#tab {
+    background: transparent; color: #3a5f84; border: none; border-bottom: 3px solid transparent;
+    padding: 12px 24px; font-size: 13px; font-weight: 700; font-family: 'Segoe UI',sans-serif; border-radius: 0;
+}
+QPushButton#tab:hover { color: #7ca8d0; border-bottom-color: #1a3a5c; }
+QPushButton#tab:checked { color: #4d8ec4; border-bottom-color: #1a6ef5; }
+"""
 
 class AdminPage(QWidget):
     go_back = pyqtSignal()
 
     def __init__(self):
         super().__init__()
-        self.setObjectName("page")
+        self.setObjectName("admin_page")
+        self.setStyleSheet(STYLE)
         self._admin_data = {}
         vl = QVBoxLayout(self)
         vl.setContentsMargins(48, 36, 48, 36)

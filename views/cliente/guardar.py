@@ -1,22 +1,48 @@
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import (
-     QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QLabel, QFrame
-)
-from views.style.widgets.widgets import lbl, sep_line
-from db.models.lockers import db_get_all_lockers
-from views.style.widgets.widgets import _step_bullet
 import datetime
-from utils.camera import CamThread
-from utils.helpers import db_get_locker_num_by_id
-import os 
-from db.connection import connectionDB
+import os
+
+from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFrame
+
 from biometria.biometria import delete_face_data, train_model, face_dir_for
+from db.connection import connectionDB
 from db.models.intentos_acceso import db_log_intento
 from db.models.lockers import db_set_locker_estado, db_next_free_locker
-from db.models.sesiones import db_create_sesion, db_close_sesion, db_get_active_sesion_by_face
+from db.models.sesiones import db_create_sesion
+from utils.camera import CamThread
+from views.style.widgets.widgets import _step_bullet, lbl, sep_line, CamWidget
 
-from views.style.widgets.widgets import CamWidget, AutoTimer, AUTO_HOME_SEC
+STYLE = """
+QWidget#guardar_page { background: #060d1a; color: #c8dff5; }
+QLabel#h2 { color: #e2f0ff; font-size: 22px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
+QLabel#tag { color: #4d8ec4; font-size: 11px; font-weight: 600; font-family: 'Courier New'; letter-spacing: 4px; }
+QLabel#body { color: #7ca8d0; font-size: 14px; font-family: 'Segoe UI',sans-serif; }
+QLabel#small { color: #3a5f84; font-size: 11px; font-family: 'Courier New'; letter-spacing: 1px; }
+QLabel#err { color: #f03d5a; font-size: 14px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
+QFrame#sep { background: #0f2035; min-height: 1px; max-height: 1px; }
+QFrame#card { background: #0a1628; border: 1px solid #0f2035; border-radius: 16px; }
+QLabel#cam {
+    background: #030810; border: 2px solid #0f2035; border-radius: 14px;
+    color: #1a3a5c; font-family: 'Courier New'; font-size: 12px;
+}
+QFrame#prog_bg { background: #0a1628; border-radius: 6px; min-height: 12px; max-height: 12px; }
+QFrame#prog_fill {
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #1a6ef5, stop:1 #3de8a0);
+    border-radius: 6px; min-height: 12px; max-height: 12px;
+}
+QPushButton#btn_blue {
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #1a6ef5, stop:1 #0f4fd4);
+    color: #fff; border: none; border-radius: 12px; padding: 16px 36px;
+    font-size: 15px; font-weight: 800; font-family: 'Segoe UI',sans-serif;
+}
+QPushButton#btn_blue:hover { background: #2b7cff; }
+QPushButton#btn_blue:disabled { background: #0d1f3a; color: #1a3a5c; }
+QPushButton#btn_sm {
+    background: #0a1628; color: #4d8ec4; border: 1px solid #1a3a5c; border-radius: 8px;
+    padding: 8px 18px; font-size: 12px; font-family: 'Segoe UI',sans-serif;
+}
+QPushButton#btn_sm:hover { color: #c8dff5; border-color: #4d8ec4; }
+"""
 
 
 class GuardarPage(QWidget):
@@ -26,7 +52,8 @@ class GuardarPage(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.setObjectName("page")
+        self.setObjectName("guardar_page")
+        self.setStyleSheet(STYLE)
         self.cam_thread  = None
         self._face_uid   = None
         self._id_locker  = None

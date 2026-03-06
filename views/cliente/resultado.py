@@ -1,29 +1,35 @@
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import (
-     QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QLabel, QFrame
-)
-from views.style.widgets.widgets import lbl, sep_line
-from db.models.lockers import db_get_all_lockers
-from views.style.widgets.widgets import _step_bullet
-import datetime
-from utils.camera import CamThread
-from utils.helpers import db_get_locker_num_by_id
-import os 
-from db.connection import connectionDB
-from biometria.biometria import delete_face_data, train_model, face_dir_for
-from db.models.intentos_acceso import db_log_intento
-from db.models.lockers import db_set_locker_estado, db_next_free_locker
-from db.models.sesiones import db_create_sesion, db_close_sesion, db_get_active_sesion_by_face
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QFrame
 
-from views.style.widgets.widgets import CamWidget, AutoTimer, AUTO_HOME_SEC
+from views.style.widgets.widgets import AutoTimer, AUTO_HOME_SEC
+
+STYLE = """
+QWidget#result_page { background: #060d1a; color: #c8dff5; }
+QLabel#body { color: #7ca8d0; font-size: 14px; font-family: 'Segoe UI',sans-serif; }
+QLabel#small { color: #3a5f84; font-size: 11px; font-family: 'Courier New'; letter-spacing: 1px; }
+QFrame#card_green { background: #041a12; border: 1px solid #1a7a50; border-radius: 16px; }
+QFrame#card_yellow { background: #1a1204; border: 1px solid #7a5a1a; border-radius: 16px; }
+QFrame#card_red { background: #1a0409; border: 1px solid #7a1a2a; border-radius: 16px; }
+QPushButton#btn_blue {
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #1a6ef5, stop:1 #0f4fd4);
+    color: #fff; border: none; border-radius: 12px; padding: 16px 36px;
+    font-size: 15px; font-weight: 800; font-family: 'Segoe UI',sans-serif;
+}
+QPushButton#btn_blue:hover { background: #2b7cff; }
+QPushButton#btn_sm {
+    background: #0a1628; color: #4d8ec4; border: 1px solid #1a3a5c; border-radius: 8px;
+    padding: 10px 24px; font-size: 12px; font-family: 'Segoe UI',sans-serif;
+}
+QPushButton#btn_sm:hover { color: #c8dff5; border-color: #4d8ec4; }
+"""
 
 class ResultPage(QWidget):
     go_home = pyqtSignal()
 
     def __init__(self):
         super().__init__()
-        self.setObjectName("page")
+        self.setObjectName("result_page")
+        self.setStyleSheet(STYLE)
         self._vl  = QVBoxLayout(self)
         self._vl.setContentsMargins(80, 80, 80, 80)
         self._vl.setAlignment(Qt.AlignCenter)

@@ -1,40 +1,32 @@
-import sys
-import os
-import cv2
-import json
-import datetime
-import importlib.util
-import site
-import shutil
-import sqlite3
-import pathlib
-import numpy as np
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFrame, QScrollArea
 
-from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QLabel, QLineEdit, QFrame, QStackedWidget,
-    QSizePolicy, QSpacerItem, QScrollArea, QGridLayout,
-    QMessageBox, QInputDialog, QComboBox
-)
-from PyQt5.QtCore import Qt, QThread, pyqtSignal
-from PyQt5.QtGui import QImage
-# Importaciones
-from db.connection import connectionDB
-from utils.helpers import  hash_password, db_get_locker_num_by_id
-from views.style.widgets.widgets import _step_bullet, lbl, sep_line, CamWidget, AutoTimer
+from db.models.intentos_acceso import db_get_intentos_recientes
+from views.style.widgets.widgets import lbl
 
-from db.models.usuarios import *
-from db.models.intentos_acceso import *
-
-from db.models.lockers import *
-from db.models.sesiones import *
-from db.models.usuarios import *
-from db.models.intentos_acceso import *
-from biometria.biometria import *
+STYLE = """
+QWidget#admin_log_panel, QWidget#admin_log_inner { background: #060d1a; color: #c8dff5; }
+QLabel#body { color: #7ca8d0; font-size: 14px; font-family: 'Segoe UI',sans-serif; }
+QLabel#small { color: #3a5f84; font-size: 11px; font-family: 'Courier New'; letter-spacing: 1px; }
+QLabel#log_ok { color: #3de8a0; font-size: 12px; font-family: 'Courier New'; }
+QLabel#log_fail { color: #f03d5a; font-size: 12px; font-family: 'Courier New'; }
+QFrame#card_log { background: #060d1a; border: 1px solid #0f2035; border-radius: 8px; }
+QPushButton#btn_sm {
+    background: #0a1628; color: #4d8ec4; border: 1px solid #1a3a5c; border-radius: 8px;
+    padding: 8px 18px; font-size: 12px; font-family: 'Segoe UI',sans-serif;
+}
+QPushButton#btn_sm:hover { color: #c8dff5; border-color: #4d8ec4; }
+QScrollArea { border: none; background: transparent; }
+QScrollBar:vertical { background: #060d1a; width: 6px; margin: 0; }
+QScrollBar::handle:vertical { background: #0f2035; border-radius: 3px; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+"""
 
 class _AdminLogPanel(QWidget):
     def __init__(self):
         super().__init__()
+        self.setObjectName("admin_log_panel")
+        self.setStyleSheet(STYLE)
         vl = QVBoxLayout(self); vl.setContentsMargins(0, 0, 0, 0); vl.setSpacing(12)
 
         top = QHBoxLayout()
@@ -46,7 +38,7 @@ class _AdminLogPanel(QWidget):
         vl.addLayout(top)
 
         scroll = QScrollArea(); scroll.setWidgetResizable(True)
-        self.inner = QWidget(); self.inner.setObjectName("page")
+        self.inner = QWidget(); self.inner.setObjectName("admin_log_inner")
         self.il = QVBoxLayout(self.inner)
         self.il.setContentsMargins(0, 0, 0, 0); self.il.setSpacing(6)
         scroll.setWidget(self.inner)
