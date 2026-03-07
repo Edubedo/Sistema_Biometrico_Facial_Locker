@@ -1,7 +1,7 @@
 STYLE = """
 /* ═══════ BASE ═══════ */
 QMainWindow, QWidget          { background: #060d1a; color: #c8dff5; }
-QWidget#page                  { background: #060d1a; }
+QWidget#page                  { background: #000000; }
 QWidget#inner_bg              { background: #0a1628; }
 
 /* ═══════ TIPOGRAFIA ═══════ */
