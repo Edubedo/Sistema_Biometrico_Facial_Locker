@@ -29,3 +29,4 @@ biometria/locker_faces/sesion_*/
 # imagenes #
 
 *.jpg
+.env
