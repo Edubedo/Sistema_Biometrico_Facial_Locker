@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import (
     QMessageBox,
     QInputDialog,
     QComboBox,
+    QSizePolicy,
 )
 
 from db.models.usuarios import (
@@ -23,55 +24,219 @@ from db.models.usuarios import (
 from views.style.widgets.widgets import lbl, sep_line
 
 STYLE = """
-QWidget#admin_users_panel, QWidget#admin_users_inner { background: #060d1a; color: #c8dff5; }
-QWidget#inner_bg { background: #0a1628; }
-QLabel#tag { color: #4d8ec4; font-size: 11px; font-weight: 600; font-family: 'Courier New'; letter-spacing: 4px; }
-QLabel#body { color: #7ca8d0; font-size: 14px; font-family: 'Segoe UI',sans-serif; }
-QLabel#small { color: #3a5f84; font-size: 11px; font-family: 'Courier New'; letter-spacing: 1px; }
-QLabel#ok { color: #3de8a0; font-size: 14px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
-QLabel#err { color: #f03d5a; font-size: 14px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
+/* Fondo principal con gradiente azul cielo */
+QWidget#admin_users_panel, QWidget#admin_users_inner {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #b3e0ff, stop:1 #87CEEB);
+}
+
+/* Widgets internos con fondo blanco */
+QWidget#inner_bg { background: white; }
+
+/* Títulos */
+QLabel#tag {
+    color: #3a7ca5;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'Segoe UI', sans-serif;
+    letter-spacing: 2px;
+}
+
+QLabel#body {
+    color: #1e4b6e;
+    font-size: 12px;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+QLabel#small {
+    color: #5f7f9e;
+    font-size: 10px;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+/* Mensajes */
+QLabel#ok {
+    color: #27ae60;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+QLabel#err {
+    color: #c0392b;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+/* Badges */
 QLabel#badge_blue {
-    background: #071833; color: #4d8ec4; border: 1px solid #1a4a8a; border-radius: 14px;
-    padding: 3px 12px; font-size: 10px; font-family: 'Courier New'; letter-spacing: 2px;
+    background: #e6f0fa;
+    color: #2c6289;
+    border: 1px solid #b8d6f0;
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 9px;
+    font-weight: 600;
+    font-family: 'Segoe UI', sans-serif;
 }
+
 QLabel#badge_green {
-    background: #041a12; color: #3de8a0; border: 1px solid #1a7a50; border-radius: 14px;
-    padding: 3px 12px; font-size: 10px; font-family: 'Courier New'; letter-spacing: 2px;
+    background: #e3f7ec;
+    color: #27ae60;
+    border: 1px solid #a9dfbf;
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 9px;
+    font-weight: 600;
+    font-family: 'Segoe UI', sans-serif;
 }
+
 QLabel#badge_red {
-    background: #1a0409; color: #f03d5a; border: 1px solid #7a1a2a; border-radius: 14px;
-    padding: 3px 12px; font-size: 10px; font-family: 'Courier New'; letter-spacing: 2px;
+    background: #fbe9eb;
+    color: #c0392b;
+    border: 1px solid #f0b3b3;
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 9px;
+    font-weight: 600;
+    font-family: 'Segoe UI', sans-serif;
 }
-QFrame#sep { background: #0f2035; min-height: 1px; max-height: 1px; }
-QFrame#card { background: #0a1628; border: 1px solid #0f2035; border-radius: 16px; }
-QFrame#card_blue { background: #071833; border: 1px solid #1a4a8a; border-radius: 16px; }
+
+/* Línea separadora */
+QFrame#sep {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #c2e0ff, stop:0.5 #6ab0e6, stop:1 #c2e0ff);
+    min-height: 1px;
+    max-height: 1px;
+}
+
+/* Tarjetas */
+QFrame#card {
+    background-color: white;
+    border: 1px solid #d0e6ff;
+    border-radius: 15px;
+}
+
+QFrame#card_blue {
+    background-color: white;
+    border: 1px solid #b0d4ff;
+    border-radius: 15px;
+}
+
+/* Campos de texto */
 QLineEdit#inp {
-    background: #060d1a; border: 1.5px solid #0f2035; border-radius: 10px;
-    color: #e2f0ff; padding: 12px 14px; font-size: 13px; font-family: 'Segoe UI',sans-serif;
+    background-color: #f5fbff;
+    border: 1.5px solid #c5e2ff;
+    border-radius: 8px;
+    color: #1e3a5f;
+    padding: 6px 8px;  /* Padding reducido */
+    font-size: 11px;  /* Fuente más pequeña */
+    font-family: 'Segoe UI', sans-serif;
+    min-height: 22px;  /* Altura mínima reducida */
 }
-QLineEdit#inp:focus { border-color: #1a6ef5; }
+
+QLineEdit#inp:focus {
+    border-color: #4a9eff;
+    background-color: white;
+}
+
+QLineEdit#inp::placeholder {
+    color: #99badd;
+    font-style: italic;
+    font-size: 10px;  /* Placeholder más pequeño */
+}
+
+/* ComboBox */
 QComboBox#combo {
-    background: #060d1a; border: 1.5px solid #0f2035; border-radius: 10px;
-    color: #e2f0ff; padding: 10px 14px; font-size: 13px; font-family: 'Segoe UI',sans-serif;
+    background-color: #f5fbff;
+    border: 1.5px solid #c5e2ff;
+    border-radius: 8px;
+    color: #1e3a5f;
+    padding: 5px 8px;
+    font-size: 11px;
+    font-family: 'Segoe UI', sans-serif;
+    min-height: 22px;
 }
-QComboBox#combo:focus { border-color: #1a6ef5; }
-QComboBox#combo::drop-down { border: none; }
-QComboBox QAbstractItemView { background: #0a1628; color: #c8dff5; border: 1px solid #1a3a5c; }
+
+QComboBox#combo:focus {
+    border-color: #4a9eff;
+}
+
+QComboBox#combo::drop-down {
+    border: none;
+    width: 18px;
+}
+
+QComboBox QAbstractItemView {
+    background-color: white;
+    color: #1e3a5f;
+    border: 1px solid #b0d4ff;
+    border-radius: 5px;
+    selection-background-color: #e6f0fa;
+    selection-color: #1e3a5f;
+}
+
+/* Botón azul (REGISTRAR) */
 QPushButton#btn_blue {
-    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #1a6ef5, stop:1 #0f4fd4);
-    color: #fff; border: none; border-radius: 12px; padding: 14px 30px;
-    font-size: 14px; font-weight: 800; font-family: 'Segoe UI',sans-serif;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #6bb5ff, stop:1 #3d8cff);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;  /* Padding reducido */
+    font-size: 12px;  /* Fuente más pequeña */
+    font-weight: 700;
+    font-family: 'Segoe UI', sans-serif;
+    min-height: 30px;  /* Altura mínima reducida */
 }
-QPushButton#btn_blue:hover { background: #2b7cff; }
+
+QPushButton#btn_blue:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #5aa5ff, stop:1 #2c7aff);
+}
+
+/* Botón rojo (DESACTIVAR) */
 QPushButton#btn_red {
-    background: #c0122a; color: #fff; border: none; border-radius: 12px;
-    padding: 14px 30px; font-size: 14px; font-weight: 800; font-family: 'Segoe UI',sans-serif;
+    background: #f1948a;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: 'Segoe UI', sans-serif;
+    min-height: 30px;
 }
-QPushButton#btn_red:hover { background: #e01535; }
-QScrollArea { border: none; background: transparent; }
-QScrollBar:vertical { background: #060d1a; width: 6px; margin: 0; }
-QScrollBar::handle:vertical { background: #0f2035; border-radius: 3px; }
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+
+QPushButton#btn_red:hover {
+    background: #ec7063;
+}
+
+/* Scroll Area */
+QScrollArea {
+    border: none;
+    background: transparent;
+}
+
+QScrollBar:vertical {
+    background: #e6f0fa;
+    width: 6px;
+    border-radius: 3px;
+}
+
+QScrollBar::handle:vertical {
+    background: #99badd;
+    border-radius: 3px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #7aa9d4;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0;
+}
 """
 
 class _AdminUsersPanel(QWidget):
@@ -85,12 +250,13 @@ class _AdminUsersPanel(QWidget):
         self.setObjectName("admin_users_panel")
         self.setStyleSheet(STYLE)
         self._current_admin = {}
-        vl = QVBoxLayout(self); vl.setContentsMargins(0, 0, 0, 0); vl.setSpacing(16)
+        vl = QVBoxLayout(self); vl.setContentsMargins(10, 10, 10, 10); vl.setSpacing(16)
 
-        body = QHBoxLayout(); body.setSpacing(28)
+        body = QHBoxLayout(); body.setSpacing(15)
 
         # ── Lista de admins ───────────────────────────────────────────────────
         left = QFrame(); left.setObjectName("card")
+        left.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         ll   = QVBoxLayout(left); ll.setContentsMargins(24, 24, 24, 24); ll.setSpacing(12)
         ll.addWidget(lbl("ADMINISTRADORES ACTIVOS", "tag"))
 
@@ -107,55 +273,72 @@ class _AdminUsersPanel(QWidget):
 
         # ── Formulario de registro ────────────────────────────────────────────
         right = QFrame(); right.setObjectName("card_blue")
-        rl    = QVBoxLayout(right); rl.setContentsMargins(28, 28, 28, 28); rl.setSpacing(12)
+        right.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        rl    = QVBoxLayout(right); rl.setContentsMargins(15, 10, 15, 8); rl.setSpacing(6)
         rl.addWidget(lbl("REGISTRAR NUEVO ADMIN", "tag"))
         rl.addWidget(sep_line())
+        rl.addSpacing(4)   # Espacio después del separador
+
 
         # Campos mapeados a Usuarios
         rl.addWidget(lbl("Nombre"))
         self.f_nombre = QLineEdit(); self.f_nombre.setObjectName("inp")
         self.f_nombre.setPlaceholderText("Juan")
         rl.addWidget(self.f_nombre)
+        rl.addSpacing(4)
 
         rl.addWidget(lbl("Apellido paterno"))
         self.f_ap = QLineEdit(); self.f_ap.setObjectName("inp")
         self.f_ap.setPlaceholderText("Garcia")
         rl.addWidget(self.f_ap)
+        rl.addSpacing(4)
 
         rl.addWidget(lbl("Apellido materno"))
         self.f_am = QLineEdit(); self.f_am.setObjectName("inp")
         self.f_am.setPlaceholderText("Lopez")
         rl.addWidget(self.f_am)
+        rl.addSpacing(4)
 
         rl.addWidget(lbl("Usuario"))
         self.f_user = QLineEdit(); self.f_user.setObjectName("inp")
         self.f_user.setPlaceholderText("jgarcia01")
         rl.addWidget(self.f_user)
+        rl.addSpacing(4)
 
         rl.addWidget(lbl("Rol"))
         self.f_rol = QComboBox(); self.f_rol.setObjectName("combo")
         self.f_rol.addItems(["empleado", "supervisor", "administrador"])
         rl.addWidget(self.f_rol)
+        rl.addSpacing(4)
 
-        rl.addWidget(lbl("Contrasena"))
+        rl.addWidget(lbl("Contraseña"))
         self.f_pass = QLineEdit(); self.f_pass.setObjectName("inp")
         self.f_pass.setEchoMode(QLineEdit.Password)
         self.f_pass.setPlaceholderText("••••••••")
         rl.addWidget(self.f_pass)
+        rl.addSpacing(4)
 
-        rl.addWidget(lbl("Confirmar contrasena"))
+        rl.addWidget(lbl("Confirmar contraseña"))
         self.f_pass2 = QLineEdit(); self.f_pass2.setObjectName("inp")
         self.f_pass2.setEchoMode(QLineEdit.Password)
         self.f_pass2.setPlaceholderText("••••••••")
         rl.addWidget(self.f_pass2)
 
+        # Espaciador para separar campos de mensajes
+        rl.addSpacing(12)
+
+        # Mensajes de error/éxito
         self.reg_err = lbl("", "err", Qt.AlignCenter)
         self.reg_ok  = lbl("", "ok",  Qt.AlignCenter)
         rl.addWidget(self.reg_err)
         rl.addWidget(self.reg_ok)
 
+        # Espacio antes del botón
+        rl.addSpacing(4)
+
         btn_reg = QPushButton("REGISTRAR ADMINISTRADOR"); btn_reg.setObjectName("btn_blue")
         btn_reg.setCursor(Qt.PointingHandCursor); btn_reg.clicked.connect(self._register)
+        btn_reg.setMinimumHeight(32)
         rl.addWidget(btn_reg)
         rl.addStretch()
 

@@ -150,7 +150,7 @@ class AdminLoginPage(QWidget):
         cl.addWidget(self.user_inp)
 
         # Campo Contraseña
-        cl.addWidget(lbl("Contrasena"))
+        cl.addWidget(lbl("Contraseña"))
         self.pass_inp = QLineEdit(); self.pass_inp.setObjectName("inp")
         self.pass_inp.setEchoMode(QLineEdit.Password)
         self.pass_inp.setPlaceholderText("••••••••")
