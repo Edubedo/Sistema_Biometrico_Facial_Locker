@@ -1,134 +1,242 @@
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QLabel, QFrame, QSizePolicy
+    QLabel, QFrame, QSizePolicy, QGraphicsDropShadowEffect,
+    QApplication
 )
-from PyQt5.QtGui import QFont, QPainter, QColor, QPen, QBrush
+from PyQt5.QtGui import (
+    QPainter, QColor, QBrush, QPen, QFont,
+    QLinearGradient, QRadialGradient
+)
 
 from db.models.lockers import db_get_all_lockers
-from views.style.widgets.widgets import lbl, sep_line
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  SCALE HELPER
+# ─────────────────────────────────────────────────────────────────────────────
+def _dp(value: float) -> int:
+    screen = QApplication.primaryScreen()
+    dpi = screen.logicalDotsPerInch() if screen else 96
+    return max(1, round(value * dpi / 96))
 
 
 STYLE = """
-/* ── Fondo general ── */
-QWidget#home_page {
-    background: #8fafc8;
-}
+QWidget#home_page { background: transparent; }
 
-/* ── Tarjeta central ── */
-QFrame#main_card {
-    background: #b8ccdc;
-    border: 3px solid #2a6db5;
-    border-radius: 18px;
+QFrame#header_strip {
+    background-color: #1565c0;
+    border: none;
 }
-
-/* ── Encabezado de tarjeta ── */
-QLabel#card_title {
-    color: #0d1f3c;
-    font-size: 22px;
-    font-weight: 900;
-    font-family: 'Segoe UI', 'Trebuchet MS', sans-serif;
-    letter-spacing: 3px;
-    text-decoration: underline;
-}
-
-/* ── Subtítulo lockers libres ── */
-QLabel#lockers_label {
-    color: #0d1f3c;
-    font-size: 15px;
+QLabel#sys_title {
+    color: #ffffff;
     font-weight: 800;
     font-family: 'Segoe UI', sans-serif;
-    letter-spacing: 2px;
+    letter-spacing: 4px;
 }
-
-/* ── Número grande de lockers ── */
-QLabel#lockers_count {
-    color: #1a5fc8;
-    font-size: 42px;
-    font-weight: 900;
+QLabel#sys_label {
+    color: rgba(255,255,255,0.65);
+    font-family: 'Segoe UI', sans-serif;
+    letter-spacing: 3px;
+}
+QLabel#clock_lbl {
+    color: #ffffff;
+    font-weight: 700;
     font-family: 'Segoe UI', sans-serif;
 }
-
-/* ── Botón circular GUARDAR ── */
-QPushButton#btn_guardar {
-    background: #d4a96a;
-    color: #3d1f00;
-    border: 3px solid #1a1a1a;
-    border-radius: 60px;
-    font-size: 11px;
-    font-weight: 900;
+QLabel#date_lbl {
+    color: rgba(255,255,255,0.65);
     font-family: 'Segoe UI', sans-serif;
-    letter-spacing: 2px;
-    min-width:  120px;
-    max-width:  120px;
-    min-height: 120px;
-    max-height: 120px;
 }
-QPushButton#btn_guardar:hover {
-    background: #e8c080;
-    border-color: #2a6db5;
-}
-QPushButton#btn_guardar:pressed {
-    background: #b8904a;
-}
-
-/* ── Botón circular RECOGER ── */
-QPushButton#btn_recoger {
-    background: #d4a96a;
-    color: #3d1f00;
-    border: 3px solid #1a1a1a;
-    border-radius: 60px;
-    font-size: 11px;
-    font-weight: 900;
+QLabel#free_count_lbl {
+    color: #e53935;
+    font-weight: 800;
     font-family: 'Segoe UI', sans-serif;
-    letter-spacing: 2px;
-    min-width:  120px;
-    max-width:  120px;
-    min-height: 120px;
-    max-height: 120px;
 }
-QPushButton#btn_recoger:hover {
-    background: #e8c080;
-    border-color: #2a6db5;
+QLabel#free_prefix_lbl {
+    color: #546e7a;
+    font-family: 'Segoe UI', sans-serif;
 }
-QPushButton#btn_recoger:pressed {
-    background: #b8904a;
-}
-
-/* ── Botón admin discreto ── */
 QPushButton#btn_admin {
     background: transparent;
-    color: #5a7a9a;
-    border: 1px solid #7a9ab8;
+    color: #90a4ae;
+    border: 1px solid #cfd8e3;
     border-radius: 6px;
-    padding: 6px 16px;
-    font-size: 10px;
-    font-family: 'Courier New';
+    font-family: 'Segoe UI', sans-serif;
     letter-spacing: 2px;
 }
-QPushButton#btn_admin:hover {
-    color: #0d1f3c;
-    border-color: #2a6db5;
-    background: #9fbdd4;
+QPushButton#btn_admin:hover   { color: #1565c0; border-color: #1976d2; background: #e3f0ff; }
+QPushButton#btn_admin:pressed { background: #bbdefb; }
+QLabel#footer_lbl {
+    color: #b0bec5;
+    font-family: 'Segoe UI', sans-serif;
 }
-
-/* ── Ícono ilustración ── */
-QLabel#icon_label {
-    color: #2a6db5;
-    font-size: 72px;
-    font-family: 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif;
-}
-
-/* ── Info stats pequeños ── */
-QLabel#stat_small {
-    color: #2a4a6a;
-    font-size: 11px;
-    font-family: 'Courier New';
-    letter-spacing: 1px;
+QFrame#h_divider {
+    background: #cfd8e3; border: none;
+    min-height: 1px; max-height: 1px;
 }
 """
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+#  STATUS DOT
+# ─────────────────────────────────────────────────────────────────────────────
+class StatusDot(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        sz = _dp(10); self.setFixedSize(sz, sz)
+        self._alpha = 255; self._growing = False
+        t = QTimer(self); t.timeout.connect(self._tick); t.start(40)
+
+    def _tick(self):
+        self._alpha += -5 if not self._growing else 5
+        if self._alpha <= 80:  self._growing = True
+        if self._alpha >= 255: self._growing = False
+        self.update()
+
+    def paintEvent(self, e):
+        p = QPainter(self); p.setRenderHint(QPainter.Antialiasing)
+        c = QColor(25, 118, 210); c.setAlpha(self._alpha)
+        p.setPen(Qt.NoPen); p.setBrush(QBrush(c))
+        m = _dp(1)
+        p.drawEllipse(m, m, self.width()-m*2, self.height()-m*2)
+        p.end()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  BIG LOCKER BUTTON  — circle icon + label + sublabel, fills half the screen
+# ─────────────────────────────────────────────────────────────────────────────
+class BigLockerButton(QWidget):
+    clicked = pyqtSignal()
+
+    # mode: "store" (blue door, arrow in) | "retrieve" (yellow door, arrow out)
+    def __init__(self, mode: str, label: str, sublabel: str = "", parent=None):
+        super().__init__(parent)
+        self.mode     = mode
+        self.label    = label
+        self.sublabel = sublabel
+
+        # Palette
+        if mode == "store":
+            self._door_color   = QColor("#1976d2")
+            self._door_dark    = QColor("#1250a0")
+            self._arrow_color  = QColor("#ffffff")
+            self._circle_color = QColor("#cfe3f5")
+            self._label_color  = QColor("#1a2a3a")
+        else:
+            self._door_color   = QColor("#f5c518")
+            self._door_dark    = QColor("#c49a10")
+            self._arrow_color  = QColor("#ffffff")
+            self._circle_color = QColor("#d8ede0")
+            self._label_color  = QColor("#1a2a3a")
+
+        self._hovered = False
+        self._pressed = False
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setCursor(Qt.PointingHandCursor)
+
+    def enterEvent(self, e):  self._hovered = True;  self.update()
+    def leaveEvent(self, e):  self._hovered = False; self.update()
+    def mousePressEvent(self, e):
+        if e.button() == Qt.LeftButton: self._pressed = True;  self.update()
+    def mouseReleaseEvent(self, e):
+        if e.button() == Qt.LeftButton:
+            self._pressed = False; self.update()
+            if self.rect().contains(e.pos()): self.clicked.emit()
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        W, H = self.width(), self.height()
+
+        # ── Subtle hover tint on background ──
+        if self._pressed:
+            p.fillRect(0, 0, W, H, QColor(21, 101, 192, 18))
+        elif self._hovered:
+            p.fillRect(0, 0, W, H, QColor(21, 101, 192, 9))
+
+        # ── Circle ──
+        circle_r = int(min(W, H) * 0.30)   # radius relative to button size
+        cx = W // 2
+        cy = int(H * 0.38)                  # circle center sits in upper 40%
+
+        # Circle fill
+        cc = QColor(self._circle_color)
+        if self._pressed: cc = cc.darker(108)
+        p.setPen(Qt.NoPen)
+        p.setBrush(QBrush(cc))
+        p.drawEllipse(cx - circle_r, cy - circle_r, circle_r * 2, circle_r * 2)
+
+        # ── Door icon inside circle ──
+        # Door body (two rectangles: frame + door panel)
+        door_w  = int(circle_r * 0.72)
+        door_h  = int(circle_r * 0.90)
+        door_x  = cx - door_w // 2
+        door_y  = cy - door_h // 2
+
+        # Frame (slightly darker)
+        p.setPen(Qt.NoPen)
+        p.setBrush(QBrush(self._door_dark))
+        frame_pad = int(door_w * 0.12)
+        p.drawRoundedRect(door_x, door_y, door_w, door_h, 3, 3)
+
+        # Door panel
+        panel_w = int(door_w * 0.70)
+        panel_h = int(door_h * 0.92)
+        panel_x = door_x + door_w - panel_w - int(door_w * 0.06)
+        panel_y = door_y + int(door_h * 0.04)
+        p.setBrush(QBrush(self._door_color))
+        p.drawRoundedRect(panel_x, panel_y, panel_w, panel_h, 2, 2)
+
+        # Arrow on door
+        arr_len  = int(circle_r * 0.28)
+        arr_head = int(arr_len * 0.55)
+        ax = cx + int(circle_r * 0.04)
+        ay = cy
+
+        pen = QPen(self._arrow_color, max(2, _dp(2)), Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+        p.setPen(pen); p.setBrush(Qt.NoBrush)
+
+        if self.mode == "store":
+            # Arrow pointing LEFT (into locker)
+            p.drawLine(ax + arr_len, ay, ax - arr_len, ay)
+            p.drawLine(ax - arr_len, ay, ax - arr_len + arr_head, ay - arr_head)
+            p.drawLine(ax - arr_len, ay, ax - arr_len + arr_head, ay + arr_head)
+        else:
+            # Arrow pointing RIGHT (out of locker)
+            p.drawLine(ax - arr_len, ay, ax + arr_len, ay)
+            p.drawLine(ax + arr_len, ay, ax + arr_len - arr_head, ay - arr_head)
+            p.drawLine(ax + arr_len, ay, ax + arr_len - arr_head, ay + arr_head)
+
+        # ── Main label ──
+        label_top = cy + circle_r + int(H * 0.04)
+        font_size  = max(14, int(H * 0.10))
+        font = QFont("Segoe UI", font_size, QFont.Bold)
+        p.setFont(font)
+        p.setPen(QPen(self._label_color))
+        p.drawText(0, label_top, W, int(H * 0.16),
+                   Qt.AlignHCenter | Qt.AlignTop, self.label)
+
+        # ── Sub-label (e.g. "Lockers desocupados: 5") ──
+        if self.sublabel:
+            sub_top = label_top + int(H * 0.13)
+            sub_font_size = max(9, int(H * 0.055))
+            sfont = QFont("Segoe UI", sub_font_size)
+            p.setFont(sfont)
+            p.setPen(QPen(QColor("#78909c")))
+            p.drawText(0, sub_top, W, int(H * 0.10),
+                       Qt.AlignHCenter | Qt.AlignTop, self.sublabel)
+
+        p.end()
+
+    def set_sublabel(self, text: str):
+        self.sublabel = text
+        self.update()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  HOME PAGE
+# ─────────────────────────────────────────────────────────────────────────────
 class HomePage(QWidget):
     go_guardar = pyqtSignal()
     go_retirar = pyqtSignal()
@@ -139,106 +247,109 @@ class HomePage(QWidget):
         self.setObjectName("home_page")
         self.setStyleSheet(STYLE)
 
-        # ── Layout raíz ─────────────────────────────────────────────────────
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
-        root.setAlignment(Qt.AlignCenter)
+        root.setSpacing(0)
 
-        # ── Tarjeta central ──────────────────────────────────────────────────
-        card = QFrame()
-        card.setObjectName("main_card")
-        card.setFixedWidth(340)
-        card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(28, 24, 28, 28)
-        card_layout.setSpacing(0)
-        card_layout.setAlignment(Qt.AlignCenter)
+        # ── Header ───────────────────────────────────────────────────────────
+        header = QFrame(); header.setObjectName("header_strip")
+        header.setFixedHeight(_dp(54))
+        hl = QHBoxLayout(header)
+        hl.setContentsMargins(_dp(16), 0, _dp(16), 0)
 
-        # Título ACCESO
-        title = QLabel("ACCESO")
-        title.setObjectName("card_title")
-        title.setAlignment(Qt.AlignCenter)
-        card_layout.addWidget(title)
-        card_layout.addSpacing(16)
+        tcol = QVBoxLayout(); tcol.setSpacing(_dp(1))
+        sl = QLabel("SISTEMA DE CONTROL"); sl.setObjectName("sys_label")
+        sl.setStyleSheet(f"font-size: {_dp(8)}px;")
+        tl = QLabel("ACCESO"); tl.setObjectName("sys_title")
+        tl.setStyleSheet(f"font-size: {_dp(18)}px;")
+        tcol.addWidget(sl); tcol.addWidget(tl)
+        hl.addLayout(tcol); hl.addStretch()
 
-        # Ilustración (emoji como placeholder visual)
-        icon = QLabel("🔒🛡️")
-        icon.setObjectName("icon_label")
-        icon.setAlignment(Qt.AlignCenter)
-        icon.setStyleSheet(
-            "color: #2a6db5; font-size: 64px;"
-            "font-family: 'Segoe UI Emoji', sans-serif;"
-        )
-        card_layout.addWidget(icon)
-        card_layout.addSpacing(18)
+        ccol = QVBoxLayout(); ccol.setSpacing(_dp(1))
+        ccol.setAlignment(Qt.AlignRight)
+        self.clock_lbl = QLabel("00:00:00"); self.clock_lbl.setObjectName("clock_lbl")
+        self.clock_lbl.setAlignment(Qt.AlignRight)
+        self.clock_lbl.setStyleSheet(f"font-size: {_dp(15)}px;")
+        self.date_lbl = QLabel("---"); self.date_lbl.setObjectName("date_lbl")
+        self.date_lbl.setAlignment(Qt.AlignRight)
+        self.date_lbl.setStyleSheet(f"font-size: {_dp(8)}px;")
+        ccol.addWidget(self.clock_lbl); ccol.addWidget(self.date_lbl)
+        hl.addLayout(ccol)
+        root.addWidget(header)
 
-        # Texto LOCKERS LIBRES
-        lbl_lockers = QLabel("LOCKERS LIBRES")
-        lbl_lockers.setObjectName("lockers_label")
-        lbl_lockers.setAlignment(Qt.AlignCenter)
-        card_layout.addWidget(lbl_lockers)
-        card_layout.addSpacing(2)
+        # ── Buttons area (takes all remaining space) ──────────────────────────
+        btn_area = QWidget()
+        bl = QVBoxLayout(btn_area)
+        bl.setContentsMargins(_dp(24), _dp(16), _dp(24), _dp(8))
+        bl.setSpacing(0)
 
-        # Número grande
-        self.count_lbl = QLabel("—")
-        self.count_lbl.setObjectName("lockers_count")
-        self.count_lbl.setAlignment(Qt.AlignCenter)
-        card_layout.addWidget(self.count_lbl)
-        card_layout.addSpacing(22)
+        self.btn_guardar = BigLockerButton("store",    "Guardar",
+                                           "Lockers desocupados: —")
+        self.btn_recoger = BigLockerButton("retrieve", "Recoger")
 
-        # ── Fila de botones circulares ───────────────────────────────────────
-        btn_row = QHBoxLayout()
-        btn_row.setSpacing(32)
-        btn_row.setAlignment(Qt.AlignCenter)
-
-        # Botón GUARDAR
-        col_g = QVBoxLayout()
-        col_g.setSpacing(6)
-        col_g.setAlignment(Qt.AlignCenter)
-        self.btn_guardar = QPushButton("🔐\nGUARDAR")
-        self.btn_guardar.setObjectName("btn_guardar")
-        self.btn_guardar.setCursor(Qt.PointingHandCursor)
         self.btn_guardar.clicked.connect(self.go_guardar.emit)
-        col_g.addWidget(self.btn_guardar)
-        btn_row.addLayout(col_g)
-
-        # Botón RECOGER
-        col_r = QVBoxLayout()
-        col_r.setSpacing(6)
-        col_r.setAlignment(Qt.AlignCenter)
-        self.btn_recoger = QPushButton("🚪\nRECOGER")
-        self.btn_recoger.setObjectName("btn_recoger")
-        self.btn_recoger.setCursor(Qt.PointingHandCursor)
         self.btn_recoger.clicked.connect(self.go_retirar.emit)
-        col_r.addWidget(self.btn_recoger)
-        btn_row.addLayout(col_r)
 
-        card_layout.addLayout(btn_row)
-        card_layout.addSpacing(16)
+        bl.addWidget(self.btn_guardar, 1)
+        bl.addWidget(self.btn_recoger, 1)
 
-        # Stats pequeños debajo de los botones
-        self.stat_lbl = QLabel("")
-        self.stat_lbl.setObjectName("stat_small")
-        self.stat_lbl.setAlignment(Qt.AlignCenter)
-        card_layout.addWidget(self.stat_lbl)
+        root.addWidget(btn_area, 1)
 
-        root.addWidget(card, alignment=Qt.AlignCenter)
-        root.addSpacing(18)
+        # ── Footer ────────────────────────────────────────────────────────────
+        div = QFrame(); div.setObjectName("h_divider"); root.addWidget(div)
 
-        # ── Botón admin discreto (fuera de la tarjeta) ───────────────────────
-        adm = QPushButton("ADMINISTRACION")
-        adm.setObjectName("btn_admin")
+        fw = QWidget()
+        fwl = QHBoxLayout(fw)
+        fwl.setContentsMargins(_dp(14), _dp(6), _dp(14), _dp(6))
+
+        # Status dot + text
+        sr = QHBoxLayout(); sr.setSpacing(_dp(5))
+        sr.addWidget(StatusDot())
+        stl = QLabel("EN LÍNEA")
+        stl.setStyleSheet(
+            f"color: #1976d2; font-size: {_dp(8)}px;"
+            f"font-family: 'Segoe UI'; font-weight: 600; letter-spacing: 2px;"
+        )
+        sr.addWidget(stl)
+        fwl.addLayout(sr)
+        fwl.addStretch()
+
+        adm = QPushButton("⚙  ADMIN"); adm.setObjectName("btn_admin")
+        adm.setStyleSheet(
+            adm.styleSheet() +
+            f"font-size: {_dp(8)}px; padding: {_dp(5)}px {_dp(16)}px;"
+        )
         adm.setCursor(Qt.PointingHandCursor)
         adm.clicked.connect(self.go_admin.emit)
-        root.addWidget(adm, alignment=Qt.AlignCenter)
+        fwl.addWidget(adm)
+        root.addWidget(fw)
 
+        # ── Clock ─────────────────────────────────────────────────────────────
+        ct = QTimer(self); ct.timeout.connect(self._tick_clock); ct.start(1000)
+        self._tick_clock()
+
+    # ── Background gradient ───────────────────────────────────────────────────
+    def paintEvent(self, event):
+        p = QPainter(self)
+        W, H = self.width(), self.height()
+        g = QLinearGradient(0, 0, 0, H)
+        g.setColorAt(0.0, QColor(232, 240, 251))
+        g.setColorAt(1.0, QColor(210, 228, 248))
+        p.fillRect(0, 0, W, H, QBrush(g))
+        p.end()
+
+    def _tick_clock(self):
+        from PyQt5.QtCore import QDateTime
+        dt = QDateTime.currentDateTime()
+        self.clock_lbl.setText(dt.toString("HH:mm:ss"))
+        self.date_lbl.setText(dt.toString("ddd dd MMM").upper())
+
+    # ── Public API ────────────────────────────────────────────────────────────
     def refresh(self):
-        """Actualiza las estadísticas desde la base de datos."""
         lockers = db_get_all_lockers()
         total   = len(lockers)
         free    = sum(1 for l in lockers if l["t_estado"] == "libre")
         busy    = total - free
 
-        self.count_lbl.setText(str(free))
-        self.stat_lbl.setText(
-            "Ocupados: {}   |   Total: {}".format(busy, total)
-        )
+        # Update sublabel on store button with free count (red number like reference)
+        self.btn_guardar.set_sublabel(f"Lockers desocupados:  {free}")
