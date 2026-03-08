@@ -54,6 +54,9 @@ QPushButton#btn_cfg:hover{color:#1565c0;border-color:#1976d2;background:#e3f0ff;
 QPushButton#btn_lib{background:transparent;color:#e65100;border:1px solid #ffcc80;
     border-radius:5px;font-family:'Segoe UI';font-weight:700;}
 QPushButton#btn_lib:hover{background:#fff3e0;}
+QPushButton#btn_del{background:transparent;color:#c62828;border:1px solid #ef9a9a;
+    border-radius:5px;font-family:'Segoe UI';font-weight:700;}
+QPushButton#btn_del:hover{background:#ffebee;border-color:#c62828;}
 QScrollArea{border:none;background:transparent;}
 QScrollBar:vertical{background:#e8f0fb;width:4px;margin:0;}
 QScrollBar::handle:vertical{background:#90c4f0;border-radius:2px;min-height:20px;}
@@ -202,6 +205,11 @@ class LockerCard(QFrame):
             bl.setCursor(Qt.PointingHandCursor); bl.clicked.connect(self._liberar)
             lay.addWidget(bl)
 
+        bd = QPushButton("✕"); bd.setObjectName("btn_del")
+        bd.setToolTip("Eliminar locker"); bd.setFixedSize(_dp(26), _dp(26))
+        bd.setCursor(Qt.PointingHandCursor); bd.clicked.connect(self._eliminar)
+        lay.addWidget(bd)
+
     # ── helpers ──────────────────────────────────────────────────────────────
     def _log(self, tipo, resultado, desc, id_sesion=None):
         """Single point for db_log_intento — column names match Intentos_acceso exactly."""
@@ -261,6 +269,39 @@ class LockerCard(QFrame):
             if reason: desc += f" Motivo: {reason}"
             self._log("liberacion_admin", "exitoso", desc)
             train_model()
+            if self.on_refresh: self.on_refresh()
+        except Exception as ex:
+            DlgError.show(str(ex), parent=self)
+
+    def _eliminar(self):
+        num = self.locker["t_numero_locker"]
+        estado = self.locker.get("t_estado", "")
+        if estado == "ocupado":
+            DlgError.show(
+                f"El locker #{num} está ocupado.\nLibéralo antes de eliminarlo.",
+                title="No se puede eliminar", parent=self,
+            )
+            return
+        from views.style.adminDialogs import DlgConfirm
+        if not DlgConfirm.ask(
+            f"¿Eliminar permanentemente el locker <b>#{num}</b>?\n"
+            "Esta acción no se puede deshacer.",
+            title=f"Eliminar Locker #{num}",
+            confirm_label="ELIMINAR",
+            danger=True,
+            parent=self,
+        ):
+            return
+        try:
+            from db.models.lockers import db_delete_locker
+            db_log_intento(
+                id_locker   = self.locker["ID_locker"],
+                tipo        = "eliminacion_admin",
+                resultado   = "exitoso",
+                descripcion = f"Admin eliminó locker #{num}.",
+                id_usuario  = self.admin_id,
+            )
+            db_delete_locker(self.locker["ID_locker"])
             if self.on_refresh: self.on_refresh()
         except Exception as ex:
             DlgError.show(str(ex), parent=self)
