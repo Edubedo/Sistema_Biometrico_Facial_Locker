@@ -23,55 +23,215 @@ from db.models.usuarios import (
 from views.style.widgets.widgets import lbl, sep_line
 
 STYLE = """
-QWidget#admin_users_panel, QWidget#admin_users_inner { background: #060d1a; color: #c8dff5; }
-QWidget#inner_bg { background: #0a1628; }
-QLabel#tag { color: #4d8ec4; font-size: 11px; font-weight: 600; font-family: 'Courier New'; letter-spacing: 4px; }
-QLabel#body { color: #7ca8d0; font-size: 14px; font-family: 'Segoe UI',sans-serif; }
-QLabel#small { color: #3a5f84; font-size: 11px; font-family: 'Courier New'; letter-spacing: 1px; }
-QLabel#ok { color: #3de8a0; font-size: 14px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
-QLabel#err { color: #f03d5a; font-size: 14px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
+QWidget#admin_users_panel, QWidget#admin_users_inner { background: #0a1a2f; color: #e0edff; }
+QWidget#inner_bg { background: #11223b; }
+
+/* ===== TIPOGRAFÍA MEJORADA ===== */
+QLabel#tag { 
+    color: #7aa9d9; 
+    font-size: 15px; 
+    font-weight: 800; 
+    font-family: 'Montserrat', 'Segoe UI', sans-serif; 
+    letter-spacing: 2px; 
+    text-transform: uppercase;
+}
+QLabel#body { 
+    color: #a0c0e0; 
+    font-size: 15px; 
+    font-family: 'Segoe UI', sans-serif; 
+    font-weight: 500;
+}
+QLabel#small { 
+    color: #a0c0e0; 
+    font-size: 13px; 
+    font-family: 'Segoe UI', sans-serif; 
+    letter-spacing: 0.5px; 
+    font-weight: 500;
+}
+QLabel#ok { 
+    color: #3de8a0; 
+    font-size: 15px; 
+    font-weight: 600; 
+    font-family: 'Segoe UI', sans-serif; 
+}
+QLabel#err { 
+    color: #f06a8a; 
+    font-size: 15px; 
+    font-weight: 600; 
+    font-family: 'Segoe UI', sans-serif; 
+}
+
+/* ===== BADGES MEJORADOS ===== */
 QLabel#badge_blue {
-    background: #071833; color: #4d8ec4; border: 1px solid #1a4a8a; border-radius: 14px;
-    padding: 3px 12px; font-size: 10px; font-family: 'Courier New'; letter-spacing: 2px;
+    background: #1e3a5a;
+    color: #ffffff;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'Segoe UI', sans-serif;
+    letter-spacing: 0.5px;
 }
 QLabel#badge_green {
-    background: #041a12; color: #3de8a0; border: 1px solid #1a7a50; border-radius: 14px;
-    padding: 3px 12px; font-size: 10px; font-family: 'Courier New'; letter-spacing: 2px;
+    background: #1a4a3a;
+    color: #ffffff;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'Segoe UI', sans-serif;
 }
 QLabel#badge_red {
-    background: #1a0409; color: #f03d5a; border: 1px solid #7a1a2a; border-radius: 14px;
-    padding: 3px 12px; font-size: 10px; font-family: 'Courier New'; letter-spacing: 2px;
+    background: #4a2a3a;
+    color: #ffffff;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'Segoe UI', sans-serif;
 }
-QFrame#sep { background: #0f2035; min-height: 1px; max-height: 1px; }
-QFrame#card { background: #0a1628; border: 1px solid #0f2035; border-radius: 16px; }
-QFrame#card_blue { background: #071833; border: 1px solid #1a4a8a; border-radius: 16px; }
+
+/* ===== SEPARADOR ===== */
+QFrame#sep { 
+    background: #1e3a5a; 
+    min-height: 2px; 
+    max-height: 2px; 
+    margin: 8px 0 12px 0;
+}
+
+/* ===== TARJETAS ===== */
+QFrame#card { 
+    background: #11223b; 
+    border: 1px solid #1e3a5a; 
+    border-radius: 20px; 
+}
+QFrame#card_blue { 
+    background: #0f2a44; 
+    border: 1px solid #2b5797; 
+    border-radius: 20px; 
+}
+
+/* ===== INPUTS MÁS GRANDES ===== */
 QLineEdit#inp {
-    background: #060d1a; border: 1.5px solid #0f2035; border-radius: 10px;
-    color: #e2f0ff; padding: 12px 14px; font-size: 13px; font-family: 'Segoe UI',sans-serif;
+    background: #0a1a2f;
+    border: 2px solid #1e3a5a;
+    border-radius: 14px;
+    color: #ffffff;
+    padding: 16px 20px;
+    font-size: 15px;
+    font-family: 'Segoe UI', sans-serif;
+    selection-background-color: #2b6eb0;
+    min-height: 30px;
 }
-QLineEdit#inp:focus { border-color: #1a6ef5; }
+QLineEdit#inp:focus { 
+    border-color: #4a7db0; 
+    background: #0f2a44;
+}
+QLineEdit#inp::placeholder { 
+    color: #5f7fa0; 
+    font-style: italic;
+    font-size: 14px;
+}
+
+/* ===== COMBOBOX MÁS GRANDE ===== */
 QComboBox#combo {
-    background: #060d1a; border: 1.5px solid #0f2035; border-radius: 10px;
-    color: #e2f0ff; padding: 10px 14px; font-size: 13px; font-family: 'Segoe UI',sans-serif;
+    background: #0a1a2f;
+    border: 2px solid #1e3a5a;
+    border-radius: 14px;
+    color: #ffffff;
+    padding: 14px 20px;
+    font-size: 15px;
+    font-family: 'Segoe UI', sans-serif;
+    min-height: 30px;
 }
-QComboBox#combo:focus { border-color: #1a6ef5; }
-QComboBox#combo::drop-down { border: none; }
-QComboBox QAbstractItemView { background: #0a1628; color: #c8dff5; border: 1px solid #1a3a5c; }
+QComboBox#combo:focus { 
+    border-color: #4a7db0; 
+    background: #0f2a44;
+}
+QComboBox#combo::drop-down { 
+    border: none; 
+    width: 40px;
+}
+QComboBox#combo::down-arrow { 
+    image: none;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 10px solid #7aa9d9;
+    margin-right: 12px;
+}
+QComboBox QAbstractItemView { 
+    background: #11223b; 
+    color: #ffffff; 
+    border: 2px solid #1e3a5a;
+    border-radius: 12px;
+    selection-background-color: #2b4a70;
+    selection-color: #ffffff;
+    padding: 8px;
+    font-size: 14px;
+}
+
+/* ===== BOTONES MEJORADOS ===== */
 QPushButton#btn_blue {
-    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #1a6ef5, stop:1 #0f4fd4);
-    color: #fff; border: none; border-radius: 12px; padding: 14px 30px;
-    font-size: 14px; font-weight: 800; font-family: 'Segoe UI',sans-serif;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #2b6eb0, stop:1 #1a4a8a);
+    color: #ffffff;
+    border: none;
+    border-radius: 40px;
+    padding: 18px 36px;
+    font-size: 16px;
+    font-weight: 700;
+    font-family: 'Segoe UI', sans-serif;
+    letter-spacing: 1.5px;
+    min-height: 40px;
+    margin-top: 10px;
 }
-QPushButton#btn_blue:hover { background: #2b7cff; }
+QPushButton#btn_blue:hover { 
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #3a7fc9, stop:1 #2b5fa0);
+}
+QPushButton#btn_blue:pressed { 
+    background: #1a4a8a; 
+}
+
 QPushButton#btn_red {
-    background: #c0122a; color: #fff; border: none; border-radius: 12px;
-    padding: 14px 30px; font-size: 14px; font-weight: 800; font-family: 'Segoe UI',sans-serif;
+    background: #4a2a3a;
+    color: #ffffff;
+    border: none;
+    border-radius: 40px;
+    padding: 16px 32px;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: 'Segoe UI', sans-serif;
+    letter-spacing: 1px;
+    min-height: 40px;
 }
-QPushButton#btn_red:hover { background: #e01535; }
-QScrollArea { border: none; background: transparent; }
-QScrollBar:vertical { background: #060d1a; width: 6px; margin: 0; }
-QScrollBar::handle:vertical { background: #0f2035; border-radius: 3px; }
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+QPushButton#btn_red:hover { 
+    background: #5a3a4a;
+}
+QPushButton#btn_red:pressed { 
+    background: #3a1a2a; 
+}
+
+/* ===== SCROLLBAR ===== */
+QScrollArea { 
+    border: none; 
+    background: transparent; 
+}
+QScrollBar:vertical { 
+    background: #0a1a2f; 
+    width: 10px; 
+    margin: 0; 
+    border-radius: 5px;
+}
+QScrollBar::handle:vertical { 
+    background: #2b4a70; 
+    border-radius: 5px; 
+    min-height: 40px; 
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { 
+    height: 0; 
+}
 """
 
 class _AdminUsersPanel(QWidget):
@@ -85,83 +245,240 @@ class _AdminUsersPanel(QWidget):
         self.setObjectName("admin_users_panel")
         self.setStyleSheet(STYLE)
         self._current_admin = {}
-        vl = QVBoxLayout(self); vl.setContentsMargins(0, 0, 0, 0); vl.setSpacing(16)
+        
+        # Layout principal
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(20)
 
-        body = QHBoxLayout(); body.setSpacing(28)
+        # Título de la sección (fuera de las tarjetas)
+        title = QLabel("ADMINISTRADORES")
+        title.setStyleSheet("""
+            QLabel {
+                color: #ffffff;
+                font-size: 24px;
+                font-weight: 900;
+                font-family: 'Montserrat', 'Segoe UI', sans-serif;
+                letter-spacing: 2px;
+                padding: 10px 24px 0 24px;
+            }
+        """)
+        main_layout.addWidget(title)
 
-        # ── Lista de admins ───────────────────────────────────────────────────
-        left = QFrame(); left.setObjectName("card")
-        ll   = QVBoxLayout(left); ll.setContentsMargins(24, 24, 24, 24); ll.setSpacing(12)
-        ll.addWidget(lbl("ADMINISTRADORES ACTIVOS", "tag"))
+        # Contenedor de dos columnas
+        columns_layout = QHBoxLayout()
+        columns_layout.setContentsMargins(24, 10, 24, 24)
+        columns_layout.setSpacing(24)
 
-        scroll = QScrollArea(); scroll.setWidgetResizable(True)
-        self.inner = QWidget(); self.inner.setObjectName("admin_users_inner")
-        self.il    = QVBoxLayout(self.inner)
-        self.il.setContentsMargins(0, 0, 0, 0); self.il.setSpacing(8)
-        scroll.setWidget(self.inner)
-        ll.addWidget(scroll, 1)
+        # ── COLUMNA IZQUIERDA: LISTA DE ADMINISTRADORES ──────────────────
+        left_card = QFrame()
+        left_card.setObjectName("card")
+        left_layout = QVBoxLayout(left_card)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(0)
 
-        btn_del = QPushButton("DESACTIVAR ADMIN"); btn_del.setObjectName("btn_red")
-        btn_del.setCursor(Qt.PointingHandCursor); btn_del.clicked.connect(self._delete)
-        ll.addWidget(btn_del)
+        # Header de la tarjeta izquierda
+        left_header = QFrame()
+        left_header.setStyleSheet("background: #1e3a5a; border-radius: 20px 20px 0 0;")
+        left_header.setFixedHeight(60)
+        left_header_layout = QHBoxLayout(left_header)
+        left_header_layout.setContentsMargins(20, 0, 20, 0)
+        
+        left_title = QLabel("ADMINISTRADORES ACTIVOS")
+        left_title.setStyleSheet("""
+            QLabel {
+                color: #ffffff;
+                font-size: 16px;
+                font-weight: 800;
+                font-family: 'Segoe UI', sans-serif;
+                letter-spacing: 1px;
+            }
+        """)
+        left_header_layout.addWidget(left_title)
+        left_header_layout.addStretch()
+        
+        left_layout.addWidget(left_header)
 
-        # ── Formulario de registro ────────────────────────────────────────────
-        right = QFrame(); right.setObjectName("card_blue")
-        rl    = QVBoxLayout(right); rl.setContentsMargins(28, 28, 28, 28); rl.setSpacing(12)
-        rl.addWidget(lbl("REGISTRAR NUEVO ADMIN", "tag"))
-        rl.addWidget(sep_line())
+        # Scroll area para la lista de admins
+        scroll_left = QScrollArea()
+        scroll_left.setWidgetResizable(True)
+        scroll_left.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        
+        self.inner = QWidget()
+        self.inner.setObjectName("admin_users_inner")
+        self.il = QVBoxLayout(self.inner)
+        self.il.setContentsMargins(16, 16, 16, 16)
+        self.il.setSpacing(10)
+        self.il.setAlignment(Qt.AlignTop)
+        
+        scroll_left.setWidget(self.inner)
+        left_layout.addWidget(scroll_left, 1)
 
-        # Campos mapeados a Usuarios
-        rl.addWidget(lbl("Nombre"))
-        self.f_nombre = QLineEdit(); self.f_nombre.setObjectName("inp")
-        self.f_nombre.setPlaceholderText("Juan")
-        rl.addWidget(self.f_nombre)
+        # Botón desactivar
+        btn_del = QPushButton("DESACTIVAR ADMINISTRADOR")
+        btn_del.setObjectName("btn_red")
+        btn_del.setCursor(Qt.PointingHandCursor)
+        btn_del.clicked.connect(self._delete)
+        btn_del.setStyleSheet("""
+            QPushButton#btn_red {
+                margin: 16px;
+                padding: 14px;
+            }
+        """)
+        left_layout.addWidget(btn_del)
 
-        rl.addWidget(lbl("Apellido paterno"))
-        self.f_ap = QLineEdit(); self.f_ap.setObjectName("inp")
-        self.f_ap.setPlaceholderText("Garcia")
-        rl.addWidget(self.f_ap)
+        # ── COLUMNA DERECHA: FORMULARIO DE REGISTRO CON SCROLL ────────────
+        right_card = QFrame()
+        right_card.setObjectName("card_blue")
+        right_layout = QVBoxLayout(right_card)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(0)
 
-        rl.addWidget(lbl("Apellido materno"))
-        self.f_am = QLineEdit(); self.f_am.setObjectName("inp")
-        self.f_am.setPlaceholderText("Lopez")
-        rl.addWidget(self.f_am)
+        # Header de la tarjeta derecha
+        right_header = QFrame()
+        right_header.setStyleSheet("background: #1e3a5a; border-radius: 20px 20px 0 0;")
+        right_header.setFixedHeight(60)
+        right_header_layout = QHBoxLayout(right_header)
+        right_header_layout.setContentsMargins(20, 0, 20, 0)
+        
+        right_title = QLabel("REGISTRAR NUEVO ADMINISTRADOR")
+        right_title.setStyleSheet("""
+            QLabel {
+                color: #ffffff;
+                font-size: 16px;
+                font-weight: 800;
+                font-family: 'Segoe UI', sans-serif;
+                letter-spacing: 1px;
+            }
+        """)
+        right_header_layout.addWidget(right_title)
+        right_header_layout.addStretch()
+        
+        right_layout.addWidget(right_header)
 
-        rl.addWidget(lbl("Usuario"))
-        self.f_user = QLineEdit(); self.f_user.setObjectName("inp")
-        self.f_user.setPlaceholderText("jgarcia01")
-        rl.addWidget(self.f_user)
+        # SCROLL AREA para el formulario (para que no se desborde)
+        scroll_right = QScrollArea()
+        scroll_right.setWidgetResizable(True)
+        scroll_right.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll_right.setStyleSheet("QScrollArea { border: none; background: transparent; }")
 
-        rl.addWidget(lbl("Rol"))
-        self.f_rol = QComboBox(); self.f_rol.setObjectName("combo")
+        # Widget contenedor del formulario
+        form_container = QWidget()
+        form_layout = QVBoxLayout(form_container)
+        form_layout.setContentsMargins(24, 24, 24, 24)
+        form_layout.setSpacing(16)
+
+        # Campos del formulario (todos con label y campo)
+        # Nombre
+        nombre_label = QLabel("Nombre completo")
+        nombre_label.setStyleSheet("color: #a0c0e0; font-size: 14px; font-weight: 600; margin-top: 5px;")
+        form_layout.addWidget(nombre_label)
+        
+        self.f_nombre = QLineEdit()
+        self.f_nombre.setObjectName("inp")
+        self.f_nombre.setPlaceholderText("Ej: Juan Carlos")
+        form_layout.addWidget(self.f_nombre)
+
+        # Apellido paterno
+        ap_label = QLabel("Apellido paterno")
+        ap_label.setStyleSheet("color: #a0c0e0; font-size: 14px; font-weight: 600; margin-top: 5px;")
+        form_layout.addWidget(ap_label)
+        
+        self.f_ap = QLineEdit()
+        self.f_ap.setObjectName("inp")
+        self.f_ap.setPlaceholderText("Ej: García")
+        form_layout.addWidget(self.f_ap)
+
+        # Apellido materno
+        am_label = QLabel("Apellido materno")
+        am_label.setStyleSheet("color: #a0c0e0; font-size: 14px; font-weight: 600; margin-top: 5px;")
+        form_layout.addWidget(am_label)
+        
+        self.f_am = QLineEdit()
+        self.f_am.setObjectName("inp")
+        self.f_am.setPlaceholderText("Ej: López (opcional)")
+        form_layout.addWidget(self.f_am)
+
+        # Usuario
+        user_label = QLabel("Nombre de usuario")
+        user_label.setStyleSheet("color: #a0c0e0; font-size: 14px; font-weight: 600; margin-top: 5px;")
+        form_layout.addWidget(user_label)
+        
+        self.f_user = QLineEdit()
+        self.f_user.setObjectName("inp")
+        self.f_user.setPlaceholderText("Ej: jgarcia01")
+        form_layout.addWidget(self.f_user)
+
+        # Rol
+        rol_label = QLabel("Rol")
+        rol_label.setStyleSheet("color: #a0c0e0; font-size: 14px; font-weight: 600; margin-top: 5px;")
+        form_layout.addWidget(rol_label)
+        
+        self.f_rol = QComboBox()
+        self.f_rol.setObjectName("combo")
         self.f_rol.addItems(["empleado", "supervisor", "administrador"])
-        rl.addWidget(self.f_rol)
+        form_layout.addWidget(self.f_rol)
 
-        rl.addWidget(lbl("Contrasena"))
-        self.f_pass = QLineEdit(); self.f_pass.setObjectName("inp")
+        # Contraseña
+        pass_label = QLabel("Contraseña")
+        pass_label.setStyleSheet("color: #a0c0e0; font-size: 14px; font-weight: 600; margin-top: 5px;")
+        form_layout.addWidget(pass_label)
+        
+        self.f_pass = QLineEdit()
+        self.f_pass.setObjectName("inp")
         self.f_pass.setEchoMode(QLineEdit.Password)
-        self.f_pass.setPlaceholderText("••••••••")
-        rl.addWidget(self.f_pass)
+        self.f_pass.setPlaceholderText("Mínimo 4 caracteres")
+        form_layout.addWidget(self.f_pass)
 
-        rl.addWidget(lbl("Confirmar contrasena"))
-        self.f_pass2 = QLineEdit(); self.f_pass2.setObjectName("inp")
+        # Confirmar contraseña
+        pass2_label = QLabel("Confirmar contraseña")
+        pass2_label.setStyleSheet("color: #a0c0e0; font-size: 14px; font-weight: 600; margin-top: 5px;")
+        form_layout.addWidget(pass2_label)
+        
+        self.f_pass2 = QLineEdit()
+        self.f_pass2.setObjectName("inp")
         self.f_pass2.setEchoMode(QLineEdit.Password)
-        self.f_pass2.setPlaceholderText("••••••••")
-        rl.addWidget(self.f_pass2)
+        self.f_pass2.setPlaceholderText("Repite la contraseña")
+        form_layout.addWidget(self.f_pass2)
 
-        self.reg_err = lbl("", "err", Qt.AlignCenter)
-        self.reg_ok  = lbl("", "ok",  Qt.AlignCenter)
-        rl.addWidget(self.reg_err)
-        rl.addWidget(self.reg_ok)
+        # Separador
+        sep = QFrame()
+        sep.setObjectName("sep")
+        sep.setFixedHeight(2)
+        form_layout.addWidget(sep)
 
-        btn_reg = QPushButton("REGISTRAR ADMINISTRADOR"); btn_reg.setObjectName("btn_blue")
-        btn_reg.setCursor(Qt.PointingHandCursor); btn_reg.clicked.connect(self._register)
-        rl.addWidget(btn_reg)
-        rl.addStretch()
+        # Mensajes de error/éxito
+        self.reg_err = QLabel("")
+        self.reg_err.setObjectName("err")
+        self.reg_err.setAlignment(Qt.AlignCenter)
+        self.reg_err.setWordWrap(True)
+        form_layout.addWidget(self.reg_err)
 
-        body.addWidget(left, 1)
-        body.addWidget(right, 1)
-        vl.addLayout(body, 1)
+        self.reg_ok = QLabel("")
+        self.reg_ok.setObjectName("ok")
+        self.reg_ok.setAlignment(Qt.AlignCenter)
+        self.reg_ok.setWordWrap(True)
+        form_layout.addWidget(self.reg_ok)
+
+        # Botón registrar
+        btn_reg = QPushButton("REGISTRAR ADMINISTRADOR")
+        btn_reg.setObjectName("btn_blue")
+        btn_reg.setCursor(Qt.PointingHandCursor)
+        btn_reg.clicked.connect(self._register)
+        form_layout.addWidget(btn_reg)
+
+        # Espacio extra al final
+        form_layout.addStretch()
+
+        # Asignar el contenedor al scroll
+        scroll_right.setWidget(form_container)
+        right_layout.addWidget(scroll_right)
+
+        # Agregar ambas columnas al layout principal
+        columns_layout.addWidget(left_card, 1)
+        columns_layout.addWidget(right_card, 1)
+        main_layout.addLayout(columns_layout)
+
         self.refresh()
 
     def set_current_admin(self, admin_data):
@@ -180,43 +497,44 @@ class _AdminUsersPanel(QWidget):
         self.reg_err.setText(""); self.reg_ok.setText("")
 
         if not all([nombre, ap, user, pw]):
-            self.reg_err.setText("Nombre, apellido, usuario y contrasena son obligatorios.")
+            self.reg_err.setText("❌ Nombre, apellido, usuario y contraseña son obligatorios.")
             return
         if len(pw) < 4:
-            self.reg_err.setText("La contrasena debe tener al menos 4 caracteres.")
+            self.reg_err.setText("❌ La contraseña debe tener al menos 4 caracteres.")
             return
         if pw != pw2:
-            self.reg_err.setText("Las contrasenas no coinciden.")
+            self.reg_err.setText("❌ Las contraseñas no coinciden.")
             return
         if db_admin_exists(user):
-            self.reg_err.setText("Ya existe un admin con ese usuario.")
+            self.reg_err.setText("❌ Ya existe un administrador con ese usuario.")
             return
 
         new_id = db_register_admin(nombre, ap, am, user, pw, rol, id_reg)
         if new_id:
             for f in [self.f_nombre, self.f_ap, self.f_am, self.f_user, self.f_pass, self.f_pass2]:
                 f.clear()
-            self.reg_ok.setText("Admin '{}' registrado correctamente.".format(user))
+            self.reg_ok.setText(f"✓ Administrador '{user}' registrado correctamente.")
             self.refresh()
         else:
-            self.reg_err.setText("No se pudo registrar. Intenta de nuevo.")
+            self.reg_err.setText("❌ No se pudo registrar. Intenta de nuevo.")
 
     def _delete(self):
-        u, ok = QInputDialog.getText(None, "Desactivar Admin", "Usuario a desactivar:")
+        u, ok = QInputDialog.getText(None, "Desactivar Administrador", "Usuario a desactivar:")
         if not ok or not u.strip():
             return
         if not db_admin_exists(u.strip()):
-            QMessageBox.warning(None, "Error", "Admin no encontrado.")
+            QMessageBox.warning(None, "Error", "Administrador no encontrado.")
             return
         if db_count_active_admins() <= 1:
             QMessageBox.warning(None, "Error", "Debe existir al menos un administrador activo.")
             return
         id_act = self._current_admin.get("ID_admin")
         db_delete_admin(u.strip(), id_act)
-        QMessageBox.information(None, "OK", "Admin '{}' desactivado.".format(u.strip()))
+        QMessageBox.information(None, "OK", f"Administrador '{u.strip()}' desactivado.")
         self.refresh()
 
     def refresh(self):
+        # Limpiar lista actual
         for i in reversed(range(self.il.count())):
             item = self.il.itemAt(i)
             if item and item.widget():
@@ -224,27 +542,96 @@ class _AdminUsersPanel(QWidget):
 
         admins = db_get_all_admins()
         if not admins:
-            self.il.addWidget(lbl("Sin administradores.", "small"))
+            empty_lbl = QLabel("No hay administradores registrados")
+            empty_lbl.setStyleSheet("color: #5f7fa0; font-size: 15px; font-style: italic; padding: 50px 0;")
+            empty_lbl.setAlignment(Qt.AlignCenter)
+            self.il.addWidget(empty_lbl)
         else:
             for a in admins:
-                row = QFrame(); row.setObjectName("card")
-                rl  = QHBoxLayout(row); rl.setContentsMargins(16, 12, 16, 12); rl.setSpacing(12)
+                # Tarjeta de administrador
+                card = QFrame()
+                card.setObjectName("card")
+                card.setStyleSheet("""
+                    QFrame#card {
+                        background: #11223b;
+                        border: 1px solid #1e3a5a;
+                        border-radius: 16px;
+                        margin: 2px 0;
+                    }
+                """)
+                
+                card_layout = QVBoxLayout(card)
+                card_layout.setContentsMargins(16, 16, 16, 16)
+                card_layout.setSpacing(8)
 
-                nombre = "{} {} {}".format(
+                # Fila superior: nombre
+                name_lbl = QLabel("{} {} {}".format(
                     a.get("t_nombre", ""),
                     a.get("t_apellido_paterno", ""),
                     a.get("t_apellido_materno", "")
-                ).strip()
-                n_lbl = QLabel(nombre)
-                n_lbl.setStyleSheet(
-                    "color:#c8dff5; font-size:13px; font-weight:700; font-family:'Segoe UI';"
-                )
-                u_lbl  = lbl("@{}".format(a.get("t_usuario", "")), "small")
-                r_lbl  = lbl(a.get("t_rol", ""), "badge_blue")
-                st_obj = "badge_green" if a.get("t_estado") == "activo" else "badge_red"
-                s_lbl  = lbl(a.get("t_estado", "").upper(), st_obj)
+                ).strip())
+                name_lbl.setStyleSheet("""
+                    color: #ffffff;
+                    font-size: 15px;
+                    font-weight: 700;
+                    font-family: 'Segoe UI', sans-serif;
+                """)
+                card_layout.addWidget(name_lbl)
 
-                rl.addWidget(n_lbl); rl.addWidget(u_lbl)
-                rl.addStretch(); rl.addWidget(r_lbl); rl.addWidget(s_lbl)
-                self.il.addWidget(row)
+                # Fila de usuario
+                user_lbl = QLabel(f"@{a.get('t_usuario', '')}")
+                user_lbl.setStyleSheet("""
+                    color: #7aa9d9;
+                    font-size: 14px;
+                    font-family: 'Segoe UI', sans-serif;
+                    font-weight: 500;
+                """)
+                card_layout.addWidget(user_lbl)
+
+                # Fila de badges
+                badges_row = QHBoxLayout()
+                badges_row.setSpacing(8)
+
+                # Badge de rol
+                rol_text = a.get("t_rol", "").upper()
+                if rol_text == "ADMINISTRADOR":
+                    rol_text = "ADMIN"
+                rol_badge = QLabel(rol_text)
+                rol_badge.setStyleSheet("""
+                    background: #1e3a5a;
+                    color: #ffffff;
+                    border-radius: 16px;
+                    padding: 4px 14px;
+                    font-size: 12px;
+                    font-weight: 600;
+                """)
+                badges_row.addWidget(rol_badge)
+
+                # Badge de estado
+                estado = a.get("t_estado", "").upper()
+                if estado == "ACTIVO":
+                    estado_badge = QLabel("● ACTIVO")
+                    estado_badge.setStyleSheet("""
+                        background: #1a4a3a;
+                        color: #ffffff;
+                        border-radius: 16px;
+                        padding: 4px 14px;
+                        font-size: 12px;
+                        font-weight: 600;
+                    """)
+                else:
+                    estado_badge = QLabel("○ INACTIVO")
+                    estado_badge.setStyleSheet("""
+                        background: #4a2a3a;
+                        color: #ffffff;
+                        border-radius: 16px;
+                        padding: 4px 14px;
+                        font-size: 12px;
+                        font-weight: 600;
+                    """)
+                badges_row.addWidget(estado_badge)
+                badges_row.addStretch()
+
+                card_layout.addLayout(badges_row)
+                self.il.addWidget(card)
         self.il.addStretch()

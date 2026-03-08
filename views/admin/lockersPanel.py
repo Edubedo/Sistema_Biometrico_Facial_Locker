@@ -20,10 +20,10 @@ from views.style.widgets.widgets import lbl
 
 STYLE = """
 QWidget#admin_lockers_panel, QWidget#admin_lockers_inner { background: #060d1a; color: #c8dff5; }
-QLabel#small { color: #3a5f84; font-size: 11px; font-family: 'Courier New'; letter-spacing: 1px; }
+QLabel#small { color: #a0c0e0; font-size: 11px; font-family: 'Courier New'; letter-spacing: 1px; font-weight: 500; }
 QFrame#card { background: #0a1628; border: 1px solid #0f2035; border-radius: 16px; }
 QFrame#lk_free { background: #041228; border: 2px solid #1a4a8a; border-radius: 12px; min-width: 110px; min-height: 90px; }
-QFrame#lk_busy { background: #1a1204; border: 2px solid #5a3a08; border-radius: 12px; min-width: 110px; min-height: 90px; }
+QFrame#lk_busy { background: #1a2a4a; border: 2px solid #4a7db0; border-radius: 12px; min-width: 110px; min-height: 90px; }
 QPushButton#btn_blue {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #1a6ef5, stop:1 #0f4fd4);
     color: #fff; border: none; border-radius: 12px; padding: 12px 28px;
@@ -162,7 +162,7 @@ class _AdminLockersPanel(QWidget):
             fr = QFrame()
             fr.setObjectName("lk_free" if is_libre else "lk_busy")
             fl = QVBoxLayout(fr); fl.setContentsMargins(8, 8, 8, 8); fl.setAlignment(Qt.AlignCenter)
-            color = "#4d8ec4" if is_libre else "#f0b429"
+            color = "#ffffff" if is_libre else "#f0b429"
 
             n_lbl = QLabel("#{}".format(locker["t_numero_locker"]))
             n_lbl.setStyleSheet(
@@ -172,7 +172,19 @@ class _AdminLockersPanel(QWidget):
 
             zona_txt = locker.get("t_zona") or ""
             s_txt    = "LIBRE" if is_libre else "OCUPADO"
-            s_lbl    = lbl("{} {}".format(s_txt, zona_txt).strip()[:14], "small", Qt.AlignCenter)
-            fl.addWidget(n_lbl); fl.addWidget(s_lbl)
+            
+            texto_completo = "{} {}".format(s_txt, zona_txt).strip()[:14]
+            s_lbl = QLabel(texto_completo)
+            s_lbl.setAlignment(Qt.AlignCenter)
+            
+            # ===== ESTILO MEJORADO - MÁS GRANDE =====
+            if is_libre:
+                s_lbl.setStyleSheet("color: #a0c0e0; font-size: 13px; font-family: 'Courier New'; font-weight: 700; letter-spacing: 0.5px;")
+            else:
+                s_lbl.setStyleSheet("color: #f0b429; font-size: 13px; font-family: 'Courier New'; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase;")
+            # ===== FIN DEL ESTILO MEJORADO =====
+            
+            fl.addWidget(n_lbl)
+            fl.addWidget(s_lbl)
             row, col = divmod(i, cols)
             self.grid.addWidget(fr, row, col)

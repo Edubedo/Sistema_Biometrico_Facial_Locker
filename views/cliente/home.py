@@ -10,7 +10,7 @@ from PyQt5.QtGui import (
 )
 
 from db.models.lockers import db_get_all_lockers
-
+from views.style.style import STYLE as GLOBAL_STYLE
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  SCALE HELPER
@@ -245,7 +245,7 @@ class HomePage(QWidget):
     def __init__(self):
         super().__init__()
         self.setObjectName("home_page")
-        self.setStyleSheet(STYLE)
+        self.setStyleSheet(GLOBAL_STYLE + STYLE)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
