@@ -50,16 +50,19 @@ def db_insert_locker(numero, zona="", tamano="mediano", id_admin=None):
 
 def db_update_locker(id_locker, numero=None, zona=None, tamano=None,
                      estado=None, id_admin=None):
-    """Actualiza los campos enviados (solo los que no son None)."""
+    """
+    Updates any combination of locker fields.
+    Only non-None values are written.
+    Always stamps d_fecha_modificacion and ID_usuario_modificacion.
+    """
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     fields, params = [], []
-    if numero  is not None: fields.append("t_numero_locker=?");    params.append(numero)
-    if zona    is not None: fields.append("t_zona=?");             params.append(zona)
-    if tamano  is not None: fields.append("t_tamano=?");           params.append(tamano)
-    if estado  is not None: fields.append("t_estado=?");           params.append(estado)
-    fields.append("d_fecha_modificacion=?");      params.append(now)
-    fields.append("ID_usuario_modificacion=?");   params.append(id_admin)
-    params.append(id_locker)
+    if numero is not None: fields.append("t_numero_locker=?");    params.append(numero)
+    if zona   is not None: fields.append("t_zona=?");             params.append(zona)
+    if tamano is not None: fields.append("t_tamano=?");           params.append(tamano)
+    if estado is not None: fields.append("t_estado=?");           params.append(estado)
+    fields += ["d_fecha_modificacion=?", "ID_usuario_modificacion=?"]
+    params += [now, id_admin, id_locker]
     with connectionDB() as con:
         con.execute(
             f"UPDATE Lockers SET {', '.join(fields)} WHERE ID_locker=?", params
