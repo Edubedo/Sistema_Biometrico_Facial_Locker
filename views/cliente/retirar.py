@@ -1,7 +1,8 @@
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFrame
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFrame, QSizePolicy, QLabel
 
 from biometria.biometria import delete_face_data, train_model
+from PyQt5.QtSvg import QSvgWidget
 from db.models.intentos_acceso import db_log_intento
 from db.models.lockers import db_set_locker_estado
 from db.models.sesiones import db_close_sesion, db_get_active_sesion_by_face
@@ -10,52 +11,58 @@ from utils.helpers import db_get_locker_num_by_id
 from views.style.widgets.widgets import _step_bullet, lbl, sep_line, CamWidget
 
 STYLE = """
-QWidget#retirar_page { background: #060d1a; color: #c8dff5; }
-QLabel#h2 { color: #e2f0ff; font-size: 22px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
-QLabel#h3 { color: #e2f0ff; font-size: 16px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
-QLabel#tag { color: #4d8ec4; font-size: 11px; font-weight: 600; font-family: 'Courier New'; letter-spacing: 4px; }
-QLabel#body { color: #7ca8d0; font-size: 14px; font-family: 'Segoe UI',sans-serif; }
-QLabel#small { color: #3a5f84; font-size: 11px; font-family: 'Courier New'; letter-spacing: 1px; }
-QLabel#ok { color: #3de8a0; font-size: 14px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
-QFrame#sep { background: #0f2035; min-height: 1px; max-height: 1px; }
-QFrame#card { background: #0a1628; border: 1px solid #0f2035; border-radius: 16px; }
+QWidget#retirar_page { background: #e7e7e7; color: #1f2a44 }
+QLabel#h2 { color: #305bab; font-size: 24px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
+QLabel#h3 { color: #305bab; font-size: 18px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
+QLabel#tag { color: #305bab; font-size: 18px; font-weight: 700; font-family: 'Courier New'; letter-spacing: 4px; }
+QLabel#body { color: #2c3e50; font-size: 16px; font-family: 'Segoe UI',sans-serif; }
+QLabel#small { color: #3a5f84; font-size: 16px; font-family: 'Courier New'; letter-spacing: 1px; }
+QLabel#ok { color: #b9ea89; font-size: 14px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
+QFrame#sep { background: #305bab; min-height: 1px; max-height: 1px; }
+QFrame#card { background: #c6dcff; border: 2px solid #305bab; border-radius: 14px; }
+
 QLabel#cam {
-    background: #030810; border: 2px solid #0f2035; border-radius: 14px;
-    color: #1a3a5c; font-family: 'Courier New'; font-size: 12px;
+    background: #0c1530; border: 4px solid #305bab; border-radius: 10px;
+    color: #1a3a5c; font-family: 'Courier New'; font-size: 0px;
 }
+
 QPushButton#btn_outline {
-    background: transparent; color: #4d8ec4; border: 2px solid #1a3a5c;
+    background: transparent; color: #305bab; border: 2px solid #1a3a5c;
     border-radius: 12px; padding: 14px 30px; font-size: 14px; font-weight: 700;
     font-family: 'Segoe UI',sans-serif;
 }
-QPushButton#btn_outline:hover { border-color: #4d8ec4; color: #c8dff5; background: #071833; }
+
+QPushButton#btn_outline:hover { border-color: #305bab; color: #c6dcff; background: #0c1530; }
+
 QPushButton#btn_green {
-    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #1ac87a, stop:1 #0fa860);
-    color: #000d08; border: none; border-radius: 12px; padding: 14px 30px;
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #b9ea89, stop:1 #0fa860);
+    color: #0a1628; border: none; border-radius: 12px; padding: 14px 30px;
     font-size: 14px; font-weight: 800; font-family: 'Segoe UI',sans-serif;
 }
-QPushButton#btn_green:hover { background: #22e88a; }
+
 QPushButton#btn_red {
-    background: #c0122a; color: #fff; border: none; border-radius: 12px;
+    background: #bd0a0a; color: #fff; border: none; border-radius: 12px;
     padding: 14px 30px; font-size: 14px; font-weight: 800; font-family: 'Segoe UI',sans-serif;
 }
-QPushButton#btn_red:hover { background: #e01535; }
+
 QPushButton#btn_sm {
-    background: #0a1628; color: #4d8ec4; border: 1px solid #1a3a5c; border-radius: 8px;
-    padding: 8px 18px; font-size: 12px; font-family: 'Segoe UI',sans-serif;
+    background: #ffffff; color: #305bab; border: 2px solid #305bab; border-radius: 8px;
+    padding: 8px 18px; font-size: 15px; font-family: 'Segoe UI',sans-serif;
 }
-QPushButton#btn_sm:hover { color: #c8dff5; border-color: #4d8ec4; }
 """
 
 class RetirarPage(QWidget):
+
     go_back      = pyqtSignal()
     retirar_done = pyqtSignal(str, str, int)   # (face_uid, num_locker, id_sesion)
     seguir_done  = pyqtSignal(str, str, int)
 
     def __init__(self):
         super().__init__()
+
         self.setObjectName("retirar_page")
         self.setStyleSheet(STYLE)
+
         self.cam_thread  = None
         self._face_uid   = None
         self._id_sesion  = None
@@ -67,38 +74,59 @@ class RetirarPage(QWidget):
 
         # ── Header ──────────────────────────────────────────────────────────
         hdr = QHBoxLayout()
-        back = QPushButton("< Volver"); back.setObjectName("btn_sm")
+
+        back = QPushButton("< Volver")
+        back.setObjectName("btn_sm")
         back.setCursor(Qt.PointingHandCursor)
         back.clicked.connect(self._cancel)
-        htxt = QVBoxLayout(); htxt.setSpacing(4)
+
+        htxt = QVBoxLayout()
+        htxt.setSpacing(4)
         htxt.addWidget(lbl("RETIRAR / CONTINUAR", "h2"))
         htxt.addWidget(lbl("VERIFICACION BIOMETRICA", "tag"))
-        hdr.addWidget(back); hdr.addSpacing(20); hdr.addLayout(htxt); hdr.addStretch()
+
+        hdr.addWidget(back)
+        hdr.addSpacing(20)
+        hdr.addLayout(htxt)
+        hdr.addStretch()
+
         vl.addLayout(hdr)
         vl.addWidget(sep_line())
 
         # ── Cuerpo ───────────────────────────────────────────────────────────
-        body = QHBoxLayout(); body.setSpacing(32)
+        body = QHBoxLayout()
+        body.setSpacing(32)
 
         # Panel izquierdo
-        left = QFrame(); left.setObjectName("card")
-        ll   = QVBoxLayout(left)
-        ll.setContentsMargins(30, 30, 30, 30); ll.setSpacing(18)
+        left = QFrame()
+        left.setObjectName("card")
 
-        ll.addWidget(lbl("VERIFICACION DE IDENTIDAD", "tag"))
-        for n, t in [("1", "Acerca tu rostro a la camara"),
-                     ("2", "Mantén una expresion neutra"),
-                     ("3", "Escoge tu opcion")]:
-            ll.addWidget(_step_bullet(n, t))
+        ll = QVBoxLayout(left)
+        ll.setContentsMargins(30, 20, 30, 30)
 
-        ll.addStretch()
+        ll.addWidget(lbl("VERIFICACION DE IDENTIDAD", "tag", Qt.AlignCenter))
+        ll.setSpacing(20)
+        
+        ll.addStretch(1)
+        for n, t in [
+            ("1", "Acerca tu rostro a la camara"),
+            ("2", "Mantén una expresion neutra"),
+            ("3", "Escoge tu opcion")
+        ]:
+             step = _step_bullet(n, t)
+             step.setFixedWidth(420)
+             ll.addWidget(step, alignment=Qt.AlignCenter)
+        ll.addStretch(1)
 
+        # Boton iniciar escaneo
         self.scan_btn = QPushButton("INICIAR ESCANEO")
         self.scan_btn.setObjectName("btn_outline")
         self.scan_btn.setCursor(Qt.PointingHandCursor)
         self.scan_btn.clicked.connect(self._start_scan)
+
         ll.addWidget(self.scan_btn)
 
+        # Texto estado escaneo
         self.scan_lbl = lbl("", "small", Qt.AlignCenter)
         ll.addWidget(self.scan_lbl)
 
@@ -106,143 +134,205 @@ class RetirarPage(QWidget):
 
         # Opciones post-reconocimiento (ocultas hasta identificar)
         self.opts = QFrame()
+
         ol = QVBoxLayout(self.opts)
-        ol.setContentsMargins(0, 0, 0, 0); ol.setSpacing(12)
-        self.id_lbl     = lbl("", "ok")
+        ol.setContentsMargins(0,0,0,0)
+        ol.setSpacing(12)
+
+        self.id_lbl = lbl("", "ok")
         self.locker_lbl = lbl("", "h3")
-        self.locker_lbl.setStyleSheet(
-            "color:#4d8ec4; font-size:20px; font-weight:900; font-family:'Segoe UI';"
-        )
-        ol.addWidget(self.id_lbl)
-        ol.addWidget(self.locker_lbl)
 
         self.btn_retirar = QPushButton("RETIRAR COSAS Y SALIR")
         self.btn_retirar.setObjectName("btn_red")
-        self.btn_retirar.setCursor(Qt.PointingHandCursor)
         self.btn_retirar.clicked.connect(self._do_retirar)
 
         self.btn_seguir = QPushButton("SEGUIR COMPRANDO")
         self.btn_seguir.setObjectName("btn_green")
-        self.btn_seguir.setCursor(Qt.PointingHandCursor)
         self.btn_seguir.clicked.connect(self._do_seguir)
 
+        ol.addWidget(self.id_lbl)
+        ol.addWidget(self.locker_lbl)
         ol.addWidget(self.btn_retirar)
         ol.addWidget(self.btn_seguir)
+
         self.opts.setVisible(False)
+
         ll.addWidget(self.opts)
 
-        # Panel derecho: camara
+        # ── Panel derecho: camara ───────────────────────────────────────────
         right = QWidget()
+
         rl = QVBoxLayout(right)
-        rl.setContentsMargins(0, 0, 0, 0); rl.setSpacing(12)
+        rl.setContentsMargins(0,0,0,0)
+        rl.setSpacing(12)
+
         rl.addWidget(lbl("ESCANER BIOMETRICO", "tag", Qt.AlignCenter))
-        self.cam = CamWidget(460, 340)
-        rl.addWidget(self.cam)
-        rl.addStretch()
 
-        body.addWidget(left, 1)
-        body.addWidget(right, 2)
-        vl.addLayout(body, 1)
+        self.cam = CamWidget(500,760)
+        self.cam.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        rl.addWidget(self.cam,1)
 
+        # ── Overlay biometrico ─────────────────────────
+
+        # icono guia rostro
+        self.face_guide = QSvgWidget(self.cam)
+        self.face_guide.load(b"""
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120">
+            <circle cx="50" cy="28" r="20" fill="#305bab" opacity="0.5"/>
+            <path d="M8 108 Q8 65 50 65 Q92 65 92 108 Z" fill="#305bab" opacity="0.5"/>
+            </svg>""")
+        self.face_guide.setStyleSheet("background: transparent;")
+        self.face_guide.setAttribute(Qt.WA_TransparentForMouseEvents)
+
+        # marco de escaneo
+        self.scan_frame = QFrame(self.cam)
+        self.scan_frame.setStyleSheet("""
+        border: 4px solid #B9EA89;
+        border-radius: 10px;
+        background: transparent;
+        """)
+        self.scan_frame.setAttribute(Qt.WA_TransparentForMouseEvents)
+
+        body.addWidget(left,1)
+        body.addWidget(right,2)
+        vl.addLayout(body,1)
+
+    # ── Centrar marco e icono ─────────────────────────────────────────────
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        QTimer.singleShot(0, self._update_overlay)
+
+    def _update_overlay(self):
+        cam_w = self.cam.width()
+        cam_h = self.cam.height()
+
+        frame_w = int(cam_w * 0.45)
+        frame_h = int(cam_h * 0.55)
+
+        frame_x = (cam_w - frame_w) // 2
+        frame_y = (cam_h - frame_h) // 2
+
+        self.scan_frame.setGeometry(frame_x, frame_y, frame_w, frame_h)
+
+        icon_w = int(frame_w * 0.40)
+        icon_h = int(frame_h * 0.40)
+
+        icon_x = frame_x + (frame_w - icon_w) // 2
+        icon_y = frame_y + (frame_h - icon_h) // 2
+
+        self.face_guide.setGeometry(icon_x, icon_y, icon_w, icon_h)
+
+    # ── Iniciar reconocimiento ─────────────────────────────────────────────
     def _start_scan(self):
+
         labels = train_model()
+
         if not labels:
             self.scan_lbl.setText("No hay biometrias registradas.")
             return
+
         self.scan_btn.setEnabled(False)
         self.opts.setVisible(False)
         self.scan_lbl.setText("Escaneando...")
+
         self.cam_thread = CamThread(CamThread.RECOGNIZE, labels=labels)
         self.cam_thread.frame_sig.connect(self.cam.update_frame)
         self.cam_thread.rec_done.connect(self._on_recognized)
         self.cam_thread.start()
 
+    # ── Resultado reconocimiento ───────────────────────────────────────────
     def _on_recognized(self, face_uid):
+
         self.scan_btn.setEnabled(True)
         self.cam.idle()
 
         if not face_uid:
-            # Intento fallido: loguear contra el primer locker ocupado (sin sesion especifica)
+
             db_log_intento(
-                1, "retirar", "fallido",
+                1,"retirar","fallido",
                 "Rostro no reconocido en escaneo de retirar"
             )
+
             self.scan_lbl.setText("No se reconocio el rostro. Intenta de nuevo.")
-            self.scan_lbl.setStyleSheet(
-                "color:#f03d5a; font-size:12px; font-family:'Segoe UI';"
-            )
             return
 
-        # Buscar sesion activa vinculada a esta biometria
         sesion = db_get_active_sesion_by_face(face_uid)
+
         if not sesion:
             self.scan_lbl.setText("No tienes una sesion activa.")
             return
 
-        self._face_uid  = face_uid
+        self._face_uid = face_uid
         self._id_sesion = sesion["ID_sesion"]
         self._id_locker = sesion["ID_locker"]
-        num_locker      = db_get_locker_num_by_id(self._id_locker)
+
+        num_locker = db_get_locker_num_by_id(self._id_locker)
 
         self.scan_lbl.setText("")
         self.id_lbl.setText("Identidad verificada")
         self.locker_lbl.setText("Tu locker: #{}".format(num_locker))
+
         self.opts.setVisible(True)
 
+    # ── Retirar cosas ──────────────────────────────────────────────────────
     def _do_retirar(self):
+
         if not self._id_sesion:
             return
 
         num_locker = db_get_locker_num_by_id(self._id_locker)
 
-        # Cerrar sesion
         db_close_sesion(self._id_sesion)
-        # Liberar locker
         db_set_locker_estado(self._id_locker, "libre")
-        # Borrar biometria
         delete_face_data(self._face_uid)
-        # Reentrenar modelo
         train_model()
-        # Log
+
         db_log_intento(
-            self._id_locker, "retirar", "exitoso",
+            self._id_locker,"retirar","exitoso",
             "Cliente retiro sus cosas. Sesion {} cerrada.".format(self._id_sesion),
             id_sesion=self._id_sesion
         )
 
         self.retirar_done.emit(self._face_uid, num_locker, self._id_sesion)
 
+    # ── Seguir comprando ───────────────────────────────────────────────────
     def _do_seguir(self):
+
         if not self._id_sesion:
             return
 
         num_locker = db_get_locker_num_by_id(self._id_locker)
 
-        # Log: el cliente sigue comprando, sesion permanece activa
         db_log_intento(
-            self._id_locker, "seguir_comprando", "exitoso",
-            "Cliente consulto locker y continuo comprando. Sesion {} activa.".format(
-                self._id_sesion
-            ),
+            self._id_locker,"seguir_comprando","exitoso",
+            "Cliente consulto locker y continuo comprando.",
             id_sesion=self._id_sesion
         )
 
         self.seguir_done.emit(self._face_uid, num_locker, self._id_sesion)
 
+    # ── Cancelar ───────────────────────────────────────────────────────────
     def _cancel(self):
+
         if self.cam_thread:
             self.cam_thread.stop()
+
         self.go_back.emit()
 
+    # ── Reset vista ────────────────────────────────────────────────────────
     def reset(self):
+
         if self.cam_thread:
             self.cam_thread.stop()
+
         self._face_uid  = None
         self._id_sesion = None
         self._id_locker = None
+
         self.opts.setVisible(False)
         self.scan_btn.setEnabled(True)
+
         self.scan_lbl.setText("")
         self.scan_lbl.setStyleSheet("")
-        self.cam.idle()
 
+        self.cam.idle()
