@@ -1,8 +1,9 @@
 import datetime
 import os
 
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFrame
+from PyQt5.QtCore import Qt, pyqtSignal,  QTimer
+from PyQt5.QtSvg import QSvgWidget
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFrame, QSizePolicy, QLabel
 
 from biometria.biometria import delete_face_data, train_model, face_dir_for
 from db.connection import connectionDB
@@ -13,35 +14,36 @@ from utils.camera import CamThread
 from views.style.widgets.widgets import _step_bullet, lbl, sep_line, CamWidget
 
 STYLE = """
-QWidget#guardar_page { background: #060d1a; color: #c8dff5; }
-QLabel#h2 { color: #e2f0ff; font-size: 22px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
-QLabel#tag { color: #4d8ec4; font-size: 11px; font-weight: 600; font-family: 'Courier New'; letter-spacing: 4px; }
-QLabel#body { color: #7ca8d0; font-size: 14px; font-family: 'Segoe UI',sans-serif; }
-QLabel#small { color: #3a5f84; font-size: 11px; font-family: 'Courier New'; letter-spacing: 1px; }
-QLabel#err { color: #f03d5a; font-size: 14px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
-QFrame#sep { background: #0f2035; min-height: 1px; max-height: 1px; }
-QFrame#card { background: #0a1628; border: 1px solid #0f2035; border-radius: 16px; }
+QWidget#guardar_page { background: #E7E7E7; color: #1f2a44; }
+QLabel#h2 { color: #305BAB; font-size: 24px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
+QLabel#tag { color: #305BAB; font-size: 18px; font-weight: 700; font-family: 'Courier New'; letter-spacing: 4px; }
+QLabel#body { color: #2c3e50; font-size: 16px; font-family: 'Segoe UI',sans-serif; }
+QLabel#small { color: #3a5f84; font-size: 16px; font-family: 'Courier New'; letter-spacing: 1px; }
+QLabel#err { color: #BD0A0A; font-size: 14px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
+QFrame#sep { background: #305BAB; min-height: 1px; max-height: 1px; }
+QFrame#card { background: #C6DCFF; border: 2px solid #305BAB; border-radius: 14px; }
 QLabel#cam {
-    background: #030810; border: 2px solid #0f2035; border-radius: 14px;
-    color: #1a3a5c; font-family: 'Courier New'; font-size: 12px;
+    background: #0c1530; border: 4px solid #305bab; border-radius: 10px;
+    color: #1a3a5c; font-family: 'Courier New'; font-size: 0px;
 }
+QFrame#status_box { background: #c6dcff; border-radius: 12px; padding: 20px; border: 2px solid #305bab; }
 QFrame#prog_bg { background: #0a1628; border-radius: 6px; min-height: 12px; max-height: 12px; }
 QFrame#prog_fill {
-    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #1a6ef5, stop:1 #3de8a0);
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #305bab, stop:1 #B9EA89);
     border-radius: 6px; min-height: 12px; max-height: 12px;
 }
 QPushButton#btn_blue {
-    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #1a6ef5, stop:1 #0f4fd4);
-    color: #fff; border: none; border-radius: 12px; padding: 16px 36px;
-    font-size: 15px; font-weight: 800; font-family: 'Segoe UI',sans-serif;
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #305bab, stop:1 #0f4fd4);
+    color: #fff; border: none; border-radius: 10px; padding: 14px 28px;
+    font-size: 15px; font-weight: 700; font-family: 'Segoe UI',sans-serif;
 }
-QPushButton#btn_blue:hover { background: #2b7cff; }
-QPushButton#btn_blue:disabled { background: #0d1f3a; color: #1a3a5c; }
+QPushButton#btn_blue:hover { background: #3d6fd1; }
+QPushButton#btn_blue:disabled { background: #9aa7c2; color: #1a3a5c; }
 QPushButton#btn_sm {
-    background: #0a1628; color: #4d8ec4; border: 1px solid #1a3a5c; border-radius: 8px;
-    padding: 8px 18px; font-size: 12px; font-family: 'Segoe UI',sans-serif;
+    background: #ffffff; color: #305bab; border: 2px solid #305bab; border-radius: 8px;
+    padding: 6px 16px; font-size: 15px; font-family: 'Segoe UI',sans-serif;
 }
-QPushButton#btn_sm:hover { color: #c8dff5; border-color: #4d8ec4; }
+QPushButton#btn_sm:hover { color: #305bab; border-color: #fff; }
 """
 
 
@@ -59,7 +61,7 @@ class GuardarPage(QWidget):
         self._id_locker  = None
 
         vl = QVBoxLayout(self)
-        vl.setContentsMargins(60, 40, 60, 40)
+        vl.setContentsMargins(60, 60, 60, 20)
         vl.setSpacing(16)
 
         # ── Header ──────────────────────────────────────────────────────────
@@ -80,25 +82,42 @@ class GuardarPage(QWidget):
         # Panel izquierdo: instrucciones y control
         left = QFrame(); left.setObjectName("card")
         ll   = QVBoxLayout(left)
-        ll.setContentsMargins(30, 30, 30, 30); ll.setSpacing(18)
+        # ll.setAlignment(Qt.AlignTop)
+        ll.setContentsMargins(30, 20, 30, 20); 
 
-        ll.addWidget(lbl("COMO FUNCIONA", "tag"))
+        ll.addWidget(lbl("COMO FUNCIONA", "tag", Qt.AlignCenter))
+        ll.addSpacing(20)
+        ll.addStretch(1)
         for n, t in [("1", "Mira directamente a la camara"),
                      ("2", "El sistema captura tu biometria facial"),
                      ("3", "Se te asigna el siguiente locker libre"),
                      ("4", "Guarda tus cosas y disfruta comprando")]:
-            ll.addWidget(_step_bullet(n, t))
-
-        ll.addStretch()
+            # ll.addWidget(_step_bullet(n, t))
+            step = _step_bullet(n, t)
+            step.setFixedWidth(420) 
+            ll.addWidget(step, alignment=Qt.AlignCenter)
+        
+        ll.addStretch(1)
+        ll.addSpacing(20)
+        status_box = QFrame()
+        status_box.setObjectName("status_box")
+        
+        sb_layout = QVBoxLayout(status_box)
+        sb_layout.setSpacing(10)
+        sb_layout.setAlignment(Qt.AlignCenter)
 
         self.avail_lbl = lbl("", "body")
-        ll.addWidget(self.avail_lbl)
+        self.avail_lbl.setAlignment(Qt.AlignCenter)
 
         self.start_btn = QPushButton("REGISTRAR BIOMETRIA")
         self.start_btn.setObjectName("btn_blue")
         self.start_btn.setCursor(Qt.PointingHandCursor)
         self.start_btn.clicked.connect(self._start_capture)
-        ll.addWidget(self.start_btn)
+       
+        sb_layout.addWidget(self.avail_lbl)
+        sb_layout.addWidget(self.start_btn)
+        
+        ll.addWidget(status_box)
 
         self.err_lbl = lbl("", "err")
         self.err_lbl.setWordWrap(True)
@@ -109,9 +128,25 @@ class GuardarPage(QWidget):
         rl = QVBoxLayout(right)
         rl.setContentsMargins(0, 0, 0, 0); rl.setSpacing(12)
         rl.addWidget(lbl("ESCANER BIOMETRICO", "tag", Qt.AlignCenter))
-        self.cam = CamWidget(460, 340)
-        rl.addWidget(self.cam)
-        rl.addStretch()
+        self.cam = CamWidget(500, 760)
+        self.cam.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        rl.addWidget(self.cam, 1)
+        # rl.addStretch()
+        
+        #GUIA VISUAL (MONITO)
+        self.face_guide = QSvgWidget(self.cam)
+        self.face_guide.load(b"""
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120">
+            <circle cx="50" cy="28" r="20" fill="#305bab" opacity="0.5"/>
+            <path d="M8 108 Q8 65 50 65 Q92 65 92 108 Z" fill="#305bab" opacity="0.5"/>
+            </svg>""")
+        self.face_guide.setStyleSheet("background: transparent;")
+        self.face_guide.setAttribute(Qt.WA_TransparentForMouseEvents)
+        
+        #MARCO VERDE (referencia)
+        self.scan_frame = QFrame(self.cam)
+        self.scan_frame.setStyleSheet("""border: 4px solid #B9EA89 ; border-radius: 10px; background: transparent;""")
+        self.scan_frame.setAttribute(Qt.WA_TransparentForMouseEvents)
 
         body.addWidget(left, 1)
         body.addWidget(right, 2)
@@ -125,12 +160,12 @@ class GuardarPage(QWidget):
             self.avail_lbl.setText(
                 "Locker disponible. Se te asignara el #{}.".format(result[1])
             )
-            self.avail_lbl.setStyleSheet("color:#3de8a0; font-size:13px; font-family:'Segoe UI';")
+            self.avail_lbl.setStyleSheet("color:#2dc75c; font-size:13px; font-family:'Segoe UI';")
             self.start_btn.setEnabled(True)
         else:
             self._id_locker = None
             self.avail_lbl.setText("No hay lockers disponibles en este momento.")
-            self.avail_lbl.setStyleSheet("color:#f03d5a; font-size:13px; font-family:'Segoe UI';")
+            self.avail_lbl.setStyleSheet("color:#bd0a0a; font-size:15px; font-family:'Segoe UI';")
             self.start_btn.setEnabled(False)
 
     def _start_capture(self):
@@ -222,4 +257,28 @@ class GuardarPage(QWidget):
         self.err_lbl.setText("")
         self.cam.idle()
         self.start_btn.setEnabled(True)
+        
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        QTimer.singleShot(0, self._update_overlay)
+
+    def _update_overlay(self):
+        cam_w = self.cam.width()
+        cam_h = self.cam.height()
+
+        frame_w = int(cam_w * 0.45)
+        frame_h = int(cam_h * 0.55)
+
+        frame_x = (cam_w - frame_w) // 2
+        frame_y = (cam_h - frame_h) // 2
+
+        self.scan_frame.setGeometry(frame_x, frame_y, frame_w, frame_h)
+
+        icon_w = int(frame_w * 0.40)
+        icon_h = int(frame_h * 0.40)
+
+        icon_x = frame_x + (frame_w - icon_w) // 2
+        icon_y = frame_y + (frame_h - icon_h) // 2
+
+        self.face_guide.setGeometry(icon_x, icon_y, icon_w, icon_h)
 

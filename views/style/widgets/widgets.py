@@ -50,7 +50,7 @@ class CamWidget(QWidget):
         vl.setContentsMargins(0, 0, 0, 0)
         vl.setSpacing(8)
 
-        self.view = QLabel("Camara inactiva")
+        self.view = QLabel("")
         self.view.setObjectName("cam")
         self.view.setAlignment(Qt.AlignCenter)
         self.view.setMinimumSize(w, h)
@@ -98,7 +98,7 @@ class CamWidget(QWidget):
 
     def idle(self):
         self.view.clear()
-        self.view.setText("Camara inactiva")
+        # self.view.setText("Camara inactiva")
         self.status.setText("")
         self.prog_bg.setVisible(False)
         self.prog_fill.setFixedWidth(0)
