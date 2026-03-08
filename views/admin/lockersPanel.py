@@ -1,178 +1,454 @@
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-    QPushButton,
-    QLabel,
-    QFrame,
-    QScrollArea,
-    QGridLayout,
-    QMessageBox,
-    QInputDialog,
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
+    QLabel, QFrame, QScrollArea, QSizePolicy,
+    QApplication, QDialog, QGridLayout,
+    QLineEdit, QComboBox, QMessageBox, QInputDialog,
 )
+from PyQt5.QtGui import QPainter, QColor, QBrush, QLinearGradient
 
-from biometria.biometria import delete_face_data, train_model
-from db.models.intentos_acceso import db_log_intento
-from db.models.lockers import db_get_all_lockers, db_insert_locker, db_set_locker_estado
+from db.models.lockers import (
+    db_get_all_lockers, db_insert_locker,
+    db_set_locker_estado, db_update_locker,
+)
 from db.models.sesiones import db_close_sesion, db_get_all_sesiones_activas
-from views.style.widgets.widgets import lbl
+from db.models.intentos_acceso import db_log_intento
+from biometria.biometria import delete_face_data, train_model
+
+
+# ── DPI helper ────────────────────────────────────────────────────────────────
+def _dp(v):
+    s = QApplication.primaryScreen()
+    return max(1, round(v * (s.logicalDotsPerInch() if s else 96) / 96))
+
+
+# ── Estado palette: (card_bg, accent, badge_bg, badge_fg, badge_border) ───────
+_C = {
+    "libre":          ("#ffffff", "#1976d2", "#e3f0ff", "#1565c0", "#90c4f0"),
+    "ocupado":        ("#fff8f0", "#ef6c00", "#fff3e0", "#e65100", "#ffcc80"),
+    "mantenimiento":  ("#fafafa", "#78909c", "#eceff1", "#546e7a", "#b0bec5"),
+}
 
 STYLE = """
-QWidget#admin_lockers_panel, QWidget#admin_lockers_inner { background: #060d1a; color: #c8dff5; }
-QLabel#small { color: #3a5f84; font-size: 11px; font-family: 'Courier New'; letter-spacing: 1px; }
-QFrame#card { background: #0a1628; border: 1px solid #0f2035; border-radius: 16px; }
-QFrame#lk_free { background: #041228; border: 2px solid #1a4a8a; border-radius: 12px; min-width: 110px; min-height: 90px; }
-QFrame#lk_busy { background: #1a1204; border: 2px solid #5a3a08; border-radius: 12px; min-width: 110px; min-height: 90px; }
-QPushButton#btn_blue {
-    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #1a6ef5, stop:1 #0f4fd4);
-    color: #fff; border: none; border-radius: 12px; padding: 12px 28px;
-    font-size: 13px; font-weight: 800; font-family: 'Segoe UI',sans-serif;
-}
-QPushButton#btn_blue:hover { background: #2b7cff; }
-QPushButton#btn_outline {
-    background: transparent; color: #4d8ec4; border: 2px solid #1a3a5c;
-    border-radius: 12px; padding: 10px 24px; font-size: 13px; font-weight: 700;
-    font-family: 'Segoe UI',sans-serif;
-}
-QPushButton#btn_outline:hover { border-color: #4d8ec4; color: #c8dff5; background: #071833; }
-QPushButton#btn_sm {
-    background: #0a1628; color: #4d8ec4; border: 1px solid #1a3a5c; border-radius: 8px;
-    padding: 8px 18px; font-size: 12px; font-family: 'Segoe UI',sans-serif;
-}
-QPushButton#btn_sm:hover { color: #c8dff5; border-color: #4d8ec4; }
-QScrollArea { border: none; background: transparent; }
-QScrollBar:vertical { background: #060d1a; width: 6px; margin: 0; }
-QScrollBar::handle:vertical { background: #0f2035; border-radius: 3px; }
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+QWidget#panel,QWidget#inner{background:transparent;}
+QLabel#ttl{color:#1565c0;font-weight:900;font-family:'Segoe UI';letter-spacing:3px;}
+QLabel#sub{color:#90a4ae;font-family:'Segoe UI';letter-spacing:2px;}
+QFrame#h_div{background:#cfd8e3;border:none;min-height:1px;max-height:1px;}
+
+QFrame#cnt{background:#fff;border:none;border-left:4px solid #1565c0;border-radius:8px;}
+QLabel#cn_b{color:#1565c0;font-weight:800;font-family:'Segoe UI';}
+QLabel#cn_o{color:#ef6c00;font-weight:800;font-family:'Segoe UI';}
+QLabel#cn_g{color:#546e7a;font-weight:800;font-family:'Segoe UI';}
+QLabel#ck  {color:#90a4ae;font-family:'Segoe UI';letter-spacing:2px;}
+
+QFrame#card_libre        {background:#fff;   border:none;border-left:4px solid #1976d2;border-radius:8px;}
+QFrame#card_ocupado      {background:#fff8f0;border:none;border-left:4px solid #ef6c00;border-radius:8px;}
+QFrame#card_mantenimiento{background:#fafafa;border:none;border-left:4px solid #78909c;border-radius:8px;}
+QLabel#meta{color:#78909c;font-family:'Segoe UI';letter-spacing:1px;}
+
+QPushButton#btn_add{background:#1976d2;color:#fff;border:none;border-radius:7px;
+    font-family:'Segoe UI';font-weight:700;letter-spacing:2px;}
+QPushButton#btn_add:hover{background:#1565c0;}
+QPushButton#btn_ref{background:transparent;color:#90a4ae;border:1px solid #cfd8e3;
+    border-radius:6px;font-family:'Segoe UI';letter-spacing:2px;}
+QPushButton#btn_ref:hover{color:#1565c0;border-color:#1976d2;background:#e3f0ff;}
+QPushButton#btn_cfg{background:transparent;color:#b0bec5;border:1px solid #e0e8f4;
+    border-radius:5px;font-family:'Segoe UI';}
+QPushButton#btn_cfg:hover{color:#1565c0;border-color:#1976d2;background:#e3f0ff;}
+QPushButton#btn_lib{background:transparent;color:#e65100;border:1px solid #ffcc80;
+    border-radius:5px;font-family:'Segoe UI';font-weight:700;}
+QPushButton#btn_lib:hover{background:#fff3e0;}
+
+QScrollArea{border:none;background:transparent;}
+QScrollBar:vertical{background:#e8f0fb;width:4px;margin:0;}
+QScrollBar::handle:vertical{background:#90c4f0;border-radius:2px;min-height:20px;}
+QScrollBar::add-line:vertical,QScrollBar::sub-line:vertical{height:0;}
+
+/* Dialog */
+QDialog{background:#f0f6ff;}
+QLineEdit,QComboBox{background:#fff;border:1px solid #cfd8e3;border-radius:5px;
+    padding:5px 8px;color:#1565c0;font-family:'Segoe UI';}
+QLineEdit:focus,QComboBox:focus{border-color:#1976d2;}
+QLabel#flbl{color:#546e7a;font-family:'Segoe UI';font-weight:700;letter-spacing:1px;}
+QPushButton#dok{background:#1976d2;color:#fff;border:none;border-radius:6px;
+    padding:7px 20px;font-family:'Segoe UI';font-weight:700;}
+QPushButton#dok:hover{background:#1565c0;}
+QPushButton#dno{background:transparent;color:#90a4ae;border:1px solid #cfd8e3;
+    border-radius:6px;padding:7px 16px;font-family:'Segoe UI';}
+QLabel#empty{color:#b0bec5;font-family:'Segoe UI';letter-spacing:3px;}
 """
 
-class _AdminLockersPanel(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.setObjectName("admin_lockers_panel")
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  CONFIG DIALOG
+# ─────────────────────────────────────────────────────────────────────────────
+class LockerConfigDialog(QDialog):
+    ESTADOS = ["libre", "ocupado", "mantenimiento"]
+    TAMANOS = ["pequeño", "mediano", "grande", "extra-grande"]
+
+    def __init__(self, locker, admin_id=None, parent=None):
+        super().__init__(parent)
+        self.locker   = locker
+        self.admin_id = admin_id
+        self.data     = None
+        self.setWindowTitle(f"Configurar Locker #{locker['t_numero_locker']}")
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        self.setMinimumWidth(_dp(320))
         self.setStyleSheet(STYLE)
-        vl = QVBoxLayout(self); vl.setContentsMargins(0, 0, 0, 0); vl.setSpacing(16)
 
-        # Stats
-        self.stats_row = QHBoxLayout(); self.stats_row.setSpacing(12)
-        vl.addLayout(self.stats_row)
+        root = QVBoxLayout(self)
+        root.setContentsMargins(_dp(20), _dp(16), _dp(20), _dp(16))
+        root.setSpacing(_dp(12))
 
-        # Grid con scroll
-        scroll = QScrollArea(); scroll.setWidgetResizable(True)
-        inner  = QWidget(); inner.setObjectName("admin_lockers_inner")
-        il     = QVBoxLayout(inner); il.setContentsMargins(0, 0, 0, 0)
-        self.grid = QGridLayout(); self.grid.setSpacing(12)
-        il.addLayout(self.grid); il.addStretch()
-        scroll.setWidget(inner)
-        vl.addWidget(scroll, 1)
+        ttl = QLabel(f"⚙  CONFIGURAR  #{locker['t_numero_locker']}")
+        ttl.setStyleSheet(
+            f"color:#1565c0;font-size:{_dp(11)}px;font-weight:900;"
+            f"font-family:'Segoe UI';letter-spacing:2px;"
+        )
+        root.addWidget(ttl)
 
-        # Acciones
-        acts = QHBoxLayout(); acts.setSpacing(12)
-        btn_lib = QPushButton("LIBERAR LOCKER"); btn_lib.setObjectName("btn_outline")
-        btn_lib.setCursor(Qt.PointingHandCursor); btn_lib.clicked.connect(self._liberar)
-        btn_add = QPushButton("AGREGAR LOCKER"); btn_add.setObjectName("btn_blue")
-        btn_add.setCursor(Qt.PointingHandCursor); btn_add.clicked.connect(self._agregar)
-        btn_ref = QPushButton("Actualizar"); btn_ref.setObjectName("btn_sm")
-        btn_ref.setCursor(Qt.PointingHandCursor); btn_ref.clicked.connect(self.refresh)
-        acts.addWidget(btn_lib); acts.addWidget(btn_add); acts.addWidget(btn_ref); acts.addStretch()
-        vl.addLayout(acts)
-        self.refresh()
+        d = QFrame(); d.setObjectName("h_div"); root.addWidget(d)
+
+        grid = QGridLayout(); grid.setSpacing(_dp(8)); grid.setColumnStretch(1, 1)
+        fs = f"font-size:{_dp(9)}px;"
+
+        def add_row(label, widget, r):
+            lb = QLabel(label); lb.setObjectName("flbl"); lb.setStyleSheet(fs)
+            grid.addWidget(lb, r, 0, Qt.AlignRight | Qt.AlignVCenter)
+            widget.setStyleSheet(fs); grid.addWidget(widget, r, 1)
+
+        self.e_num  = QLineEdit(locker.get("t_numero_locker", ""))
+        self.e_zona = QLineEdit(locker.get("t_zona") or "")
+        self.e_zona.setPlaceholderText("ej. A, Planta Baja")
+        self.c_tam  = QComboBox(); self.c_tam.addItems(self.TAMANOS)
+        self.c_est  = QComboBox(); self.c_est.addItems(self.ESTADOS)
+
+        if locker.get("t_tamano") in self.TAMANOS:
+            self.c_tam.setCurrentText(locker["t_tamano"])
+        if locker.get("t_estado") in self.ESTADOS:
+            self.c_est.setCurrentText(locker["t_estado"])
+
+        add_row("NÚMERO", self.e_num,  0)
+        add_row("ZONA",   self.e_zona, 1)
+        add_row("TAMAÑO", self.c_tam,  2)
+        add_row("ESTADO", self.c_est,  3)
+        root.addLayout(grid)
+
+        btn_row = QHBoxLayout(); btn_row.addStretch()
+        bn = QPushButton("CANCELAR"); bn.setObjectName("dno"); bn.setStyleSheet(fs)
+        bn.setCursor(Qt.PointingHandCursor); bn.clicked.connect(self.reject)
+        bo = QPushButton("GUARDAR");   bo.setObjectName("dok"); bo.setStyleSheet(fs)
+        bo.setCursor(Qt.PointingHandCursor); bo.clicked.connect(self._save)
+        btn_row.addWidget(bn); btn_row.addWidget(bo)
+        root.addLayout(btn_row)
+
+    def _save(self):
+        num = self.e_num.text().strip()
+        if not num:
+            QMessageBox.warning(self, "Error", "El número no puede estar vacío.")
+            return
+        self.data = {
+            "numero": num,
+            "zona":   self.e_zona.text().strip() or None,
+            "tamano": self.c_tam.currentText(),
+            "estado": self.c_est.currentText(),
+        }
+        self.accept()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  LOCKER CARD  — sin QGraphicsDropShadowEffect (caro en RPi)
+# ─────────────────────────────────────────────────────────────────────────────
+class LockerCard(QFrame):
+
+    def __init__(self, locker, index, admin_id=None, on_refresh=None, parent=None):
+        super().__init__(parent)
+        self.locker     = locker
+        self.admin_id   = admin_id
+        self.on_refresh = on_refresh
+
+        estado = locker.get("t_estado", "libre").lower()
+        if estado not in _C:
+            estado = "libre"
+        _, accent, badge_bg, badge_fg, badge_border = _C[estado]
+
+        self.setObjectName(f"card_{estado}")
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(_dp(12), _dp(8), _dp(12), _dp(8))
+        lay.setSpacing(_dp(10))
+
+        # Index
+        idx = QLabel(f"{index:02d}")
+        idx.setStyleSheet(
+            f"color:#bbdefb;font-size:{_dp(13)}px;font-weight:900;"
+            f"font-family:'Segoe UI';min-width:{_dp(22)}px;"
+        )
+        idx.setAlignment(Qt.AlignCenter)
+        lay.addWidget(idx)
+
+        # Vertical sep
+        sep = QFrame(); sep.setFrameShape(QFrame.VLine)
+        sep.setStyleSheet(
+            f"background:#e3f0ff;border:none;"
+            f"min-width:{_dp(1)}px;max-width:{_dp(1)}px;"
+        )
+        lay.addWidget(sep)
+
+        # Info column
+        col = QVBoxLayout(); col.setSpacing(_dp(2))
+        num_lbl = QLabel(f"LOCKER  #{locker['t_numero_locker']}")
+        num_lbl.setStyleSheet(
+            f"color:{badge_fg};font-size:{_dp(11)}px;font-weight:900;"
+            f"font-family:'Segoe UI';"
+        )
+        col.addWidget(num_lbl)
+
+        zona = locker.get("t_zona")   or "—"
+        tam  = locker.get("t_tamano") or "—"
+        meta = QLabel(f"ZONA  {zona}   ·   TAMAÑO  {tam}")
+        meta.setObjectName("meta"); meta.setStyleSheet(f"font-size:{_dp(7)}px;")
+        col.addWidget(meta)
+        lay.addLayout(col)
+        lay.addStretch()
+
+        # Date
+        fecha = str(locker.get("d_fecha_registro", "") or "")[:10]
+        if fecha:
+            fl = QLabel(fecha)
+            fl.setStyleSheet(
+                f"color:#b0bec5;font-size:{_dp(7)}px;font-family:'Segoe UI';"
+            )
+            fl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            lay.addWidget(fl)
+
+        # Badge
+        badge_map = {"libre": "LIBRE", "ocupado": "OCUPADO", "mantenimiento": "MANTENIM."}
+        badge = QLabel(badge_map.get(estado, estado.upper()))
+        badge.setStyleSheet(
+            f"background:{badge_bg};color:{badge_fg};border:1px solid {badge_border};"
+            f"border-radius:8px;font-size:{_dp(7)}px;font-weight:700;"
+            f"font-family:'Segoe UI';letter-spacing:2px;"
+            f"padding:{_dp(2)}px {_dp(8)}px;"
+        )
+        lay.addWidget(badge)
+
+        # Config button
+        bc = QPushButton("⚙")
+        bc.setObjectName("btn_cfg"); bc.setToolTip("Configurar locker")
+        bc.setFixedSize(_dp(26), _dp(26))
+        bc.setCursor(Qt.PointingHandCursor); bc.clicked.connect(self._config)
+        lay.addWidget(bc)
+
+        # Liberar — solo si ocupado
+        if estado == "ocupado":
+            bl = QPushButton("↩ LIBERAR"); bl.setObjectName("btn_lib")
+            bl.setStyleSheet(f"font-size:{_dp(7)}px;padding:{_dp(3)}px {_dp(8)}px;")
+            bl.setCursor(Qt.PointingHandCursor); bl.clicked.connect(self._liberar)
+            lay.addWidget(bl)
+
+    # ── helpers ──────────────────────────────────────────────────────────────
+    def _close_active_session(self):
+        for s in db_get_all_sesiones_activas():
+            if s["ID_locker"] != self.locker["ID_locker"]:
+                continue
+            db_close_sesion(s["ID_sesion"])
+            fuid = s.get("b_vector_biometrico_temp")
+            if isinstance(fuid, bytes): fuid = fuid.decode()
+            if fuid: delete_face_data(fuid)
+            db_log_intento(
+                id_locker   = self.locker["ID_locker"],
+                id_sesion   = s["ID_sesion"],
+                id_usuario  = self.admin_id,
+                tipo        = "cierre_sesion_admin",
+                resultado   = "exitoso",
+                descripcion = (
+                    f"Sesión #{s['ID_sesion']} cerrada al liberar "
+                    f"locker #{self.locker['t_numero_locker']}."
+                ),
+            )
+
+    def _config(self):
+        dlg = LockerConfigDialog(self.locker, self.admin_id, parent=self)
+        if dlg.exec_() != QDialog.Accepted or not dlg.data:
+            return
+        d = dlg.data
+        changes = []
+        for new_k, db_k in [("numero","t_numero_locker"), ("zona","t_zona"),
+                              ("tamano","t_tamano"),       ("estado","t_estado")]:
+            old = self.locker.get(db_k)
+            if str(old or "") != str(d[new_k] or ""):
+                changes.append(f"{db_k}: '{old}'→'{d[new_k]}'")
+        try:
+            db_update_locker(
+                id_locker = self.locker["ID_locker"],
+                numero    = d["numero"],
+                zona      = d["zona"],
+                tamano    = d["tamano"],
+                estado    = d["estado"],
+                id_admin  = self.admin_id,
+            )
+            db_log_intento(
+                id_locker   = self.locker["ID_locker"],
+                id_usuario  = self.admin_id,
+                tipo        = "configuracion_admin",
+                resultado   = "exitoso",
+                descripcion = "Modificado: " + ("; ".join(changes) or "sin cambios"),
+            )
+            # Si se pone a libre manualmente, cerrar sesión activa
+            if d["estado"] == "libre" and self.locker.get("t_estado") != "libre":
+                self._close_active_session()
+            if self.on_refresh: self.on_refresh()
+        except Exception as ex:
+            QMessageBox.warning(self, "Error", str(ex))
 
     def _liberar(self):
-        num, ok = QInputDialog.getText(None, "Liberar Locker", "Numero del locker a liberar:")
-        if not ok or not num.strip():
-            return
-        # Buscar locker por numero
-        lockers = [l for l in db_get_all_lockers() if l["t_numero_locker"] == num.strip()]
-        if not lockers:
-            QMessageBox.warning(None, "Error", "Locker no encontrado.")
-            return
-        locker = lockers[0]
-        if locker["t_estado"] == "libre":
-            QMessageBox.information(None, "Info", "El locker ya esta libre.")
-            return
-        # Cerrar sesion activa si existe
-        sesiones = db_get_all_sesiones_activas()
-        for s in sesiones:
-            if s["ID_locker"] == locker["ID_locker"]:
-                db_close_sesion(s["ID_sesion"])
-                face_uid = s["b_vector_biometrico_temp"]
-                if isinstance(face_uid, bytes):
-                    face_uid = face_uid.decode("utf-8")
-                delete_face_data(face_uid)
-                db_log_intento(
-                    locker["ID_locker"], "liberacion_admin", "exitoso",
-                    "Admin libero locker #{} manualmente.".format(num.strip()),
-                    id_sesion=s["ID_sesion"]
-                )
-        db_set_locker_estado(locker["ID_locker"], "libre")
-        train_model()
-        QMessageBox.information(None, "OK", "Locker #{} liberado.".format(num.strip()))
-        self.refresh()
-
-    def _agregar(self):
-        num, ok = QInputDialog.getText(None, "Agregar Locker", "Numero del nuevo locker:")
-        if not ok or not num.strip():
+        num = self.locker["t_numero_locker"]
+        if QMessageBox.question(
+            self, "Confirmar",
+            f"¿Liberar locker #{num}?\nSe cerrará la sesión y el acceso biométrico.",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+        ) != QMessageBox.Yes:
             return
         try:
-            db_insert_locker(num.strip())
-            QMessageBox.information(None, "OK", "Locker #{} creado.".format(num.strip()))
+            self._close_active_session()
+            db_set_locker_estado(self.locker["ID_locker"], "libre", self.admin_id)
+            db_log_intento(
+                id_locker   = self.locker["ID_locker"],
+                id_usuario  = self.admin_id,
+                tipo        = "liberacion_admin",
+                resultado   = "exitoso",
+                descripcion = f"Admin liberó locker #{num} manualmente.",
+            )
+            train_model()
+            if self.on_refresh: self.on_refresh()
+        except Exception as ex:
+            QMessageBox.warning(self, "Error", str(ex))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  MAIN PANEL
+# ─────────────────────────────────────────────────────────────────────────────
+class _AdminLockersPanel(QWidget):
+    def __init__(self, admin_id=None):
+        super().__init__()
+        self.admin_id = admin_id
+        self.setObjectName("panel")
+        self.setStyleSheet(STYLE)
+
+        root = QVBoxLayout(self)
+        m = _dp(14)
+        root.setContentsMargins(m, _dp(10), m, _dp(10))
+        root.setSpacing(_dp(8))
+
+        # ── Header ────────────────────────────────────────────────────────────
+        hdr = QHBoxLayout(); hdr.setSpacing(_dp(6))
+        tc  = QVBoxLayout(); tc.setSpacing(_dp(2))
+        t   = QLabel("GESTIÓN DE LOCKERS"); t.setObjectName("ttl")
+        t.setStyleSheet(f"font-size:{_dp(12)}px;")
+        s   = QLabel("PANEL ADMIN · LOCKERS DE TIENDA"); s.setObjectName("sub")
+        s.setStyleSheet(f"font-size:{_dp(8)}px;")
+        tc.addWidget(t); tc.addWidget(s)
+        hdr.addLayout(tc); hdr.addStretch()
+
+        for obj, icon, cb in [
+            ("btn_add", "＋  NUEVO",      self._agregar),
+            ("btn_ref", "↺  ACTUALIZAR",  self.refresh),
+        ]:
+            b = QPushButton(icon); b.setObjectName(obj)
+            b.setStyleSheet(f"font-size:{_dp(8)}px;padding:{_dp(5)}px {_dp(14)}px;")
+            b.setCursor(Qt.PointingHandCursor); b.clicked.connect(cb)
+            hdr.addWidget(b)
+        root.addLayout(hdr)
+        root.addWidget(self._div())
+
+        # ── Counters ──────────────────────────────────────────────────────────
+        cr = QHBoxLayout(); cr.setSpacing(_dp(10))
+        self._cnt = {}
+        for key, label, obj in [
+            ("libre",   "LIBRES",   "cn_b"),
+            ("ocupado", "OCUPADOS", "cn_o"),
+            ("total",   "TOTAL",    "cn_g"),
+        ]:
+            blk = QFrame(); blk.setObjectName("cnt")
+            bl  = QHBoxLayout(blk)
+            bl.setContentsMargins(_dp(12), _dp(7), _dp(12), _dp(7))
+            bl.setSpacing(_dp(8))
+            n = QLabel("0"); n.setObjectName(obj)
+            n.setStyleSheet(f"font-size:{_dp(24)}px;")
+            k = QLabel(label); k.setObjectName("ck")
+            k.setStyleSheet(f"font-size:{_dp(7)}px;")
+            bl.addWidget(n); bl.addWidget(k); bl.addStretch()
+            cr.addWidget(blk, 1)
+            self._cnt[key] = n
+        root.addLayout(cr)
+        root.addWidget(self._div())
+
+        # ── Scroll list ───────────────────────────────────────────────────────
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.inner = QWidget(); self.inner.setObjectName("inner")
+        self.il = QVBoxLayout(self.inner)
+        self.il.setContentsMargins(0, _dp(4), _dp(4), 0)
+        self.il.setSpacing(_dp(5))
+        self.il.setAlignment(Qt.AlignTop)
+        scroll.setWidget(self.inner)
+        root.addWidget(scroll, 1)
+
+        self.refresh()
+
+    def _div(self):
+        d = QFrame(); d.setObjectName("h_div"); return d
+
+    def paintEvent(self, e):
+        p = QPainter(self)
+        g = QLinearGradient(0, 0, 0, self.height())
+        g.setColorAt(0.0, QColor(232, 240, 251))
+        g.setColorAt(1.0, QColor(214, 230, 248))
+        p.fillRect(0, 0, self.width(), self.height(), QBrush(g))
+        p.end()
+
+    def _agregar(self):
+        num, ok = QInputDialog.getText(self, "Nuevo Locker", "Número del locker:")
+        if not ok or not num.strip(): return
+        try:
+            db_insert_locker(num.strip(), id_admin=self.admin_id)
+            db_log_intento(
+                id_locker   = None,
+                id_usuario  = self.admin_id,
+                tipo        = "alta_locker_admin",
+                resultado   = "exitoso",
+                descripcion = f"Admin creó locker #{num.strip()}.",
+            )
             self.refresh()
         except Exception as ex:
-            QMessageBox.warning(None, "Error", str(ex))
+            QMessageBox.warning(self, "Error", str(ex))
 
     def refresh(self):
-        # Limpiar stats
-        for i in reversed(range(self.stats_row.count())):
-            item = self.stats_row.itemAt(i)
-            if item and item.widget():
-                item.widget().deleteLater()
+        for i in reversed(range(self.il.count())):
+            w = self.il.itemAt(i)
+            if w and w.widget(): w.widget().deleteLater()
 
         lockers = db_get_all_lockers()
-        total   = len(lockers)
-        free    = sum(1 for l in lockers if l["t_estado"] == "libre")
-        busy    = total - free
+        libres  = sum(1 for l in lockers if l.get("t_estado") == "libre")
+        ocups   = sum(1 for l in lockers if l.get("t_estado") == "ocupado")
+        self._cnt["libre"].setText(str(libres))
+        self._cnt["ocupado"].setText(str(ocups))
+        self._cnt["total"].setText(str(len(lockers)))
 
-        for text, val, color in [
-            ("LIBRES",   free,  "#3de8a0"),
-            ("OCUPADOS", busy,  "#f0b429"),
-            ("TOTAL",    total, "#4d8ec4"),
-        ]:
-            sf = QFrame(); sf.setObjectName("card")
-            sl = QHBoxLayout(sf); sl.setContentsMargins(20, 12, 20, 12); sl.setSpacing(10)
-            n  = QLabel(str(val))
-            n.setStyleSheet(
-                "color:{}; font-size:24px; font-weight:900; font-family:'Segoe UI';".format(color)
+        if not lockers:
+            e = QLabel("·  SIN LOCKERS REGISTRADOS  ·")
+            e.setObjectName("empty"); e.setAlignment(Qt.AlignCenter)
+            e.setStyleSheet(f"font-size:{_dp(9)}px;")
+            e.setContentsMargins(0, _dp(20), 0, _dp(20))
+            self.il.addWidget(e); return
+
+        _ord = {"ocupado": 0, "libre": 1, "mantenimiento": 2}
+        for i, lk in enumerate(
+            sorted(lockers, key=lambda l: _ord.get(l.get("t_estado", ""), 9)), 1
+        ):
+            self.il.addWidget(
+                LockerCard(lk, i, self.admin_id, on_refresh=self.refresh)
             )
-            t = lbl(text, "small")
-            sl.addWidget(n); sl.addWidget(t)
-            self.stats_row.addWidget(sf)
-        self.stats_row.addStretch()
-
-        # Limpiar grid
-        for i in reversed(range(self.grid.count())):
-            item = self.grid.itemAt(i)
-            if item and item.widget():
-                item.widget().deleteLater()
-
-        cols = 4
-        for i, locker in enumerate(lockers):
-            is_libre = locker["t_estado"] == "libre"
-            fr = QFrame()
-            fr.setObjectName("lk_free" if is_libre else "lk_busy")
-            fl = QVBoxLayout(fr); fl.setContentsMargins(8, 8, 8, 8); fl.setAlignment(Qt.AlignCenter)
-            color = "#4d8ec4" if is_libre else "#f0b429"
-
-            n_lbl = QLabel("#{}".format(locker["t_numero_locker"]))
-            n_lbl.setStyleSheet(
-                "color:{}; font-size:18px; font-weight:900; font-family:'Segoe UI';".format(color)
-            )
-            n_lbl.setAlignment(Qt.AlignCenter)
-
-            zona_txt = locker.get("t_zona") or ""
-            s_txt    = "LIBRE" if is_libre else "OCUPADO"
-            s_lbl    = lbl("{} {}".format(s_txt, zona_txt).strip()[:14], "small", Qt.AlignCenter)
-            fl.addWidget(n_lbl); fl.addWidget(s_lbl)
-            row, col = divmod(i, cols)
-            self.grid.addWidget(fr, row, col)
