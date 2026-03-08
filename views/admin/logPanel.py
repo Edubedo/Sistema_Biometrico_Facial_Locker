@@ -1,76 +1,293 @@
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFrame, QScrollArea
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
+    QLabel, QFrame, QScrollArea, QApplication, QGraphicsDropShadowEffect
+)
+from PyQt5.QtGui import QPainter, QColor, QBrush, QLinearGradient, QFont
 
 from db.models.intentos_acceso import db_get_intentos_recientes
-from views.style.widgets.widgets import lbl
 
-STYLE = """
-QWidget#admin_log_panel, QWidget#admin_log_inner { background: #060d1a; color: #c8dff5; }
-QLabel#body { color: #7ca8d0; font-size: 14px; font-family: 'Segoe UI',sans-serif; }
-QLabel#small { color: #3a5f84; font-size: 11px; font-family: 'Courier New'; letter-spacing: 1px; }
-QLabel#log_ok { color: #3de8a0; font-size: 12px; font-family: 'Courier New'; }
-QLabel#log_fail { color: #f03d5a; font-size: 12px; font-family: 'Courier New'; }
-QFrame#card_log { background: #060d1a; border: 1px solid #0f2035; border-radius: 8px; }
-QPushButton#btn_sm {
-    background: #0a1628; color: #4d8ec4; border: 1px solid #1a3a5c; border-radius: 8px;
-    padding: 8px 18px; font-size: 12px; font-family: 'Segoe UI',sans-serif;
-}
-QPushButton#btn_sm:hover { color: #c8dff5; border-color: #4d8ec4; }
-QScrollArea { border: none; background: transparent; }
-QScrollBar:vertical { background: #060d1a; width: 6px; margin: 0; }
-QScrollBar::handle:vertical { background: #0f2035; border-radius: 3px; }
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
-"""
+
+def _dp(value: float) -> int:
+    screen = QApplication.primaryScreen()
+    dpi = screen.logicalDotsPerInch() if screen else 96
+    return max(1, round(value * dpi / 96))
+
+
+def _shadow(widget, blur=10, alpha=30, offset=2):
+    shadow = QGraphicsDropShadowEffect()
+    shadow.setBlurRadius(blur)
+    shadow.setColor(QColor(0, 0, 0, alpha))
+    shadow.setOffset(0, offset)
+    widget.setGraphicsEffect(shadow)
+
 
 class _AdminLogPanel(QWidget):
     def __init__(self):
         super().__init__()
         self.setObjectName("admin_log_panel")
-        self.setStyleSheet(STYLE)
-        vl = QVBoxLayout(self); vl.setContentsMargins(0, 0, 0, 0); vl.setSpacing(12)
+        self.setStyleSheet("""
+            QWidget#admin_log_panel, QWidget#admin_log_inner {
+                background: transparent;
+            }
+            
+            /* ===== TÍTULO ===== */
+            QLabel#page_title {
+                color: #0a1a2f;
+                font-size: 24px;
+                font-weight: 900;
+                font-family: 'Montserrat', 'Segoe UI', sans-serif;
+                letter-spacing: 2px;
+                padding: 10px 24px 0 24px;
+                background: transparent;
+            }
+            
+            /* ===== TARJETA DE REGISTRO ===== */
+            QFrame#log_card {
+                background: #ffffff;
+                border: none;
+                border-radius: 18px;
+                min-height: 90px;
+            }
+            
+            QLabel#log_timestamp {
+                color: #0a1a2f;
+                font-size: 15px;
+                font-family: 'Roboto Mono', 'Courier New', monospace;
+                font-weight: 600;
+                background: #f0f7ff;
+                padding: 6px 14px;
+                border-radius: 20px;
+                min-width: 110px;
+            }
+            
+            QLabel#log_type {
+                color: #0a1a2f;
+                font-size: 15px;
+                font-weight: 700;
+                font-family: 'Segoe UI', sans-serif;
+                background: #f5f5f5;
+                padding: 6px 16px;
+                border-radius: 20px;
+                min-width: 170px;
+            }
+            
+            QLabel#log_locker {
+                color: #ffffff;
+                font-size: 14px;
+                font-weight: 700;
+                background: #2b6eb0;
+                padding: 6px 14px;
+                border-radius: 25px;
+                min-width: 50px;
+                text-align: center;
+            }
+            
+            QLabel#log_success {
+                color: #ffffff;
+                font-size: 14px;
+                font-weight: 700;
+                background: #1a7a50;
+                padding: 6px 16px;
+                border-radius: 25px;
+                min-width: 80px;
+                text-align: center;
+            }
+            
+            QLabel#log_fail {
+                color: #ffffff;
+                font-size: 14px;
+                font-weight: 700;
+                background: #c05a5a;
+                padding: 6px 16px;
+                border-radius: 25px;
+                min-width: 80px;
+                text-align: center;
+            }
+            
+            QLabel#log_description {
+                color: #5f7fa0;
+                font-size: 13px;
+                font-family: 'Segoe UI', sans-serif;
+                font-style: italic;
+                margin-top: 8px;
+                padding-left: 8px;
+            }
+            
+            /* ===== BOTÓN ACTUALIZAR ===== */
+            QPushButton#btn_refresh {
+                background: #ffffff;
+                color: #0a1a2f;
+                border: none;
+                border-radius: 30px;
+                padding: 10px 24px;
+                font-size: 14px;
+                font-weight: 600;
+                font-family: 'Segoe UI', sans-serif;
+            }
+            QPushButton#btn_refresh:hover {
+                background: #f0f7ff;
+            }
+            QPushButton#btn_refresh:pressed {
+                background: #e0ecff;
+            }
+            
+            /* ===== DIVISOR ===== */
+            QFrame#h_divider {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #d0e4ff, stop:0.5 #b0c8ff, stop:1 #d0e4ff);
+                min-height: 2px;
+                max-height: 2px;
+                margin: 16px 0;
+            }
+            
+            /* ===== SCROLLBAR ===== */
+            QScrollArea {
+                border: none;
+                background: transparent;
+            }
+            QScrollBar:vertical {
+                background: #f0f5ff;
+                width: 8px;
+                border-radius: 4px;
+            }
+            QScrollBar::handle:vertical {
+                background: #b8d6ff;
+                border-radius: 4px;
+                min-height: 40px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: #7aa9d9;
+            }
+        """)
 
-        top = QHBoxLayout()
-        top.addWidget(lbl("Registro de accesos (ultimos 50)", "body"))
-        top.addStretch()
-        btn_ref = QPushButton("Actualizar"); btn_ref.setObjectName("btn_sm")
-        btn_ref.setCursor(Qt.PointingHandCursor); btn_ref.clicked.connect(self.refresh)
-        top.addWidget(btn_ref)
-        vl.addLayout(top)
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(24, 24, 24, 24)
+        main_layout.setSpacing(16)
 
-        scroll = QScrollArea(); scroll.setWidgetResizable(True)
-        self.inner = QWidget(); self.inner.setObjectName("admin_log_inner")
-        self.il = QVBoxLayout(self.inner)
-        self.il.setContentsMargins(0, 0, 0, 0); self.il.setSpacing(6)
+        # Header con título y botón
+        header = QHBoxLayout()
+        
+        # Título
+        title = QLabel("REGISTRO DE ACCESOS")
+        title.setObjectName("page_title")
+        header.addWidget(title)
+        
+        header.addStretch()
+        
+        # Botón actualizar con sombra
+        self.btn_refresh = QPushButton("↻ ACTUALIZAR")
+        self.btn_refresh.setObjectName("btn_refresh")
+        self.btn_refresh.setCursor(Qt.PointingHandCursor)
+        self.btn_refresh.clicked.connect(self.refresh)
+        self.btn_refresh.setFixedWidth(140)
+        _shadow(self.btn_refresh, blur=8, alpha=20, offset=2)
+        header.addWidget(self.btn_refresh)
+
+        main_layout.addLayout(header)
+
+        # Divisor
+        div = QFrame()
+        div.setObjectName("h_divider")
+        main_layout.addWidget(div)
+
+        # Scroll area
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        self.inner = QWidget()
+        self.inner.setObjectName("admin_log_inner")
+        self.inner_layout = QVBoxLayout(self.inner)
+        self.inner_layout.setContentsMargins(8, 8, 8, 8)
+        self.inner_layout.setSpacing(16)
+        self.inner_layout.setAlignment(Qt.AlignTop)
+
         scroll.setWidget(self.inner)
-        vl.addWidget(scroll, 1)
+        main_layout.addWidget(scroll, 1)
+
         self.refresh()
 
+    def paintEvent(self, event):
+        p = QPainter(self)
+        g = QLinearGradient(0, 0, 0, self.height())
+        g.setColorAt(0.0, QColor(248, 250, 255))
+        g.setColorAt(0.5, QColor(240, 245, 255))
+        g.setColorAt(1.0, QColor(235, 240, 255))
+        p.fillRect(0, 0, self.width(), self.height(), QBrush(g))
+
     def refresh(self):
-        for i in reversed(range(self.il.count())):
-            item = self.il.itemAt(i)
+        # Limpiar
+        for i in reversed(range(self.inner_layout.count())):
+            item = self.inner_layout.itemAt(i)
             if item and item.widget():
                 item.widget().deleteLater()
 
         intentos = db_get_intentos_recientes(50)
+
         if not intentos:
-            self.il.addWidget(lbl("Sin registros.", "small"))
-        else:
-            for it in intentos:
-                row = QFrame(); row.setObjectName("card_log")
-                rl  = QHBoxLayout(row); rl.setContentsMargins(16, 10, 16, 10); rl.setSpacing(12)
+            empty = QLabel("No hay registros de acceso")
+            empty.setStyleSheet("color: #7aa9d9; font-size: 16px; font-style: italic; padding: 60px 0;")
+            empty.setAlignment(Qt.AlignCenter)
+            self.inner_layout.addWidget(empty)
+            return
 
-                # Color por resultado
-                resultado = it.get("t_resultado_acceso", "")
-                lbl_obj   = "log_ok" if resultado == "exitoso" else "log_fail"
+        for it in intentos:
+            # Tarjeta de registro con sombra principal
+            card = QFrame()
+            card.setObjectName("log_card")
+            _shadow(card, blur=12, alpha=25, offset=3)
 
-                ts   = lbl(it.get("d_fecha_hora_acceso", "")[:16], "small")
-                tipo = lbl(it.get("t_tipo_intento", ""), lbl_obj)
-                lk   = lbl("L#{}".format(it.get("t_numero_locker") or "-"), "small")
-                res  = lbl(resultado, lbl_obj)
-                desc = lbl((it.get("t_descripcion_acceso") or "")[:40], "small")
+            layout = QVBoxLayout(card)
+            layout.setContentsMargins(18, 14, 18, 14)
+            layout.setSpacing(8)
 
-                rl.addWidget(ts); rl.addWidget(tipo); rl.addWidget(lk)
-                rl.addWidget(res); rl.addStretch(); rl.addWidget(desc)
-                self.il.addWidget(row)
-        self.il.addStretch()
+            # Primera fila: timestamp, tipo, locker, resultado
+            row1 = QHBoxLayout()
+            row1.setSpacing(12)
 
+            # Timestamp con sombra
+            ts = it.get("d_fecha_hora_acceso", "")
+            if ts:
+                if len(ts) >= 16:
+                    ts_formatted = f"{ts[8:10]}/{ts[5:7]} {ts[11:16]}"
+                else:
+                    ts_formatted = ts
+                ts_lbl = QLabel(ts_formatted)
+                ts_lbl.setObjectName("log_timestamp")
+                _shadow(ts_lbl, blur=5, alpha=15, offset=1)
+                row1.addWidget(ts_lbl)
+
+            # Tipo con sombra
+            tipo = it.get("t_tipo_intento", "").upper()
+            tipo_lbl = QLabel(tipo)
+            tipo_lbl.setObjectName("log_type")
+            _shadow(tipo_lbl, blur=5, alpha=15, offset=1)
+            row1.addWidget(tipo_lbl)
+
+            # Locker con sombra
+            locker = it.get("t_numero_locker")
+            if locker:
+                locker_lbl = QLabel(f"#{locker}")
+                locker_lbl.setObjectName("log_locker")
+                _shadow(locker_lbl, blur=6, alpha=25, offset=1)
+                row1.addWidget(locker_lbl)
+
+            # Resultado con sombra
+            resultado = it.get("t_resultado_acceso", "")
+            res_lbl = QLabel("✔ ÉXITO" if resultado == "exitoso" else "✗ FALLO")
+            res_lbl.setObjectName("log_success" if resultado == "exitoso" else "log_fail")
+            _shadow(res_lbl, blur=6, alpha=25, offset=1)
+            row1.addWidget(res_lbl)
+
+            row1.addStretch()
+            layout.addLayout(row1)
+
+            # Segunda fila: descripción
+            desc = it.get("t_descripcion_acceso", "")
+            if desc:
+                desc_lbl = QLabel(desc[:60] + ("..." if len(desc) > 60 else ""))
+                desc_lbl.setObjectName("log_description")
+                layout.addWidget(desc_lbl)
+
+            self.inner_layout.addWidget(card)
