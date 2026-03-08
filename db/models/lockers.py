@@ -1,8 +1,8 @@
 from db.connection import connectionDB
 import datetime
 
+
 def db_get_all_lockers():
-    """Devuelve lista de todos los lockers como dicts."""
     with connectionDB() as con:
         rows = con.execute(
             "SELECT * FROM Lockers ORDER BY CAST(t_numero_locker AS INTEGER)"
@@ -19,7 +19,6 @@ def db_get_locker_by_id(id_locker):
 
 
 def db_next_free_locker():
-    """Devuelve (ID_locker, t_numero_locker) del primer locker libre, o None."""
     with connectionDB() as con:
         row = con.execute(
             "SELECT ID_locker, t_numero_locker FROM Lockers "
@@ -29,7 +28,6 @@ def db_next_free_locker():
 
 
 def db_set_locker_estado(id_locker, estado, id_admin=None):
-    """Actualiza el estado de un locker y registra quien lo modifico."""
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with connectionDB() as con:
         con.execute(
@@ -40,7 +38,6 @@ def db_set_locker_estado(id_locker, estado, id_admin=None):
 
 
 def db_insert_locker(numero, zona="", tamano="mediano", id_admin=None):
-    """Inserta un nuevo locker. Retorna el ID generado."""
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with connectionDB() as con:
         cur = con.execute(
@@ -49,6 +46,27 @@ def db_insert_locker(numero, zona="", tamano="mediano", id_admin=None):
             (numero, zona, tamano, now, id_admin)
         )
         return cur.lastrowid
+
+
+def db_update_locker(id_locker, numero=None, zona=None, tamano=None,
+                     estado=None, id_admin=None):
+    """
+    Updates any combination of locker fields.
+    Only non-None values are written.
+    Always stamps d_fecha_modificacion and ID_usuario_modificacion.
+    """
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    fields, params = [], []
+    if numero is not None: fields.append("t_numero_locker=?");    params.append(numero)
+    if zona   is not None: fields.append("t_zona=?");             params.append(zona)
+    if tamano is not None: fields.append("t_tamano=?");           params.append(tamano)
+    if estado is not None: fields.append("t_estado=?");           params.append(estado)
+    fields += ["d_fecha_modificacion=?", "ID_usuario_modificacion=?"]
+    params += [now, id_admin, id_locker]
+    with connectionDB() as con:
+        con.execute(
+            f"UPDATE Lockers SET {', '.join(fields)} WHERE ID_locker=?", params
+        )
 
 
 def db_delete_locker(id_locker):
