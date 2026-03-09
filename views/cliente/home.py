@@ -158,7 +158,7 @@ class BigLockerButton(QWidget):
         # ── Circle ──
         circle_r = int(min(W, H) * 0.30)   # radius relative to button size
         cx = W // 2
-        cy = int(H * 0.38)                  # circle center sits in upper 40%
+        cy = int(H * 0.33)                  # circle center sits in upper 40%
 
         # Circle fill
         cc = QColor(self._circle_color)
@@ -210,7 +210,7 @@ class BigLockerButton(QWidget):
 
         # ── Main label ──
         label_top = cy + circle_r + int(H * 0.04)
-        font_size  = max(14, int(H * 0.10))
+        font_size  = max(14, int(H * 0.08))
         font = QFont("Segoe UI", font_size, QFont.Bold)
         p.setFont(font)
         p.setPen(QPen(self._label_color))
