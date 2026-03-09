@@ -214,8 +214,8 @@ class BigLockerButton(QWidget):
         font = QFont("Segoe UI", font_size, QFont.Bold)
         p.setFont(font)
         p.setPen(QPen(self._label_color))
-        p.drawText(0, label_top, W, int(H * 0.16),
-                   Qt.AlignHCenter | Qt.AlignTop, self.label)
+        p.drawText(0, label_top, W, H - label_top,
+           Qt.AlignHCenter | Qt.AlignTop, self.label)
 
         # ── Sub-label (e.g. "Lockers desocupados: 5") ──
         if self.sublabel:
@@ -224,8 +224,8 @@ class BigLockerButton(QWidget):
             sfont = QFont("Segoe UI", sub_font_size)
             p.setFont(sfont)
             p.setPen(QPen(QColor("#78909c")))
-            p.drawText(0, sub_top, W, int(H * 0.10),
-                       Qt.AlignHCenter | Qt.AlignTop, self.sublabel)
+            p.drawText(0, sub_top, W, H - sub_top,
+           Qt.AlignHCenter | Qt.AlignTop, self.sublabel)
 
         p.end()
 
