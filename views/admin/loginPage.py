@@ -1,183 +1,241 @@
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLineEdit, QFrame, QSizePolicy
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
+    QLineEdit, QFrame, QSizePolicy, QLabel, QApplication
+)
+from PyQt5.QtGui import QPainter, QColor, QBrush, QLinearGradient, QFont
 
 from db.models.intentos_acceso import db_log_intento
 from db.models.usuarios import db_admin_exists, db_admin_valid, db_get_admin_by_username
-from views.style.widgets.widgets import lbl, sep_line
+from views.style.widgets.widgets import sep_line
+
+
+def _dp(v):
+    screen = QApplication.primaryScreen()
+    dpi = screen.logicalDotsPerInch() if screen else 96
+    return max(1, round(v * dpi / 96))
+
+
+def lbl(text, obj="", align=Qt.AlignLeft):
+    l = QLabel(text)
+    if obj:
+        l.setObjectName(obj)
+    l.setAlignment(align)
+    return l
+
+
+# ─── PALETTE ────────────────────────────────────────────────────────────────
+#   BG      #F7F8FA  (off-white, not glaring)
+#   CARD    #FFFFFF  (pure white card)
+#   INK     #111318  (near-black text)
+#   MUTED   #8B909A  (secondary text)
+#   BORDER  #E4E6EA  (very subtle border)
+#   ACCENT  #2563EB  (single vivid blue)
+#   DANGER  #DC2626  (error red)
+# ────────────────────────────────────────────────────────────────────────────
 
 STYLE = """
-/* Fondo principal con azul cielo */
 QWidget#admin_login_page {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-        stop:0 #b3e0ff, stop:1 #87CEEB);
+    background-color: #F7F8FA;
 }
 
-/* Tarjeta blanca - CON MARGEN DE 10px */
-QFrame#card_blue {
-    background-color: white;
-    border: 1px solid #c0dcf0;
-    border-radius: 25px;
-    margin: 10px;  /* ← MARGEN DE 10px EN TODOS LOS BORDES */
+/* ── Card ── */
+QFrame#card {
+    background-color: #FFFFFF;
+    border: 1px solid #E4E6EA;
+    border-radius: 4px;
 }
 
-/* Título grande (Acceso al Panel) */
-QLabel#h2 {
-    color: #145388;
-    font-size: 28px;
-    font-weight: 700;
-}
-
-/* Etiqueta ADMINISTRACIÓN */
-QLabel#tag {
-    color: #3a7ca5;
-    font-size: 14px;
+/* ── Labels ── */
+QLabel#eyebrow {
+    color: #2563EB;
+    font-family: 'DM Mono', 'Courier New', monospace;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 4px;
 }
-
-/* Etiquetas normales (Usuario, Contraseña) */
-QLabel {
-    color: #1e4b6e;
-    font-size: 16px;
+QLabel#headline {
+    color: #111318;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 32px;
+    font-weight: 400;
 }
-
-/* Línea separadora */
-QFrame#sep {
-    background: #7bb3d9;
-    min-height: 3px;
-    max-height: 3px;
-}
-
-/* Campos de texto */
-QLineEdit#inp {
-    background-color: #f0f8ff;
-    border: 2px solid #b8d6f0;
-    border-radius: 15px;
-    color: #0a2a44;
-    padding: 16px 20px;
-    font-size: 16px;
-}
-
-QLineEdit#inp:focus {
-    border-color: #3d8cff;
-    background-color: white;
-}
-
-/* Placeholder */
-QLineEdit#inp::placeholder {
-    color: #8fb4d9;
-    font-size: 16px;
-}
-
-/* Botón INGRESAR */
-QPushButton#btn_blue {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-        stop:0 #5da5ff, stop:1 #3a7cd9);
-    color: white;
-    border: none;
-    border-radius: 15px;
-    padding: 18px 36px;
-    font-size: 18px;
-    font-weight: 700;
-    min-height: 30px;
-}
-
-QPushButton#btn_blue:hover {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-        stop:0 #4a95ff, stop:1 #2c6ac9);
-}
-
-/* Botón Volver */
-QPushButton#btn_sm {
-    background-color: transparent;
-    color: #2c6289;
-    border: 2px solid #aac9e5;
-    border-radius: 12px;
-    padding: 10px 20px;
-    font-size: 14px;
-    font-weight: 500;
-}
-
-QPushButton#btn_sm:hover {
-    background-color: #e2f0ff;
-    border-color: #5d9fd3;
-}
-
-/* Mensajes de error */
-QLabel#err {
-    color: #c74545;
-    font-size: 16px;
+QLabel#field_lbl {
+    color: #8B909A;
+    font-family: 'DM Mono', 'Courier New', monospace;
+    font-size: 10px;
     font-weight: 600;
-    padding: 10px;
+    letter-spacing: 3px;
+}
+
+/* ── Inputs ── */
+QLineEdit#inp {
+    background-color: #F7F8FA;
+    border: 1px solid #E4E6EA;
+    border-radius: 2px;
+    color: #111318;
+    padding: 14px 16px;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 15px;
+    selection-background-color: #DBEAFE;
+}
+QLineEdit#inp:focus {
+    border: 1.5px solid #2563EB;
+    background-color: #FFFFFF;
+    outline: none;
+}
+QLineEdit#inp::placeholder {
+    color: #C4C7CE;
+}
+
+/* ── Primary button ── */
+QPushButton#btn_primary {
+    background-color: #111318;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 2px;
+    padding: 16px 0px;
+    font-family: 'DM Mono', 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 4px;
+    min-height: 52px;
+}
+QPushButton#btn_primary:hover {
+    background-color: #2563EB;
+}
+QPushButton#btn_primary:pressed {
+    background-color: #1D4ED8;
+}
+
+/* ── Ghost button ── */
+QPushButton#btn_ghost {
+    background-color: transparent;
+    color: #8B909A;
+    border: none;
+    padding: 6px 0px;
+    font-family: 'DM Mono', 'Courier New', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 2px;
+}
+QPushButton#btn_ghost:hover {
+    color: #111318;
+}
+
+/* ── Error ── */
+QLabel#err {
+    color: #DC2626;
+    font-family: 'DM Mono', 'Courier New', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    padding: 0px;
+}
+
+/* ── Divider ── */
+QFrame#div {
+    background-color: #E4E6EA;
+    border: none;
+    min-height: 1px;
+    max-height: 1px;
 }
 """
 
+
 class AdminLoginPage(QWidget):
     go_back  = pyqtSignal()
-    login_ok = pyqtSignal(dict)   # dict con datos del admin autenticado
+    login_ok = pyqtSignal(dict)
 
     def __init__(self):
         super().__init__()
         self.setObjectName("admin_login_page")
         self.setStyleSheet(STYLE)
-        vl = QVBoxLayout(self)
-        vl.setContentsMargins(0, 0, 0, 0)
-        vl.setAlignment(Qt.AlignCenter)
 
-        card = QFrame(); card.setObjectName("card_blue")
-        card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        cl   = QVBoxLayout(card)
-        cl.setContentsMargins(80, 60, 80, 60)  # Antes 56,48,56,48
-        cl.setSpacing(25)  # Antes 18
-        # card.setFixedWidth(460) #Eliminado para quitar el ancho fijo
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setAlignment(Qt.AlignCenter)
 
-        # Fila superior con botón Volver
-        hdr_row = QHBoxLayout()
-        bk = QPushButton("< Volver"); bk.setObjectName("btn_sm")
-        bk.setCursor(Qt.PointingHandCursor); bk.clicked.connect(self.go_back.emit)
-        hdr_row.addWidget(bk); hdr_row.addStretch()
-        cl.addLayout(hdr_row)
+        # ── Card ──────────────────────────────────────────────────────────────
+        card = QFrame()
+        card.setObjectName("card")
+        card.setFixedWidth(_dp(440))
+        card.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.MinimumExpanding)
 
-        # Títulos y separador (usando las funciones existentes)
-        cl.addWidget(lbl("ADMINISTRACION", "tag", Qt.AlignCenter))
-        cl.addWidget(lbl("Acceso al Panel", "h2", Qt.AlignCenter))
-        cl.addWidget(sep_line())
+        cl = QVBoxLayout(card)
+        cl.setContentsMargins(_dp(56), _dp(52), _dp(56), _dp(52))
+        cl.setSpacing(0)
 
-        # Campo Usuario
-        cl.addWidget(lbl("Usuario"))
-        self.user_inp = QLineEdit(); self.user_inp.setObjectName("inp")
+        # ── Back button ───────────────────────────────────────────────────────
+        back_row = QHBoxLayout()
+        bk = QPushButton("← VOLVER")
+        bk.setObjectName("btn_ghost")
+        bk.setCursor(Qt.PointingHandCursor)
+        bk.clicked.connect(self.go_back.emit)
+        back_row.addWidget(bk)
+        back_row.addStretch()
+        cl.addLayout(back_row)
+        cl.addSpacing(_dp(36))
+
+        # ── Eyebrow + Headline ────────────────────────────────────────────────
+        cl.addWidget(lbl("ADMINISTRACIÓN", "eyebrow"))
+        cl.addSpacing(_dp(10))
+        cl.addWidget(lbl("Acceso\nal panel.", "headline"))
+        cl.addSpacing(_dp(32))
+
+        # ── Divider ───────────────────────────────────────────────────────────
+        div = QFrame(); div.setObjectName("div")
+        cl.addWidget(div)
+        cl.addSpacing(_dp(32))
+
+        # ── Usuario ───────────────────────────────────────────────────────────
+        cl.addWidget(lbl("USUARIO", "field_lbl"))
+        cl.addSpacing(_dp(8))
+        self.user_inp = QLineEdit()
+        self.user_inp.setObjectName("inp")
         self.user_inp.setPlaceholderText("nombre de usuario")
         cl.addWidget(self.user_inp)
+        cl.addSpacing(_dp(20))
 
-        # Campo Contraseña
-        cl.addWidget(lbl("Contraseña"))
-        self.pass_inp = QLineEdit(); self.pass_inp.setObjectName("inp")
+        # ── Contraseña ────────────────────────────────────────────────────────
+        cl.addWidget(lbl("CONTRASEÑA", "field_lbl"))
+        cl.addSpacing(_dp(8))
+        self.pass_inp = QLineEdit()
+        self.pass_inp.setObjectName("inp")
         self.pass_inp.setEchoMode(QLineEdit.Password)
         self.pass_inp.setPlaceholderText("••••••••")
         self.pass_inp.returnPressed.connect(self._check)
         cl.addWidget(self.pass_inp)
+        cl.addSpacing(_dp(8))
 
-        # Label de error
-        self.err_lbl = lbl("", "err", Qt.AlignCenter)
+        # ── Error label ───────────────────────────────────────────────────────
+        self.err_lbl = lbl("", "err")
+        self.err_lbl.setMinimumHeight(_dp(20))
         cl.addWidget(self.err_lbl)
+        cl.addSpacing(_dp(24))
 
-        # Botón INGRESAR
-        btn_in = QPushButton("INGRESAR"); btn_in.setObjectName("btn_blue")
+        # ── Submit button ─────────────────────────────────────────────────────
+        btn_in = QPushButton("INGRESAR")
+        btn_in.setObjectName("btn_primary")
         btn_in.setCursor(Qt.PointingHandCursor)
         btn_in.clicked.connect(self._check)
         cl.addWidget(btn_in)
 
-        vl.addWidget(card)
+        root.addWidget(card)
+
+    def paintEvent(self, e):
+        p = QPainter(self)
+        p.fillRect(self.rect(), QBrush(QColor("#F7F8FA")))
+        p.end()
 
     def _check(self):
         u = self.user_inp.text().strip()
         p = self.pass_inp.text()
         if not u or not p:
-            self.err_lbl.setText("Completa los campos.")
+            self.err_lbl.setText("· Completa todos los campos.")
             return
         if not db_admin_exists(u):
-            self.err_lbl.setText("Usuario no encontrado.")
-            # Loguear intento fallido (sin locker especifico, usamos 0)
+            self.err_lbl.setText("· Usuario no encontrado.")
             try:
                 db_log_intento(0, "acceso_admin", "fallido",
                                "Intento con usuario: {}".format(u))
@@ -185,26 +243,27 @@ class AdminLoginPage(QWidget):
                 pass
             return
         if not db_admin_valid(u, p):
-            self.err_lbl.setText("Contrasena incorrecta.")
+            self.err_lbl.setText("· Contraseña incorrecta.")
             self.pass_inp.clear()
             try:
                 db_log_intento(0, "acceso_admin", "fallido",
-                               "Contrasena incorrecta para: {}".format(u))
+                               "Contraseña incorrecta para: {}".format(u))
             except Exception:
                 pass
             return
         admin = db_get_admin_by_username(u)
-        # Loguear acceso exitoso
         try:
             db_log_intento(0, "acceso_admin", "exitoso",
-                           "Admin {} ingreso al panel.".format(u),
+                           "Admin {} ingresó al panel.".format(u),
                            id_usuario=admin["ID_admin"])
         except Exception:
             pass
         self.err_lbl.setText("")
-        self.user_inp.clear(); self.pass_inp.clear()
+        self.user_inp.clear()
+        self.pass_inp.clear()
         self.login_ok.emit(admin)
-        
 
     def reset(self):
-        self.user_inp.clear(); self.pass_inp.clear(); self.err_lbl.setText("")
+        self.user_inp.clear()
+        self.pass_inp.clear()
+        self.err_lbl.setText("")
