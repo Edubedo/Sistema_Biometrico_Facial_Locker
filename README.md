@@ -97,7 +97,7 @@ Crear un archivo `.env` en la raíz del proyecto:
 DB_PATH=C:/ruta/a/tu/base_de_datos/lockers.db
 ```
 
-**Nota**: La base de datos SQLite debe existir previamente con el esquema correcto. Ver sección [Estructura de la Base de Datos](#-estructura-de-la-base-de-datos).
+**Nota**: La base de datos SQLite debe existir previamente con el esquema correcto.
 
 ### 4. Ejecutar el sistema
 ```bash
