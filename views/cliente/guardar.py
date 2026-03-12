@@ -33,17 +33,26 @@ QFrame#prog_fill {
     border-radius: 6px; min-height: 12px; max-height: 12px;
 }
 QPushButton#btn_blue {
-    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #305bab, stop:1 #0f4fd4);
-    color: #fff; border: none; border-radius: 10px; padding: 14px 28px;
-    font-size: 15px; font-weight: 700; font-family: 'Segoe UI',sans-serif;
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
+        stop:0 #1a3a6b, stop:0.5 #305bab, stop:1 #678dd3); color: white; border: none; border-radius: 11px;
+    padding: 20px 30px; font-size: 16px; font-weight: 750; font-family: 'Segoe UI', sans-serif;
+    letter-spacing: 1px;
 }
-QPushButton#btn_blue:hover { background: #3d6fd1; }
-QPushButton#btn_blue:disabled { background: #9aa7c2; color: #1a3a5c; }
+QPushButton#btn_blue:hover { background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
+        stop:0 #2952a3, stop:0.5 #3d6fd1, stop:1 #7aa3e8); }
+QPushButton#btn_blue:pressed {
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
+        stop:0 #1a3a6b, stop:0.5 #305bab, stop:1 #5681cf);
+}
+QPushButton#btn_blue:disabled {  background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
+        stop:0 #4a90d9, stop:1 #7ec8f5);
+    color: black; }
 QPushButton#btn_sm {
-    background: #ffffff; color: #305bab; border: 2px solid #305bab; border-radius: 8px;
+     background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #96bfe9, stop:1 #b8e1fa); color: #1d3767; border: 3px solid #305bab; border-radius: 8px;
     padding: 6px 16px; font-size: 15px; font-family: 'Segoe UI',sans-serif;
 }
-QPushButton#btn_sm:hover { color: #305bab; border-color: #fff; }
+QPushButton#btn_sm:hover { color: #305bab; border-color: #838383; }
+QPushButton#btn_sm:pressed { background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #95a49f, stop:0.5 #c1cac7, stop:1 #5681cf); }
 """
 
 
@@ -111,6 +120,8 @@ class GuardarPage(QWidget):
 
         self.start_btn = QPushButton("REGISTRAR BIOMETRIA")
         self.start_btn.setObjectName("btn_blue")
+        self.start_btn.setMinimumHeight(55)
+        self.start_btn.setMinimumWidth(320)
         self.start_btn.setCursor(Qt.PointingHandCursor)
         self.start_btn.clicked.connect(self._start_capture)
        
@@ -160,7 +171,7 @@ class GuardarPage(QWidget):
             self.avail_lbl.setText(
                 "Locker disponible. Se te asignara el #{}.".format(result[1])
             )
-            self.avail_lbl.setStyleSheet("color:#2dc75c; font-size:13px; font-family:'Segoe UI';")
+            self.avail_lbl.setStyleSheet("color:#B9EA89; font-size:13px; font-family:'Segoe UI';")
             self.start_btn.setEnabled(True)
         else:
             self._id_locker = None
