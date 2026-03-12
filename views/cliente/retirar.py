@@ -14,12 +14,13 @@ STYLE = """
 QWidget#retirar_page { background: #e7e7e7; color: #1f2a44 }
 QLabel#h2 { color: #305bab; font-size: 24px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
 QLabel#h3 { color: #305bab; font-size: 18px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
-QLabel#tag { color: #305bab; font-size: 18px; font-weight: 700; font-family: 'Courier New'; letter-spacing: 4px; }
-QLabel#body { color: #2c3e50; font-size: 16px; font-family: 'Segoe UI',sans-serif; }
+QLabel#tag { color: #305bab; font-size: 22px; font-weight: 700; font-family: 'Courier New'; letter-spacing: 4px; }
+QLabel#body { color: #2c3e50; font-size: 20px; font-family: 'Segoe UI',sans-serif; }
 QLabel#small { color: #3a5f84; font-size: 16px; font-family: 'Courier New'; letter-spacing: 1px; }
 QLabel#ok { color: #b9ea89; font-size: 14px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
 QFrame#sep { background: #305bab; min-height: 1px; max-height: 1px; }
 QFrame#card { background: #c6dcff; border: 2px solid #305bab; border-radius: 14px; }
+QFrame#status_box { background: #c6dcff; border-radius: 12px; padding: 20px; border: 2px solid #305bab; }
 
 QLabel#cam {
     background: #0c1530; border: 4px solid #305bab; border-radius: 10px;
@@ -28,7 +29,7 @@ QLabel#cam {
 
 QPushButton#btn_outline {
      background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #4a90d9, stop:1 #7ec8f5); color: black;
-    border: none; border-radius: 11px; padding: 20px 30px; font-size: 16px;
+    border: none; border-radius: 11px; padding: 20px 30px; font-size: 19px;
     font-weight: 750; font-family: 'Segoe UI', sans-serif; letter-spacing: 1px;
 }
 
@@ -41,17 +42,17 @@ QPushButton#btn_outline:disabled { background: qlineargradient(x1:0,y1:0,x2:1,y2
 QPushButton#btn_green {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #b9ea89, stop:1 #0fa860);
     color: #0a1628; border: none; border-radius: 12px; padding: 14px 30px;
-    font-size: 14px; font-weight: 800; font-family: 'Segoe UI',sans-serif;
+    font-size: 16px; font-weight: 800; font-family: 'Segoe UI',sans-serif;
 }
 
 QPushButton#btn_red {
     background: #bd0a0a; color: #fff; border: none; border-radius: 12px;
-    padding: 14px 30px; font-size: 14px; font-weight: 800; font-family: 'Segoe UI',sans-serif;
+    padding: 14px 30px; font-size: 16px; font-weight: 800; font-family: 'Segoe UI',sans-serif;
 }
 
 QPushButton#btn_sm {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #96bfe9, stop:1 #b8e1fa); color: #1d3767; border: 3px solid #305bab; border-radius: 8px;
-    padding: 8px 18px; font-size: 15px; font-family: 'Segoe UI',sans-serif;
+    padding: 8px 18px; font-size: 19px; font-family: 'Segoe UI',sans-serif;
 }
 
 QPushButton#btn_sm:hover { color: #305bab; border-color: #838383; }
@@ -119,28 +120,42 @@ class RetirarPage(QWidget):
         for n, t in [
             ("1", "Acerca tu rostro a la camara"),
             ("2", "Mantén una expresion neutra"),
-            ("3", "Escoge tu opcion")
+            ("3", "Escoge tu opcion"),
+            ("4", "Sus imágenes solo están siendo usadas en este momento y las borraremos en cuanto finalice sus compras")
         ]:
              step = _step_bullet(n, t)
              step.setFixedWidth(420)
+             for child in step.findChildren(QLabel):
+                child.setWordWrap(True)
              ll.addWidget(step, alignment=Qt.AlignCenter)
         ll.addStretch(1)
 
         # Boton iniciar escaneo
+        status_box = QFrame()
+        status_box.setObjectName("status_box")
+        sb_layout = QVBoxLayout(status_box)
+        sb_layout.setSpacing(10)
+        sb_layout.setAlignment(Qt.AlignCenter)
+        
+        
         self.scan_btn = QPushButton("INICIAR ESCANEO")
         self.scan_btn.setObjectName("btn_outline")
-        self.scan_btn.setMinimumHeight(55)
-        self.scan_btn.setMinimumWidth(320)
+        self.scan_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.scan_btn.setCursor(Qt.PointingHandCursor)
         self.scan_btn.clicked.connect(self._start_scan)
+        
+        self.scan_lbl = lbl("", "small", Qt.AlignCenter)
 
-        ll.addWidget(self.scan_btn)
+        sb_layout.addWidget(self.scan_btn)
+        sb_layout.addWidget(self.scan_lbl)
+        
+        ll.addWidget(status_box)
 
         # Texto estado escaneo
         self.scan_lbl = lbl("", "small", Qt.AlignCenter)
         ll.addWidget(self.scan_lbl)
 
-        ll.addWidget(sep_line())
+        # ll.addWidget(sep_line())
 
         # Opciones post-reconocimiento (ocultas hasta identificar)
         self.opts = QFrame()
