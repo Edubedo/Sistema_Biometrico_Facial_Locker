@@ -27,12 +27,16 @@ QLabel#cam {
 }
 
 QPushButton#btn_outline {
-    background: transparent; color: #305bab; border: 2px solid #1a3a5c;
-    border-radius: 12px; padding: 14px 30px; font-size: 14px; font-weight: 700;
-    font-family: 'Segoe UI',sans-serif;
+     background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #4a90d9, stop:1 #7ec8f5); color: black;
+    border: none; border-radius: 11px; padding: 20px 30px; font-size: 16px;
+    font-weight: 750; font-family: 'Segoe UI', sans-serif; letter-spacing: 1px;
 }
 
-QPushButton#btn_outline:hover { border-color: #305bab; color: #c6dcff; background: #0c1530; }
+QPushButton#btn_outline:hover { background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #5ba3e8, stop:1 #90d4ff); }
+
+QPushButton#btn_outline:pressed { background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #1a3a6b, stop:0.5 #305bab, stop:1 #678dd3); }
+
+QPushButton#btn_outline:disabled { background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #8ab8e0, stop:1 #aad0f0); color:  #e0eef8; }
 
 QPushButton#btn_green {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #b9ea89, stop:1 #0fa860);
@@ -46,9 +50,13 @@ QPushButton#btn_red {
 }
 
 QPushButton#btn_sm {
-    background: #ffffff; color: #305bab; border: 2px solid #305bab; border-radius: 8px;
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #96bfe9, stop:1 #b8e1fa); color: #1d3767; border: 3px solid #305bab; border-radius: 8px;
     padding: 8px 18px; font-size: 15px; font-family: 'Segoe UI',sans-serif;
 }
+
+QPushButton#btn_sm:hover { color: #305bab; border-color: #838383; }
+QPushButton#btn_sm:pressed { background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #95a49f, stop:0.5 #c1cac7, stop:1 #5681cf); }
+
 """
 
 class RetirarPage(QWidget):
@@ -121,6 +129,8 @@ class RetirarPage(QWidget):
         # Boton iniciar escaneo
         self.scan_btn = QPushButton("INICIAR ESCANEO")
         self.scan_btn.setObjectName("btn_outline")
+        self.scan_btn.setMinimumHeight(55)
+        self.scan_btn.setMinimumWidth(320)
         self.scan_btn.setCursor(Qt.PointingHandCursor)
         self.scan_btn.clicked.connect(self._start_scan)
 
