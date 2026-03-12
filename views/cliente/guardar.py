@@ -16,10 +16,10 @@ from views.style.widgets.widgets import _step_bullet, lbl, sep_line, CamWidget
 STYLE = """
 QWidget#guardar_page { background: #E7E7E7; color: #1f2a44; }
 QLabel#h2 { color: #305BAB; font-size: 24px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
-QLabel#tag { color: #305BAB; font-size: 18px; font-weight: 700; font-family: 'Courier New'; letter-spacing: 4px; }
-QLabel#body { color: #2c3e50; font-size: 16px; font-family: 'Segoe UI',sans-serif; }
+QLabel#tag { color: #305BAB; font-size: 22px; font-weight: 700; font-family: 'Courier New'; letter-spacing: 4px; }
+QLabel#body { color: #2c3e50; font-size: 20px; font-family: 'Segoe UI',sans-serif; }
 QLabel#small { color: #3a5f84; font-size: 16px; font-family: 'Courier New'; letter-spacing: 1px; }
-QLabel#err { color: #BD0A0A; font-size: 14px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
+QLabel#err { color: #BD0A0A; font-size: 17px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
 QFrame#sep { background: #305BAB; min-height: 1px; max-height: 1px; }
 QFrame#card { background: #C6DCFF; border: 2px solid #305BAB; border-radius: 14px; }
 QLabel#cam {
@@ -35,7 +35,7 @@ QFrame#prog_fill {
 QPushButton#btn_blue {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
         stop:0 #1a3a6b, stop:0.5 #305bab, stop:1 #678dd3); color: white; border: none; border-radius: 11px;
-    padding: 20px 30px; font-size: 16px; font-weight: 750; font-family: 'Segoe UI', sans-serif;
+    padding: 20px 30px; font-size: 19px; font-weight: 750; font-family: 'Segoe UI', sans-serif;
     letter-spacing: 1px;
 }
 QPushButton#btn_blue:hover { background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
@@ -49,7 +49,7 @@ QPushButton#btn_blue:disabled {  background: qlineargradient(x1:0,y1:0,x2:1,y2:0
     color: black; }
 QPushButton#btn_sm {
      background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #96bfe9, stop:1 #b8e1fa); color: #1d3767; border: 3px solid #305bab; border-radius: 8px;
-    padding: 6px 16px; font-size: 15px; font-family: 'Segoe UI',sans-serif;
+    padding: 6px 16px; font-size: 19px; font-family: 'Segoe UI',sans-serif;
 }
 QPushButton#btn_sm:hover { color: #305bab; border-color: #838383; }
 QPushButton#btn_sm:pressed { background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #95a49f, stop:0.5 #c1cac7, stop:1 #5681cf); }
@@ -100,10 +100,14 @@ class GuardarPage(QWidget):
         for n, t in [("1", "Mira directamente a la camara"),
                      ("2", "El sistema captura tu biometria facial"),
                      ("3", "Se te asigna el siguiente locker libre"),
-                     ("4", "Guarda tus cosas y disfruta comprando")]:
+                     ("4", "Guarda tus cosas y disfruta comprando"),
+                     ("5", "Sus imágenes solo están siendo usadas en este momento y las borraremos en cuanto finalice sus compras")
+                     ]:
             # ll.addWidget(_step_bullet(n, t))
             step = _step_bullet(n, t)
             step.setFixedWidth(420) 
+            for child in step.findChildren(QLabel):
+                child.setWordWrap(True)
             ll.addWidget(step, alignment=Qt.AlignCenter)
         
         ll.addStretch(1)
@@ -120,8 +124,7 @@ class GuardarPage(QWidget):
 
         self.start_btn = QPushButton("REGISTRAR BIOMETRIA")
         self.start_btn.setObjectName("btn_blue")
-        self.start_btn.setMinimumHeight(55)
-        self.start_btn.setMinimumWidth(320)
+        self.start_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.start_btn.setCursor(Qt.PointingHandCursor)
         self.start_btn.clicked.connect(self._start_capture)
        
@@ -171,7 +174,7 @@ class GuardarPage(QWidget):
             self.avail_lbl.setText(
                 "Locker disponible. Se te asignara el #{}.".format(result[1])
             )
-            self.avail_lbl.setStyleSheet("color:#B9EA89; font-size:13px; font-family:'Segoe UI';")
+            self.avail_lbl.setStyleSheet("color:#B9EA89; font-size:15px; font-family:'Segoe UI';")
             self.start_btn.setEnabled(True)
         else:
             self._id_locker = None
