@@ -1,80 +1,110 @@
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QLabel, QFrame, QSizePolicy, QGraphicsDropShadowEffect,
-    QApplication
+    QLabel, QFrame, QSizePolicy, QApplication
 )
 from PyQt5.QtGui import (
     QPainter, QColor, QBrush, QPen, QFont,
-    QLinearGradient, QRadialGradient
+    QLinearGradient
 )
 
 from db.models.lockers import db_get_all_lockers
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  SCALE HELPER
+#  SCALE HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
+def _screen_size():
+    screen = QApplication.primaryScreen()
+    if screen:
+        geo = screen.availableGeometry()
+        return geo.width(), geo.height()
+    return 1280, 720
+
+
 def _dp(value: float) -> int:
+    """DPI-aware pixel conversion."""
     screen = QApplication.primaryScreen()
     dpi = screen.logicalDotsPerInch() if screen else 96
     return max(1, round(value * dpi / 96))
 
 
-STYLE = """
-QWidget#home_page { background: transparent; }
+def _sw(fraction: float) -> int:
+    """Fraction of screen width."""
+    w, _ = _screen_size()
+    return max(1, round(w * fraction))
 
-QFrame#header_strip {
+
+def _sh(fraction: float) -> int:
+    """Fraction of screen height."""
+    _, h = _screen_size()
+    return max(1, round(h * fraction))
+
+
+def _sf(fraction: float) -> int:
+    """Font size as fraction of screen height, DPI-corrected."""
+    _, h = _screen_size()
+    screen = QApplication.primaryScreen()
+    dpi = screen.logicalDotsPerInch() if screen else 96
+    base = h * fraction
+    return max(8, round(base * 96 / dpi))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  DYNAMIC STYLESHEET  (re-built on each instantiation so sizes are current)
+# ─────────────────────────────────────────────────────────────────────────────
+def _build_style() -> str:
+    return f"""
+QWidget#home_page {{ background: transparent; }}
+
+QFrame#header_strip {{
     background-color: #1565c0;
     border: none;
-}
-QLabel#sys_title {
+}}
+QLabel#sys_title {{
     color: #ffffff;
     font-weight: 800;
     font-family: 'Segoe UI', sans-serif;
+    font-size: {_sf(0.030)}px;
     letter-spacing: 4px;
-}
-QLabel#sys_label {
+}}
+QLabel#sys_label {{
     color: rgba(255,255,255,0.65);
     font-family: 'Segoe UI', sans-serif;
+    font-size: {_sf(0.014)}px;
     letter-spacing: 3px;
-}
-QLabel#clock_lbl {
+}}
+QLabel#clock_lbl {{
     color: #ffffff;
     font-weight: 700;
     font-family: 'Segoe UI', sans-serif;
-}
-QLabel#date_lbl {
+    font-size: {_sf(0.026)}px;
+}}
+QLabel#date_lbl {{
     color: rgba(255,255,255,0.65);
     font-family: 'Segoe UI', sans-serif;
-}
-QLabel#free_count_lbl {
-    color: #e53935;
-    font-weight: 800;
-    font-family: 'Segoe UI', sans-serif;
-}
-QLabel#free_prefix_lbl {
-    color: #546e7a;
-    font-family: 'Segoe UI', sans-serif;
-}
-QPushButton#btn_admin {
+    font-size: {_sf(0.014)}px;
+}}
+QPushButton#btn_admin {{
     background: transparent;
     color: #90a4ae;
     border: 1px solid #cfd8e3;
-    border-radius: 6px;
+    border-radius: {_dp(6)}px;
     font-family: 'Segoe UI', sans-serif;
+    font-size: {_sf(0.014)}px;
     letter-spacing: 2px;
-}
-QPushButton#btn_admin:hover   { color: #1565c0; border-color: #1976d2; background: #e3f0ff; }
-QPushButton#btn_admin:pressed { background: #bbdefb; }
-QLabel#footer_lbl {
+    padding: {_sh(0.008)}px {_sw(0.018)}px;
+}}
+QPushButton#btn_admin:hover   {{ color: #1565c0; border-color: #1976d2; background: #e3f0ff; }}
+QPushButton#btn_admin:pressed {{ background: #bbdefb; }}
+QLabel#footer_lbl {{
     color: #b0bec5;
     font-family: 'Segoe UI', sans-serif;
-}
-QFrame#h_divider {
+}}
+QFrame#h_divider {{
     background: #cfd8e3; border: none;
     min-height: 1px; max-height: 1px;
-}
+}}
 """
 
 
@@ -84,9 +114,13 @@ QFrame#h_divider {
 class StatusDot(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        sz = _dp(10); self.setFixedSize(sz, sz)
-        self._alpha = 255; self._growing = False
-        t = QTimer(self); t.timeout.connect(self._tick); t.start(40)
+        sz = max(8, _sw(0.010))
+        self.setFixedSize(sz, sz)
+        self._alpha = 255
+        self._growing = False
+        t = QTimer(self)
+        t.timeout.connect(self._tick)
+        t.start(40)
 
     def _tick(self):
         self._alpha += -5 if not self._growing else 5
@@ -95,28 +129,29 @@ class StatusDot(QWidget):
         self.update()
 
     def paintEvent(self, e):
-        p = QPainter(self); p.setRenderHint(QPainter.Antialiasing)
-        c = QColor(25, 118, 210); c.setAlpha(self._alpha)
-        p.setPen(Qt.NoPen); p.setBrush(QBrush(c))
-        m = _dp(1)
-        p.drawEllipse(m, m, self.width()-m*2, self.height()-m*2)
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        c = QColor(25, 118, 210)
+        c.setAlpha(self._alpha)
+        p.setPen(Qt.NoPen)
+        p.setBrush(QBrush(c))
+        m = max(1, _dp(1))
+        p.drawEllipse(m, m, self.width() - m * 2, self.height() - m * 2)
         p.end()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  BIG LOCKER BUTTON  — circle icon + label + sublabel, fills half the screen
+#  BIG LOCKER BUTTON  — fully responsive via relative sizing
 # ─────────────────────────────────────────────────────────────────────────────
 class BigLockerButton(QWidget):
     clicked = pyqtSignal()
 
-    # mode: "store" (blue door, arrow in) | "retrieve" (yellow door, arrow out)
     def __init__(self, mode: str, label: str, sublabel: str = "", parent=None):
         super().__init__(parent)
         self.mode     = mode
         self.label    = label
         self.sublabel = sublabel
 
-        # Palette
         if mode == "store":
             self._door_color   = QColor("#1976d2")
             self._door_dark    = QColor("#1250a0")
@@ -137,50 +172,53 @@ class BigLockerButton(QWidget):
 
     def enterEvent(self, e):  self._hovered = True;  self.update()
     def leaveEvent(self, e):  self._hovered = False; self.update()
+
     def mousePressEvent(self, e):
-        if e.button() == Qt.LeftButton: self._pressed = True;  self.update()
+        if e.button() == Qt.LeftButton:
+            self._pressed = True
+            self.update()
+
     def mouseReleaseEvent(self, e):
         if e.button() == Qt.LeftButton:
-            self._pressed = False; self.update()
-            if self.rect().contains(e.pos()): self.clicked.emit()
+            self._pressed = False
+            self.update()
+            if self.rect().contains(e.pos()):
+                self.clicked.emit()
 
     def paintEvent(self, event):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
         W, H = self.width(), self.height()
 
-        # ── Subtle hover tint on background ──
+        # Hover / press tint
         if self._pressed:
             p.fillRect(0, 0, W, H, QColor(21, 101, 192, 18))
         elif self._hovered:
             p.fillRect(0, 0, W, H, QColor(21, 101, 192, 9))
 
-        # ── Circle ──
-        circle_r = int(min(W, H) * 0.30)   # radius relative to button size
+        # ── Circle (size relative to widget dimensions) ──
+        short_side = min(W, H)
+        circle_r   = int(short_side * 0.28)   # scales with whichever axis is smaller
         cx = W // 2
-        cy = int(H * 0.33)                  # circle center sits in upper 40%
+        cy = int(H * 0.36)
 
-        # Circle fill
         cc = QColor(self._circle_color)
-        if self._pressed: cc = cc.darker(108)
+        if self._pressed:
+            cc = cc.darker(108)
         p.setPen(Qt.NoPen)
         p.setBrush(QBrush(cc))
         p.drawEllipse(cx - circle_r, cy - circle_r, circle_r * 2, circle_r * 2)
 
-        # ── Door icon inside circle ──
-        # Door body (two rectangles: frame + door panel)
-        door_w  = int(circle_r * 0.72)
-        door_h  = int(circle_r * 0.90)
-        door_x  = cx - door_w // 2
-        door_y  = cy - door_h // 2
+        # ── Door icon ──
+        door_w = int(circle_r * 0.72)
+        door_h = int(circle_r * 0.90)
+        door_x = cx - door_w // 2
+        door_y = cy - door_h // 2
 
-        # Frame (slightly darker)
         p.setPen(Qt.NoPen)
         p.setBrush(QBrush(self._door_dark))
-        frame_pad = int(door_w * 0.12)
         p.drawRoundedRect(door_x, door_y, door_w, door_h, 3, 3)
 
-        # Door panel
         panel_w = int(door_w * 0.70)
         panel_h = int(door_h * 0.92)
         panel_x = door_x + door_w - panel_w - int(door_w * 0.06)
@@ -188,44 +226,49 @@ class BigLockerButton(QWidget):
         p.setBrush(QBrush(self._door_color))
         p.drawRoundedRect(panel_x, panel_y, panel_w, panel_h, 2, 2)
 
-        # Arrow on door
+        # ── Arrow ──
         arr_len  = int(circle_r * 0.28)
         arr_head = int(arr_len * 0.55)
         ax = cx + int(circle_r * 0.04)
         ay = cy
 
-        pen = QPen(self._arrow_color, max(2, _dp(2)), Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
-        p.setPen(pen); p.setBrush(Qt.NoBrush)
+        pen_w = max(2, int(short_side * 0.006))
+        pen = QPen(self._arrow_color, pen_w, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+        p.setPen(pen)
+        p.setBrush(Qt.NoBrush)
 
         if self.mode == "store":
-            # Arrow pointing LEFT (into locker)
             p.drawLine(ax + arr_len, ay, ax - arr_len, ay)
             p.drawLine(ax - arr_len, ay, ax - arr_len + arr_head, ay - arr_head)
             p.drawLine(ax - arr_len, ay, ax - arr_len + arr_head, ay + arr_head)
         else:
-            # Arrow pointing RIGHT (out of locker)
             p.drawLine(ax - arr_len, ay, ax + arr_len, ay)
             p.drawLine(ax + arr_len, ay, ax + arr_len - arr_head, ay - arr_head)
             p.drawLine(ax + arr_len, ay, ax + arr_len - arr_head, ay + arr_head)
 
         # ── Main label ──
-        label_top = cy + circle_r + int(H * 0.04)
-        font_size  = max(14, int(H * 0.08))
+        label_top     = cy + circle_r + int(H * 0.04)
+        font_size_raw = H * 0.075          # ~7.5% of widget height
+        screen        = QApplication.primaryScreen()
+        dpi           = screen.logicalDotsPerInch() if screen else 96
+        font_size     = max(12, round(font_size_raw * 96 / dpi))
+
         font = QFont("Segoe UI", font_size, QFont.Bold)
         p.setFont(font)
         p.setPen(QPen(self._label_color))
         p.drawText(0, label_top, W, H - label_top,
-           Qt.AlignHCenter | Qt.AlignTop, self.label)
+                   Qt.AlignHCenter | Qt.AlignTop, self.label)
 
-        # ── Sub-label (e.g. "Lockers desocupados: 5") ──
+        # ── Sub-label ──
         if self.sublabel:
-            sub_top = label_top + int(H * 0.13)
-            sub_font_size = max(9, int(H * 0.055))
-            sfont = QFont("Segoe UI", sub_font_size)
+            sub_top      = label_top + int(H * 0.12)
+            sub_size_raw = H * 0.048
+            sub_size     = max(8, round(sub_size_raw * 96 / dpi))
+            sfont = QFont("Segoe UI", sub_size)
             p.setFont(sfont)
             p.setPen(QPen(QColor("#78909c")))
             p.drawText(0, sub_top, W, H - sub_top,
-           Qt.AlignHCenter | Qt.AlignTop, self.sublabel)
+                       Qt.AlignHCenter | Qt.AlignTop, self.sublabel)
 
         p.end()
 
@@ -245,46 +288,61 @@ class HomePage(QWidget):
     def __init__(self):
         super().__init__()
         self.setObjectName("home_page")
-        self.setStyleSheet(STYLE)
+        self.setStyleSheet(_build_style())
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
         # ── Header ───────────────────────────────────────────────────────────
-        header = QFrame(); header.setObjectName("header_strip")
-        header.setFixedHeight(_dp(54))
+        header = QFrame()
+        header.setObjectName("header_strip")
+        header.setMinimumHeight(_sh(0.06))
+        header.setMaximumHeight(_sh(0.10))
+
         hl = QHBoxLayout(header)
-        hl.setContentsMargins(_dp(16), 0, _dp(16), 0)
+        pad_h = _sw(0.012)
+        hl.setContentsMargins(pad_h, 0, pad_h, 0)
+        hl.setSpacing(_sw(0.010))
 
-        tcol = QVBoxLayout(); tcol.setSpacing(_dp(1))
-        sl = QLabel("SISTEMA DE CONTROL"); sl.setObjectName("sys_label")
-        sl.setStyleSheet(f"font-size: {_dp(8)}px;")
-        tl = QLabel("ACCESO"); tl.setObjectName("sys_title")
-        tl.setStyleSheet(f"font-size: {_dp(18)}px;")
-        tcol.addWidget(sl); tcol.addWidget(tl)
-        hl.addLayout(tcol); hl.addStretch()
+        # Title column
+        tcol = QVBoxLayout()
+        tcol.setSpacing(_sh(0.004))
+        sl = QLabel("SISTEMA DE CONTROL")
+        sl.setObjectName("sys_label")
+        tl = QLabel("ACCESO")
+        tl.setObjectName("sys_title")
+        tcol.addWidget(sl)
+        tcol.addWidget(tl)
+        hl.addLayout(tcol)
+        hl.addStretch()
 
-        ccol = QVBoxLayout(); ccol.setSpacing(_dp(1))
+        # Clock column
+        ccol = QVBoxLayout()
+        ccol.setSpacing(_sh(0.004))
         ccol.setAlignment(Qt.AlignRight)
-        self.clock_lbl = QLabel("00:00:00"); self.clock_lbl.setObjectName("clock_lbl")
+        self.clock_lbl = QLabel("00:00:00")
+        self.clock_lbl.setObjectName("clock_lbl")
         self.clock_lbl.setAlignment(Qt.AlignRight)
-        self.clock_lbl.setStyleSheet(f"font-size: {_dp(15)}px;")
-        self.date_lbl = QLabel("---"); self.date_lbl.setObjectName("date_lbl")
+        self.date_lbl = QLabel("---")
+        self.date_lbl.setObjectName("date_lbl")
         self.date_lbl.setAlignment(Qt.AlignRight)
-        self.date_lbl.setStyleSheet(f"font-size: {_dp(8)}px;")
-        ccol.addWidget(self.clock_lbl); ccol.addWidget(self.date_lbl)
+        ccol.addWidget(self.clock_lbl)
+        ccol.addWidget(self.date_lbl)
         hl.addLayout(ccol)
+
         root.addWidget(header)
 
-        # ── Buttons area (takes all remaining space) ──────────────────────────
+        # ── Button area ───────────────────────────────────────────────────────
         btn_area = QWidget()
         bl = QVBoxLayout(btn_area)
-        bl.setContentsMargins(_dp(24), _dp(16), _dp(24), _dp(8))
+        pad = _sw(0.018)
+        bl.setContentsMargins(pad, _sh(0.012), pad, _sh(0.008))
         bl.setSpacing(0)
 
-        self.btn_guardar = BigLockerButton("store",    "Guardar",
-                                           "Lockers desocupados: —")
+        self.btn_guardar = BigLockerButton(
+            "store", "Guardar", "Lockers desocupados: —"
+        )
         self.btn_recoger = BigLockerButton("retrieve", "Recoger")
 
         self.btn_guardar.clicked.connect(self.go_guardar.emit)
@@ -295,37 +353,48 @@ class HomePage(QWidget):
 
         root.addWidget(btn_area, 1)
 
+        # ── Divider ───────────────────────────────────────────────────────────
+        div = QFrame()
+        div.setObjectName("h_divider")
+        root.addWidget(div)
+
         # ── Footer ────────────────────────────────────────────────────────────
-        div = QFrame(); div.setObjectName("h_divider"); root.addWidget(div)
-
         fw = QWidget()
+        fw.setMinimumHeight(_sh(0.040))
+        fw.setMaximumHeight(_sh(0.065))
         fwl = QHBoxLayout(fw)
-        fwl.setContentsMargins(_dp(14), _dp(6), _dp(14), _dp(6))
+        pad_f = _sw(0.011)
+        fwl.setContentsMargins(pad_f, 0, pad_f, 0)
+        fwl.setSpacing(_sw(0.008))
 
-        # Status dot + text
-        sr = QHBoxLayout(); sr.setSpacing(_dp(5))
+        # Online indicator
+        sr = QHBoxLayout()
+        sr.setSpacing(_sw(0.005))
         sr.addWidget(StatusDot())
         stl = QLabel("EN LÍNEA")
         stl.setStyleSheet(
-            f"color: #1976d2; font-size: {_dp(8)}px;"
-            f"font-family: 'Segoe UI'; font-weight: 600; letter-spacing: 2px;"
+            f"color: #1976d2;"
+            f"font-size: {_sf(0.014)}px;"
+            f"font-family: 'Segoe UI';"
+            f"font-weight: 600;"
+            f"letter-spacing: 2px;"
         )
         sr.addWidget(stl)
         fwl.addLayout(sr)
         fwl.addStretch()
 
-        adm = QPushButton("⚙  ADMIN"); adm.setObjectName("btn_admin")
-        adm.setStyleSheet(
-            adm.styleSheet() +
-            f"font-size: {_dp(8)}px; padding: {_dp(5)}px {_dp(16)}px;"
-        )
+        adm = QPushButton("⚙  ADMIN")
+        adm.setObjectName("btn_admin")
         adm.setCursor(Qt.PointingHandCursor)
         adm.clicked.connect(self.go_admin.emit)
         fwl.addWidget(adm)
+
         root.addWidget(fw)
 
-        # ── Clock ─────────────────────────────────────────────────────────────
-        ct = QTimer(self); ct.timeout.connect(self._tick_clock); ct.start(1000)
+        # ── Clock timer ───────────────────────────────────────────────────────
+        ct = QTimer(self)
+        ct.timeout.connect(self._tick_clock)
+        ct.start(1000)
         self._tick_clock()
 
     # ── Background gradient ───────────────────────────────────────────────────
@@ -338,6 +407,11 @@ class HomePage(QWidget):
         p.fillRect(0, 0, W, H, QBrush(g))
         p.end()
 
+    # Re-apply stylesheet when resized so font sizes stay accurate
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.setStyleSheet(_build_style())
+
     def _tick_clock(self):
         from PyQt5.QtCore import QDateTime
         dt = QDateTime.currentDateTime()
@@ -349,7 +423,5 @@ class HomePage(QWidget):
         lockers = db_get_all_lockers()
         total   = len(lockers)
         free    = sum(1 for l in lockers if l["t_estado"] == "libre")
-        busy    = total - free
 
-        # Update sublabel on store button with free count (red number like reference)
         self.btn_guardar.set_sublabel(f"Lockers desocupados:  {free}")
