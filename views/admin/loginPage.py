@@ -34,111 +34,123 @@ def lbl(text, obj="", align=Qt.AlignLeft):
 #   DANGER  #DC2626  (error red)
 # ────────────────────────────────────────────────────────────────────────────
 
+
 STYLE = """
+/* Fondo principal con azul cielo */
 QWidget#admin_login_page {
-    background-color: #F7F8FA;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #b3e0ff, stop:1 #87CEEB);
 }
 
-/* ── Card ── */
+/* Tarjeta blanca - CON MARGEN DE 10px (como en el primer código) */
 QFrame#card {
-    background-color: #FFFFFF;
-    border: 1px solid #E4E6EA;
-    border-radius: 4px;
+    background-color: white;
+    border: 1px solid #c0dcf0;
+    border-radius: 25px;
+    margin: 10px;  /* Margen de 10px en todos los bordes */
 }
 
-/* ── Labels ── */
+/* Título grande (Acceso al panel) - usando #h2 del primer código */
+QLabel#headline {
+    color: #145388;
+    font-size: 28px;
+    font-weight: 700;
+    font-family: 'Segoe UI', 'Inter', sans-serif;
+}
+
+/* Etiqueta ADMINISTRACIÓN - usando #tag del primer código */
 QLabel#eyebrow {
-    color: #2563EB;
-    font-family: 'DM Mono', 'Courier New', monospace;
-    font-size: 11px;
+    color: #3a7ca5;
+    font-size: 14px;
     font-weight: 600;
     letter-spacing: 4px;
-}
-QLabel#headline {
-    color: #111318;
-    font-family: 'Georgia', 'Times New Roman', serif;
-    font-size: 32px;
-    font-weight: 400;
-}
-QLabel#field_lbl {
-    color: #8B909A;
-    font-family: 'DM Mono', 'Courier New', monospace;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 3px;
+    font-family: 'Segoe UI', 'Inter', sans-serif;
 }
 
-/* ── Inputs ── */
+/* Etiquetas normales (Usuario, Contraseña) */
+QLabel#field_lbl {
+    color: #1e4b6e;
+    font-size: 16px;
+    font-family: 'Segoe UI', 'Inter', sans-serif;
+    font-weight: 500;
+}
+
+/* Línea separadora - usando #sep del primer código */
+QFrame#div {
+    background: #7bb3d9;
+    min-height: 3px;
+    max-height: 3px;
+    border: none;
+}
+
+/* Campos de texto */
 QLineEdit#inp {
-    background-color: #F7F8FA;
-    border: 1px solid #E4E6EA;
-    border-radius: 2px;
-    color: #111318;
-    padding: 14px 16px;
-    font-family: 'Segoe UI', sans-serif;
-    font-size: 15px;
-    selection-background-color: #DBEAFE;
+    background-color: #f0f8ff;
+    border: 2px solid #b8d6f0;
+    border-radius: 15px;
+    color: #0a2a44;
+    padding: 16px 20px;
+    font-size: 16px;
+    font-family: 'Segoe UI', 'Inter', sans-serif;
 }
 QLineEdit#inp:focus {
-    border: 1.5px solid #2563EB;
-    background-color: #FFFFFF;
-    outline: none;
+    border-color: #3d8cff;
+    background-color: white;
 }
 QLineEdit#inp::placeholder {
-    color: #C4C7CE;
+    color: #8fb4d9;
+    font-size: 16px;
+    font-family: 'Segoe UI', 'Inter', sans-serif;
 }
 
-/* ── Primary button ── */
+/* Botón INGRESAR - usando #btn_blue del primer código */
 QPushButton#btn_primary {
-    background-color: #111318;
-    color: #FFFFFF;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #5da5ff, stop:1 #3a7cd9);
+    color: white;
     border: none;
-    border-radius: 2px;
-    padding: 16px 0px;
-    font-family: 'DM Mono', 'Courier New', monospace;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 4px;
-    min-height: 52px;
+    border-radius: 15px;
+    padding: 18px 36px;
+    font-size: 18px;
+    font-weight: 700;
+    min-height: 30px;
+    font-family: 'Segoe UI', 'Inter', sans-serif;
 }
 QPushButton#btn_primary:hover {
-    background-color: #2563EB;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #4a95ff, stop:1 #2c6ac9);
 }
 QPushButton#btn_primary:pressed {
-    background-color: #1D4ED8;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #3a7cd9, stop:1 #2c6ac9);
 }
 
-/* ── Ghost button ── */
+/* Botón Volver - usando #btn_sm del primer código */
 QPushButton#btn_ghost {
     background-color: transparent;
-    color: #8B909A;
-    border: none;
-    padding: 6px 0px;
-    font-family: 'DM Mono', 'Courier New', monospace;
-    font-size: 10px;
+    color: #2c6289;
+    border: 2px solid #aac9e5;
+    border-radius: 12px;
+    padding: 10px 20px;
+    font-size: 14px;
     font-weight: 500;
-    letter-spacing: 2px;
+    font-family: 'Segoe UI', 'Inter', sans-serif;
 }
 QPushButton#btn_ghost:hover {
-    color: #111318;
+    background-color: #e2f0ff;
+    border-color: #5d9fd3;
+}
+QPushButton#btn_ghost:pressed {
+    background-color: #c5e0ff;
 }
 
-/* ── Error ── */
+/* Mensajes de error */
 QLabel#err {
-    color: #DC2626;
-    font-family: 'DM Mono', 'Courier New', monospace;
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 1px;
-    padding: 0px;
-}
-
-/* ── Divider ── */
-QFrame#div {
-    background-color: #E4E6EA;
-    border: none;
-    min-height: 1px;
-    max-height: 1px;
+    color: #c74545;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 10px;
+    font-family: 'Segoe UI', 'Inter', sans-serif;
 }
 """
 
@@ -180,7 +192,7 @@ class AdminLoginPage(QWidget):
         # ── Eyebrow + Headline ────────────────────────────────────────────────
         cl.addWidget(lbl("ADMINISTRACIÓN", "eyebrow"))
         cl.addSpacing(_dp(10))
-        cl.addWidget(lbl("Acceso\nal panel.", "headline"))
+        cl.addWidget(lbl("Acceso al panel.", "headline"))
         cl.addSpacing(_dp(32))
 
         # ── Divider ───────────────────────────────────────────────────────────
