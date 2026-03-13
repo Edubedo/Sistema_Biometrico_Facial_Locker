@@ -12,6 +12,7 @@ from PyQt5.QtWidgets import (
     QInputDialog,
     QComboBox,
     QSizePolicy,
+    QDialog,
 )
 
 from db.models.usuarios import (
@@ -213,6 +214,25 @@ QPushButton#btn_red:hover {
     background: #ec7063;
 }
 
+/* Botón verde (NUEVO ADMIN) */
+QPushButton#btn_green {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #2ecc71, stop:1 #27ae60);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: 'Segoe UI', sans-serif;
+    min-height: 30px;
+}
+
+QPushButton#btn_green:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #27ae60, stop:1 #229954);
+}
+
 /* Scroll Area */
 QScrollArea {
     border: none;
@@ -237,12 +257,228 @@ QScrollBar::handle:vertical:hover {
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
     height: 0;
 }
+
+/* Diálogo de registro */
+QDialog {
+    background: #f0f6ff;
+}
+
+QLabel#dialog_title {
+    color: #1565c0;
+    font-size: 14px;
+    font-weight: 900;
+    font-family: 'Segoe UI';
+    letter-spacing: 2px;
+}
+
+QLabel#field_label {
+    color: #546e7a;
+    font-family: 'Segoe UI';
+    font-weight: 700;
+    letter-spacing: 1px;
+    font-size: 10px;
+}
+
+QPushButton#dialog_ok {
+    background: #1976d2;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 20px;
+    font-family: 'Segoe UI';
+    font-weight: 700;
+    font-size: 10px;
+}
+
+QPushButton#dialog_ok:hover {
+    background: #1565c0;
+}
+
+QPushButton#dialog_cancel {
+    background: transparent;
+    color: #90a4ae;
+    border: 1px solid #cfd8e3;
+    border-radius: 6px;
+    padding: 7px 16px;
+    font-family: 'Segoe UI';
+    font-size: 10px;
+}
 """
+
+class AdminRegisterDialog(QDialog):
+    """Diálogo para registrar un nuevo administrador."""
+    
+    def __init__(self, current_admin_id=None, parent=None):
+        super().__init__(parent)
+        self.current_admin_id = current_admin_id
+        self.setWindowTitle("Registrar Nuevo Administrador")
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        self.setMinimumWidth(450)
+        self.setStyleSheet(STYLE)
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(20, 16, 20, 16)
+        root.setSpacing(12)
+
+        # Título
+        ttl = QLabel("➕  REGISTRAR NUEVO ADMINISTRADOR")
+        ttl.setObjectName("dialog_title")
+        root.addWidget(ttl)
+        
+        # Línea separadora
+        d = QFrame()
+        d.setObjectName("sep")
+        d.setFixedHeight(1)
+        root.addWidget(d)
+
+        # Formulario
+        form = QVBoxLayout()
+        form.setSpacing(8)
+
+        # Nombre
+        lbl_nombre = QLabel("NOMBRE")
+        lbl_nombre.setObjectName("field_label")
+        form.addWidget(lbl_nombre)
+        self.f_nombre = QLineEdit()
+        self.f_nombre.setPlaceholderText("Juan")
+        self.f_nombre.setObjectName("inp")
+        form.addWidget(self.f_nombre)
+
+        # Apellido paterno
+        lbl_ap = QLabel("APELLIDO PATERNO")
+        lbl_ap.setObjectName("field_label")
+        form.addWidget(lbl_ap)
+        self.f_ap = QLineEdit()
+        self.f_ap.setPlaceholderText("Garcia")
+        self.f_ap.setObjectName("inp")
+        form.addWidget(self.f_ap)
+
+        # Apellido materno
+        lbl_am = QLabel("APELLIDO MATERNO")
+        lbl_am.setObjectName("field_label")
+        form.addWidget(lbl_am)
+        self.f_am = QLineEdit()
+        self.f_am.setPlaceholderText("Lopez")
+        self.f_am.setObjectName("inp")
+        form.addWidget(self.f_am)
+
+        # Usuario
+        lbl_user = QLabel("USUARIO")
+        lbl_user.setObjectName("field_label")
+        form.addWidget(lbl_user)
+        self.f_user = QLineEdit()
+        self.f_user.setPlaceholderText("jgarcia01")
+        self.f_user.setObjectName("inp")
+        form.addWidget(self.f_user)
+
+        # Rol
+        lbl_rol = QLabel("ROL")
+        lbl_rol.setObjectName("field_label")
+        form.addWidget(lbl_rol)
+        self.f_rol = QComboBox()
+        self.f_rol.setObjectName("combo")
+        self.f_rol.addItems(["empleado", "supervisor", "administrador"])
+        form.addWidget(self.f_rol)
+
+        # Contraseña
+        lbl_pass = QLabel("CONTRASEÑA")
+        lbl_pass.setObjectName("field_label")
+        form.addWidget(lbl_pass)
+        self.f_pass = QLineEdit()
+        self.f_pass.setEchoMode(QLineEdit.Password)
+        self.f_pass.setPlaceholderText("••••••••")
+        self.f_pass.setObjectName("inp")
+        form.addWidget(self.f_pass)
+
+        # Confirmar contraseña
+        lbl_pass2 = QLabel("CONFIRMAR CONTRASEÑA")
+        lbl_pass2.setObjectName("field_label")
+        form.addWidget(lbl_pass2)
+        self.f_pass2 = QLineEdit()
+        self.f_pass2.setEchoMode(QLineEdit.Password)
+        self.f_pass2.setPlaceholderText("••••••••")
+        self.f_pass2.setObjectName("inp")
+        form.addWidget(self.f_pass2)
+
+        # Espaciador
+        form.addSpacing(10)
+
+        # Mensajes de error/éxito
+        self.reg_err = QLabel("")
+        self.reg_err.setObjectName("err")
+        self.reg_err.setAlignment(Qt.AlignCenter)
+        form.addWidget(self.reg_err)
+
+        self.reg_ok = QLabel("")
+        self.reg_ok.setObjectName("ok")
+        self.reg_ok.setAlignment(Qt.AlignCenter)
+        form.addWidget(self.reg_ok)
+
+        root.addLayout(form)
+
+        # Botones
+        br = QHBoxLayout()
+        br.addStretch()
+
+        bn = QPushButton("CANCELAR")
+        bn.setObjectName("dialog_cancel")
+        bn.setCursor(Qt.PointingHandCursor)
+        bn.clicked.connect(self.reject)
+
+        bo = QPushButton("REGISTRAR")
+        bo.setObjectName("dialog_ok")
+        bo.setCursor(Qt.PointingHandCursor)
+        bo.clicked.connect(self._register)
+
+        br.addWidget(bn)
+        br.addWidget(bo)
+        root.addLayout(br)
+
+    def _register(self):
+        nombre = self.f_nombre.text().strip()
+        ap = self.f_ap.text().strip()
+        am = self.f_am.text().strip()
+        user = self.f_user.text().strip()
+        rol = self.f_rol.currentText()
+        pw = self.f_pass.text()
+        pw2 = self.f_pass2.text()
+
+        self.reg_err.setText("")
+        self.reg_ok.setText("")
+
+        if not all([nombre, ap, user, pw]):
+            self.reg_err.setText("Nombre, apellido paterno, usuario y contraseña son obligatorios.")
+            return
+        if len(pw) < 4:
+            self.reg_err.setText("La contraseña debe tener al menos 4 caracteres.")
+            return
+        if pw != pw2:
+            self.reg_err.setText("Las contraseñas no coinciden.")
+            return
+        if db_admin_exists(user):
+            self.reg_err.setText("Ya existe un administrador con ese usuario.")
+            return
+
+        new_id = db_register_admin(nombre, ap, am, user, pw, rol, self.current_admin_id)
+        if new_id:
+            self.reg_ok.setText(f"Administrador '{user}' registrado correctamente.")
+            # Limpiar campos
+            self.f_nombre.clear()
+            self.f_ap.clear()
+            self.f_am.clear()
+            self.f_user.clear()
+            self.f_pass.clear()
+            self.f_pass2.clear()
+            # Cerrar después de mostrar el mensaje
+            from PyQt5.QtCore import QTimer
+            QTimer.singleShot(1500, self.accept)
+        else:
+            self.reg_err.setText("No se pudo registrar. Intenta de nuevo.")
+
 
 class _AdminUsersPanel(QWidget):
     """
-    Permite registrar nuevos administradores con nombre completo,
-    usuario y contrasena. Campos mapeados a la tabla Usuarios.
+    Permite gestionar administradores: ver lista, desactivar y registrar nuevos.
     """
 
     def __init__(self):
@@ -254,11 +490,23 @@ class _AdminUsersPanel(QWidget):
 
         body = QHBoxLayout(); body.setSpacing(15)
 
-        # ── Lista de admins ───────────────────────────────────────────────────
+        # Lista de admins
         left = QFrame(); left.setObjectName("card")
         left.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         ll   = QVBoxLayout(left); ll.setContentsMargins(24, 24, 24, 24); ll.setSpacing(12)
-        ll.addWidget(lbl("ADMINISTRADORES ACTIVOS", "tag"))
+        
+        # Header con título y botón NUEVO ADMIN
+        header = QHBoxLayout()
+        header.addWidget(lbl("ADMINISTRADORES ACTIVOS", "tag"))
+        header.addStretch()
+        
+        btn_new = QPushButton("+  NUEVO ADMIN")
+        btn_new.setObjectName("btn_green")
+        btn_new.setCursor(Qt.PointingHandCursor)
+        btn_new.clicked.connect(self._nuevo_admin)
+        header.addWidget(btn_new)
+        
+        ll.addLayout(header)
 
         scroll = QScrollArea(); scroll.setWidgetResizable(True)
         self.inner = QWidget(); self.inner.setObjectName("admin_users_inner")
@@ -271,132 +519,38 @@ class _AdminUsersPanel(QWidget):
         btn_del.setCursor(Qt.PointingHandCursor); btn_del.clicked.connect(self._delete)
         ll.addWidget(btn_del)
 
-        # ── Formulario de registro ────────────────────────────────────────────
-        right = QFrame(); right.setObjectName("card_blue")
-        right.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        rl    = QVBoxLayout(right); rl.setContentsMargins(15, 10, 15, 8); rl.setSpacing(6)
-        rl.addWidget(lbl("REGISTRAR NUEVO ADMIN", "tag"))
-        rl.addWidget(sep_line())
-        rl.addSpacing(4)   # Espacio después del separador
-
-
-        # Campos mapeados a Usuarios
-        rl.addWidget(lbl("Nombre"))
-        self.f_nombre = QLineEdit(); self.f_nombre.setObjectName("inp")
-        self.f_nombre.setPlaceholderText("Juan")
-        rl.addWidget(self.f_nombre)
-        rl.addSpacing(4)
-
-        rl.addWidget(lbl("Apellido paterno"))
-        self.f_ap = QLineEdit(); self.f_ap.setObjectName("inp")
-        self.f_ap.setPlaceholderText("Garcia")
-        rl.addWidget(self.f_ap)
-        rl.addSpacing(4)
-
-        rl.addWidget(lbl("Apellido materno"))
-        self.f_am = QLineEdit(); self.f_am.setObjectName("inp")
-        self.f_am.setPlaceholderText("Lopez")
-        rl.addWidget(self.f_am)
-        rl.addSpacing(4)
-
-        rl.addWidget(lbl("Usuario"))
-        self.f_user = QLineEdit(); self.f_user.setObjectName("inp")
-        self.f_user.setPlaceholderText("jgarcia01")
-        rl.addWidget(self.f_user)
-        rl.addSpacing(4)
-
-        rl.addWidget(lbl("Rol"))
-        self.f_rol = QComboBox(); self.f_rol.setObjectName("combo")
-        self.f_rol.addItems(["empleado", "supervisor", "administrador"])
-        rl.addWidget(self.f_rol)
-        rl.addSpacing(4)
-
-        rl.addWidget(lbl("Contraseña"))
-        self.f_pass = QLineEdit(); self.f_pass.setObjectName("inp")
-        self.f_pass.setEchoMode(QLineEdit.Password)
-        self.f_pass.setPlaceholderText("••••••••")
-        rl.addWidget(self.f_pass)
-        rl.addSpacing(4)
-
-        rl.addWidget(lbl("Confirmar contraseña"))
-        self.f_pass2 = QLineEdit(); self.f_pass2.setObjectName("inp")
-        self.f_pass2.setEchoMode(QLineEdit.Password)
-        self.f_pass2.setPlaceholderText("••••••••")
-        rl.addWidget(self.f_pass2)
-
-        # Espaciador para separar campos de mensajes
-        rl.addSpacing(12)
-
-        # Mensajes de error/éxito
-        self.reg_err = lbl("", "err", Qt.AlignCenter)
-        self.reg_ok  = lbl("", "ok",  Qt.AlignCenter)
-        rl.addWidget(self.reg_err)
-        rl.addWidget(self.reg_ok)
-
-        # Espacio antes del botón
-        rl.addSpacing(4)
-
-        btn_reg = QPushButton("REGISTRAR ADMINISTRADOR"); btn_reg.setObjectName("btn_blue")
-        btn_reg.setCursor(Qt.PointingHandCursor); btn_reg.clicked.connect(self._register)
-        btn_reg.setMinimumHeight(32)
-        rl.addWidget(btn_reg)
-        rl.addStretch()
-
+        # Ya no hay panel derecho, solo el izquierdo ocupa todo
         body.addWidget(left, 1)
-        body.addWidget(right, 1)
         vl.addLayout(body, 1)
         self.refresh()
 
     def set_current_admin(self, admin_data):
         self._current_admin = admin_data
 
-    def _register(self):
-        nombre = self.f_nombre.text().strip()
-        ap     = self.f_ap.text().strip()
-        am     = self.f_am.text().strip()
-        user   = self.f_user.text().strip()
-        rol    = self.f_rol.currentText()
-        pw     = self.f_pass.text()
-        pw2    = self.f_pass2.text()
-        id_reg = self._current_admin.get("ID_admin")
-
-        self.reg_err.setText(""); self.reg_ok.setText("")
-
-        if not all([nombre, ap, user, pw]):
-            self.reg_err.setText("Nombre, apellido, usuario y contrasena son obligatorios.")
-            return
-        if len(pw) < 4:
-            self.reg_err.setText("La contrasena debe tener al menos 4 caracteres.")
-            return
-        if pw != pw2:
-            self.reg_err.setText("Las contrasenas no coinciden.")
-            return
-        if db_admin_exists(user):
-            self.reg_err.setText("Ya existe un admin con ese usuario.")
-            return
-
-        new_id = db_register_admin(nombre, ap, am, user, pw, rol, id_reg)
-        if new_id:
-            for f in [self.f_nombre, self.f_ap, self.f_am, self.f_user, self.f_pass, self.f_pass2]:
-                f.clear()
-            self.reg_ok.setText("Admin '{}' registrado correctamente.".format(user))
+    def _nuevo_admin(self):
+        """Abre el diálogo para registrar un nuevo administrador."""
+        dlg = AdminRegisterDialog(
+            current_admin_id=self._current_admin.get("ID_admin"),
+            parent=self
+        )
+        if dlg.exec_() == QDialog.Accepted:
             self.refresh()
-        else:
-            self.reg_err.setText("No se pudo registrar. Intenta de nuevo.")
+            # Opcional: mostrar mensaje de éxito
+            # El diálogo ya muestra su propio mensaje
 
     def _delete(self):
-        u, ok = QInputDialog.getText(None, "Desactivar Admin", "Usuario a desactivar:")
+        u, ok = QInputDialog.getText(self, "Desactivar Admin", "Usuario a desactivar:")
         if not ok or not u.strip():
             return
         if not db_admin_exists(u.strip()):
-            QMessageBox.warning(None, "Error", "Admin no encontrado.")
+            QMessageBox.warning(self, "Error", "Admin no encontrado.")
             return
         if db_count_active_admins() <= 1:
-            QMessageBox.warning(None, "Error", "Debe existir al menos un administrador activo.")
+            QMessageBox.warning(self, "Error", "Debe existir al menos un administrador activo.")
             return
         id_act = self._current_admin.get("ID_admin")
         db_delete_admin(u.strip(), id_act)
-        QMessageBox.information(None, "OK", "Admin '{}' desactivado.".format(u.strip()))
+        QMessageBox.information(self, "OK", "Admin '{}' desactivado.".format(u.strip()))
         self.refresh()
 
     def refresh(self):
@@ -420,7 +574,7 @@ class _AdminUsersPanel(QWidget):
                 ).strip()
                 n_lbl = QLabel(nombre)
                 n_lbl.setStyleSheet(
-                    "color:#c8dff5; font-size:13px; font-weight:700; font-family:'Segoe UI';"
+                    "color:#2c6289; font-size:13px; font-weight:700; font-family:'Segoe UI';"
                 )
                 u_lbl  = lbl("@{}".format(a.get("t_usuario", "")), "small")
                 r_lbl  = lbl(a.get("t_rol", ""), "badge_blue")
