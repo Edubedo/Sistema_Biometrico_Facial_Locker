@@ -116,6 +116,7 @@ class AdminPage(QWidget):
 
     def __init__(self):
         super().__init__()
+        self._admin_data = {}
         self.setObjectName("admin_page")
         self.setStyleSheet(STYLE)
 
@@ -238,6 +239,13 @@ class AdminPage(QWidget):
         self._admin_data = admin_data
         self.badge.setText("  {}  ".format(admin_data.get("t_usuario", "").upper()))
         self.p_admins.set_current_admin(admin_data)
+        self.p_lockers.set_admin_context(admin_data)
+        role = (admin_data.get("t_rol", "empleado") or "empleado").lower()
+        can_manage_admins = role == "administrador"
+        self.t_adm.setEnabled(True)
+        self.t_adm.setToolTip(
+            "Solo lectura" if not can_manage_admins else "Gestionar administradores"
+        )
 
     def showEvent(self, e):
         super().showEvent(e)

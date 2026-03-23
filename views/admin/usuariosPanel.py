@@ -23,6 +23,7 @@ from db.models.usuarios import (
     db_delete_admin,
     db_get_all_admins,
     db_register_admin,
+    db_set_admin_estado,
 )
 from views.style.adminDialogs import DlgError, DlgInfo, DlgConfirm
 
@@ -46,11 +47,13 @@ QLabel#ttl{
     font-weight:900;
     font-family:'Segoe UI';
     letter-spacing:3px;
+    font-size:18px;
 }
 QLabel#sub{
     color:#90a4ae;
     font-family:'Segoe UI';
     letter-spacing:2px;
+    font-size:13px;
 }
 QFrame#h_div{
     background:#cfd8e3;
@@ -227,10 +230,28 @@ QHeaderView::section {
 QTableWidget::item {
     padding: 8px 10px;
     font-family: 'Segoe UI', sans-serif;
-    font-size: 12px;
+    font-size: 13px;
     color: #1a2a3a;
 }
 QTableWidget::item:selected { background: #bbdefb; }
+QPushButton#btn_toggle_on{
+    background:#e8f5e9;
+    color:#1b5e20;
+    border:1px solid #a5d6a7;
+    border-radius:5px;
+    font-family:'Segoe UI';
+    font-weight:700;
+}
+QPushButton#btn_toggle_on:hover{ background:#d6f0d8; }
+QPushButton#btn_toggle_off{
+    background:#ffebee;
+    color:#c62828;
+    border:1px solid #ef9a9a;
+    border-radius:5px;
+    font-family:'Segoe UI';
+    font-weight:700;
+}
+QPushButton#btn_toggle_off:hover{ background:#ffe1e6; }
 """
 
 
@@ -519,13 +540,16 @@ class _AdminUsersPanel(QWidget):
         self.table = QTableWidget()
         self.table.setObjectName("admin_users_tbl")
         self.table.setColumnCount(6)
-        self.table.setHorizontalHeaderLabels(["#", "NOMBRE", "USUARIO", "ROL", "ESTADO", "ACCIONES"])
+        self.table.setHorizontalHeaderLabels(["🔢", "👤 NOMBRE", "@ USUARIO", "👑 ROL", "✓ ESTADO", "⚙ ACCIONES"])
         self.table.verticalHeader().setVisible(False)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setSelectionMode(QTableWidget.SingleSelection)
-        self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.horizontalHeader().setMinimumSectionSize(_dp(90))
+        self.table.horizontalHeader().setStretchLastSection(False)
+        self.table.horizontalHeader().setMinimumSectionSize(_dp(110))
+        self.table.verticalHeader().setDefaultSectionSize(_dp(44))
+        self.table.setAlternatingRowColors(True)
+        self.table.setWordWrap(True)
         root.addWidget(self.table, 1)
 
         self.refresh()
@@ -548,6 +572,14 @@ class _AdminUsersPanel(QWidget):
             admin.get("t_apellido_materno", ""),
         ).strip()
 
+        if admin.get("ID_admin") == self.admin_id:
+            DlgError.show(
+                "Esta cuenta ya está activa y no se puede eliminar.",
+                title="Operación no permitida",
+                parent=self,
+            )
+            return
+
         if db_count_active_admins() <= 1:
             DlgError.show(
                 "Debe existir al menos un administrador activo.",
@@ -569,6 +601,49 @@ class _AdminUsersPanel(QWidget):
         try:
             db_delete_admin(usuario, self.admin_id)
             DlgInfo.show(f"Admin '{usuario}' desactivado correctamente.", parent=self)
+        except Exception as ex:
+            DlgError.show(str(ex), parent=self)
+        finally:
+            self.refresh()
+
+    def _set_admin_status(self, admin: dict, target_status: str):
+        usuario = admin.get("t_usuario", "")
+        nombre = "{} {} {}".format(
+            admin.get("t_nombre", ""),
+            admin.get("t_apellido_paterno", ""),
+            admin.get("t_apellido_materno", ""),
+        ).strip()
+
+        if target_status == "inactivo":
+            if admin.get("ID_admin") == self.admin_id:
+                DlgError.show(
+                    "Esta cuenta ya está activa y no se puede eliminar.",
+                    title="Operación no permitida",
+                    parent=self,
+                )
+                return
+            if db_count_active_admins() <= 1:
+                DlgError.show(
+                    "Debe existir al menos un administrador activo.",
+                    title="No se puede desactivar",
+                    parent=self,
+                )
+                return
+
+        accion = "ACTIVAR" if target_status == "activo" else "DESACTIVAR"
+        if not DlgConfirm.ask(
+            f"¿Deseas {accion.lower()} al administrador <b>{nombre}</b> (@{usuario})?",
+            title=f"{accion} Admin",
+            confirm_label=accion,
+            danger=(target_status == "inactivo"),
+            parent=self,
+        ):
+            return
+
+        try:
+            db_set_admin_estado(usuario, target_status, self.admin_id)
+            msg = "activado" if target_status == "activo" else "desactivado"
+            DlgInfo.show(f"Admin '{usuario}' {msg} correctamente.", parent=self)
         except Exception as ex:
             DlgError.show(str(ex), parent=self)
         finally:
@@ -626,6 +701,12 @@ class _AdminUsersPanel(QWidget):
 
         active_count = db_count_active_admins()
         self.table.setRowCount(len(ordered))
+        self.table.setColumnWidth(0, _dp(52))
+        self.table.setColumnWidth(1, _dp(300))
+        self.table.setColumnWidth(2, _dp(170))
+        self.table.setColumnWidth(3, _dp(150))
+        self.table.setColumnWidth(4, _dp(130))
+        self.table.setColumnWidth(5, _dp(140))
 
         for r, admin in enumerate(ordered):
             full_name = "{} {} {}".format(
@@ -665,16 +746,12 @@ class _AdminUsersPanel(QWidget):
             estado_item.setFlags(estado_item.flags() & ~Qt.ItemIsEditable)
             self.table.setItem(r, 4, estado_item)
 
-            # Acciones
-            can_delete = estado == "activo" and active_count > 1
-            if can_delete:
-                btn = QPushButton("DESACTIVAR")
-                btn.setObjectName("btn_del")
-                btn.setFixedHeight(_dp(32))
-                btn.setCursor(Qt.PointingHandCursor)
-                btn.clicked.connect(lambda _, a=admin: self._delete_admin(a))
-                self.table.setCellWidget(r, 5, btn)
-            else:
-                dash = QLabel("—")
-                dash.setAlignment(Qt.AlignCenter)
-                self.table.setCellWidget(r, 5, dash)
+            # Acciones: desactivar/activar
+            btn = QPushButton("ACTIVAR" if estado == "inactivo" else "DESACT.")
+            btn.setObjectName("btn_toggle_on" if estado == "inactivo" else "btn_toggle_off")
+            btn.setFixedHeight(_dp(28))
+            btn.setCursor(Qt.PointingHandCursor)
+            btn.setEnabled(not (estado == "activo" and active_count <= 1) and admin.get("ID_admin") != self.admin_id)
+            target = "activo" if estado == "inactivo" else "inactivo"
+            btn.clicked.connect(lambda _, a=admin, t=target: self._set_admin_status(a, t))
+            self.table.setCellWidget(r, 5, btn)

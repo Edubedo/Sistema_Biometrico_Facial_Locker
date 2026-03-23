@@ -43,8 +43,8 @@ _STATE = {
 
 STYLE = """
 QWidget#panel{background:transparent;}
-QLabel#ttl{color:#1565c0;font-weight:900;font-family:'Segoe UI';letter-spacing:3px;}
-QLabel#sub{color:#90a4ae;font-family:'Segoe UI';letter-spacing:2px;}
+QLabel#ttl{color:#1565c0;font-weight:900;font-family:'Segoe UI';letter-spacing:3px;font-size:18px;}
+QLabel#sub{color:#90a4ae;font-family:'Segoe UI';letter-spacing:2px;font-size:13px;}
 QFrame#h_div{background:#cfd8e3;border:none;min-height:1px;max-height:1px;}
 QFrame#cnt{background:#fff;border:none;border-left:4px solid #1565c0;border-radius:8px;}
 QLabel#cn_b{color:#1565c0;font-weight:800;font-family:'Segoe UI';}
@@ -287,8 +287,8 @@ class LockerConfigDialog(QDialog):
 
 
 class LockerCard(QFrame):
-    CARD_W = 170
-    CARD_H = 190
+    CARD_W = 220
+    CARD_H = 250
 
     def __init__(self, locker, index, admin_id=None, on_refresh=None, parent=None):
         super().__init__(parent)
@@ -322,7 +322,7 @@ class LockerCard(QFrame):
         outer.addWidget(content, 1)
 
         vbox = QVBoxLayout(content)
-        vbox.setContentsMargins(9, 8, 9, 8)
+        vbox.setContentsMargins(12, 12, 12, 12)
         vbox.setSpacing(0)
 
         icon_row = QHBoxLayout()
@@ -336,32 +336,32 @@ class LockerCard(QFrame):
         self.badge.setAlignment(Qt.AlignCenter)
         self.badge.setStyleSheet(
             f"background:{badge_bg}; color:{badge_fg};"
-            "font-size:9px; font-weight:800; font-family:'Segoe UI';"
-            "padding:2px 5px; border-radius:5px;"
+            "font-size:11px; font-weight:800; font-family:'Segoe UI';"
+            "padding:4px 8px; border-radius:7px;"
         )
         icon_row.addWidget(self.badge, alignment=Qt.AlignTop)
         vbox.addLayout(icon_row)
 
-        vbox.addSpacing(6)
+        vbox.addSpacing(10)
 
         num_lbl = QLabel(f"Locker #{locker['t_numero_locker']}")
         num_lbl.setWordWrap(True)
         num_lbl.setStyleSheet(
-            f"font-size:11px; font-weight:900; color:{badge_fg}; font-family:'Segoe UI';"
+            f"font-size:14px; font-weight:900; color:{badge_fg}; font-family:'Segoe UI';"
         )
         vbox.addWidget(num_lbl)
 
-        vbox.addSpacing(3)
+        vbox.addSpacing(6)
 
         zona   = locker.get("t_zona")   or "—"
         tamano = locker.get("t_tamano") or "—"
         chips_row = QHBoxLayout()
         chips_row.setSpacing(3)
-        for text in [f"Z:{zona}", tamano]:
+        for text in [f"Zona:{zona}, Tamaño:{tamano}"]:
             chip = QLabel(text)
             chip.setStyleSheet(
                 f"background:{GRAY_CHIP}; color:{GRAY_TEXT};"
-                "font-size:8px; padding:2px 6px; border-radius:6px; font-family:'Segoe UI';"
+                "font-size:10px; padding:4px 8px; border-radius:8px; font-family:'Segoe UI';"
             )
             chips_row.addWidget(chip)
         chips_row.addStretch()
@@ -377,19 +377,19 @@ class LockerCard(QFrame):
 
         fecha = str(locker.get("d_fecha_registro", "") or "")[:10]
         date_lbl = QLabel(fecha or "—")
-        date_lbl.setStyleSheet("font-size:7px; color:#9ca3af; font-family:'Segoe UI';")
+        date_lbl.setStyleSheet("font-size:9px; color:#9ca3af; font-family:'Segoe UI';")
         vbox.addWidget(date_lbl)
 
-        vbox.addSpacing(4)
+        vbox.addSpacing(8)
 
         btn_row = QHBoxLayout()
         btn_row.setSpacing(3)
 
         btn_config = QPushButton("⚙")
-        btn_config.setFixedSize(34, 30)
+        btn_config.setFixedSize(44, 38)
         btn_config.setStyleSheet(
             f"background:{GRAY_CHIP}; color:{GRAY_TEXT};"
-            "font-size:12px; border:none; border-radius:6px;"
+            "font-size:16px; border:none; border-radius:8px;"
         )
         btn_config.setToolTip("Configurar")
         btn_config.setCursor(Qt.PointingHandCursor)
@@ -398,11 +398,11 @@ class LockerCard(QFrame):
 
         if estado == "ocupado":
             self.btn_liberar = QPushButton("↩")
-            self.btn_liberar.setFixedSize(34, 30)
+            self.btn_liberar.setFixedSize(44, 38)
             self.btn_liberar.setToolTip("Liberar")
             self.btn_liberar.setStyleSheet(
-                f"background:{ORANGE}; color:white; font-size:13px;"
-                "font-weight:800; border:none; border-radius:6px;"
+                f"background:{ORANGE}; color:white; font-size:17px;"
+                "font-weight:800; border:none; border-radius:8px;"
             )
             self.btn_liberar.setCursor(Qt.PointingHandCursor)
             self.btn_liberar.clicked.connect(self._liberar)
@@ -411,10 +411,10 @@ class LockerCard(QFrame):
         btn_row.addStretch()
 
         btn_del = QPushButton("✕")
-        btn_del.setFixedSize(34, 30)
+        btn_del.setFixedSize(44, 38)
         btn_del.setStyleSheet(
             f"background:{RED_BG}; color:{RED_TEXT};"
-            "font-size:12px; border:none; border-radius:6px;"
+            "font-size:15px; border:none; border-radius:8px;"
         )
         btn_del.setToolTip("Eliminar locker")
         btn_del.setCursor(Qt.PointingHandCursor)
@@ -487,7 +487,11 @@ class LockerCard(QFrame):
             if self.on_refresh:
                 self.on_refresh()
         except Exception as ex:
-            DlgError.show(str(ex), parent=self)
+            msg = str(ex)
+            if "UNIQUE constraint failed: Lockers.t_numero_locker" in msg:
+                DlgError.show("Ese locker ya existe. Elige otro número.", parent=self)
+            else:
+                DlgError.show(msg, parent=self)
 
     def _liberar(self):
         num = self.locker["t_numero_locker"]
@@ -535,7 +539,7 @@ class LockerCard(QFrame):
                 descripcion = f"Admin eliminó locker #{num}.",
                 id_usuario  = self.admin_id,
             )
-            db_delete_locker(self.locker["ID_locker"])
+            db_delete_locker(self.locker["ID_locker"], self.admin_id)
             if self.on_refresh:
                 self.on_refresh()
         except Exception as ex:
@@ -575,7 +579,7 @@ class _AdminLockersPanel(QWidget):
         ]:
             b = QPushButton(icon)
             b.setObjectName(obj)
-            b.setStyleSheet(f"font-size:{_dp(10)}px;padding:{_dp(7)}px {_dp(18)}px;")
+            b.setStyleSheet(f"font-size:{_dp(12)}px;padding:{_dp(10)}px {_dp(24)}px;")
             b.setCursor(Qt.PointingHandCursor)
             b.clicked.connect(cb)
             hdr.addWidget(b)
@@ -619,7 +623,7 @@ class _AdminLockersPanel(QWidget):
         self.inner.setStyleSheet("background:transparent;")
         self.grid = QGridLayout(self.inner)
         self.grid.setContentsMargins(_dp(4), _dp(4), _dp(4), _dp(4))
-        self.grid.setSpacing(_dp(10))
+        self.grid.setSpacing(_dp(14))
         self.grid.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         scroll.setWidget(self.inner)
         root.addWidget(scroll, 1)
@@ -661,7 +665,11 @@ class _AdminLockersPanel(QWidget):
             DlgInfo.show(f"Locker #{num} creado correctamente.", parent=self)
             self.refresh()
         except Exception as ex:
-            DlgError.show(str(ex), parent=self)
+            msg = str(ex)
+            if "UNIQUE constraint failed: Lockers.t_numero_locker" in msg:
+                DlgError.show("Ese locker ya existe. Elige otro número.", parent=self)
+            else:
+                DlgError.show(msg, parent=self)
 
     def refresh(self):
         while self.grid.count():

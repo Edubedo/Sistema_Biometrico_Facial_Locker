@@ -33,11 +33,13 @@ QLabel#section_title {
     font-weight: 900;
     font-family: 'Segoe UI', sans-serif;
     letter-spacing: 3px;
+    font-size: 18px;
 }
 QLabel#section_sub {
     color: #90a4ae;
     font-family: 'Segoe UI', sans-serif;
     letter-spacing: 2px;
+    font-size: 13px;
 }
 
 QFrame#card {
@@ -138,13 +140,13 @@ QHeaderView::section {
     font-weight: 900;
     font-family: 'Segoe UI', sans-serif;
     letter-spacing: 1px;
-    padding: 8px 10px;
+    padding: 10px 12px;
     border: none;
 }
 QTableWidget::item {
-    padding: 8px 10px;
+    padding: 10px 12px;
     font-family: 'Segoe UI', sans-serif;
-    font-size: 12px;
+    font-size: 13px;
     color: #1a2a3a;
 }
 QTableWidget::item:selected { background: #bbdefb; }
@@ -358,14 +360,22 @@ class _AdminLogPanel(QWidget):
         self.table.setObjectName("admin_log_tbl")
         self.table.setColumnCount(5)
         self.table.setHorizontalHeaderLabels(
-            ["TIPO", "LOCKER", "RESULTADO", "FECHA/HORA", "DESCRIPCIÓN"]
+            ["📋 TIPO", "📦 LOCKER", "✓ RESULTADO", "📅 FECHA/HORA", "📝 DESCRIPCIÓN"]
         )
         self.table.verticalHeader().setVisible(False)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setSelectionMode(QTableWidget.SingleSelection)
+        self.table.horizontalHeader().setStretchLastSection(False)
+        self.table.horizontalHeader().setMinimumSectionSize(_dp(110))
+        self.table.verticalHeader().setDefaultSectionSize(_dp(46))
+        self.table.setAlternatingRowColors(True)
+        self.table.setWordWrap(True)
+        self.table.setColumnWidth(0, _dp(260))
+        self.table.setColumnWidth(1, _dp(120))
+        self.table.setColumnWidth(2, _dp(140))
+        self.table.setColumnWidth(3, _dp(220))
         self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.horizontalHeader().setMinimumSectionSize(_dp(90))
         root.addWidget(self.table, 1)
 
         self.refresh()
@@ -402,11 +412,11 @@ class _AdminLogPanel(QWidget):
             desc = it.get("t_descripcion_acceso", "") or ""
             ts = it.get("d_fecha_hora_acceso", "") or ""
 
-            # FECHA/HORA (misma idea del card)
-            ts_text = str(ts)
-            if len(ts_text) >= 16:
-                ts_text = f"{ts_text[8:10]}/{ts_text[5:7]} {ts_text[11:16]}"
-            ts_text = ts_text.replace("T", "  ")
+            # FECHA/HORA formateada como DD/MM/YYYY HH:MM
+            if ts and len(ts) >= 16:
+                ts_text = f"{ts[8:10]}/{ts[5:7]}/{ts[0:4]} {ts[11:16]}"
+            else:
+                ts_text = str(ts).replace("T", " ")
 
             tipo_item = QTableWidgetItem(f"INTENTO  #{tipo}" if tipo else "INTENTO #—")
             tipo_item.setTextAlignment(Qt.AlignCenter)

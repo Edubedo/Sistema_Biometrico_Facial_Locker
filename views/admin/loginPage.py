@@ -104,8 +104,9 @@ QLineEdit#inp {
     border: 2px solid #b8d6f0;
     border-radius: 15px;
     color: #0a2a44;
-    padding: 16px 20px;
-    font-size: 16px;
+    padding: 14px 18px;
+    min-height: 36px;
+    font-size: 17px;
     font-family: 'Segoe UI', 'Inter', sans-serif;
 }
 QLineEdit#inp:focus {
@@ -125,10 +126,10 @@ QPushButton#btn_primary {
     color: white;
     border: none;
     border-radius: 16px;
-    padding: 20px 40px;
-    font-size: 19px;
+    padding: 16px 30px;
+    font-size: 20px;
     font-weight: 700;
-    min-height: 34px;
+    min-height: 42px;
     font-family: 'Segoe UI', 'Inter', sans-serif;
 }
 QPushButton#btn_primary:hover {
@@ -164,7 +165,7 @@ QLabel#err {
     color: #c74545;
     font-size: 16px;
     font-weight: 600;
-    padding: 10px;
+    padding: 2px;
     font-family: 'Segoe UI', 'Inter', sans-serif;
 }
 """
@@ -179,19 +180,31 @@ class AdminLoginPage(QWidget):
         self.setObjectName("admin_login_page")
         self.setStyleSheet(STYLE)
 
+        screen = QApplication.primaryScreen()
+        screen_w = screen.availableGeometry().width() if screen else 1200
+        screen_h = screen.availableGeometry().height() if screen else 1000
+        compact = screen_h <= 900
+
         root = QVBoxLayout(self)
-        root.setContentsMargins(0, 0, 0, 0)
+        root.setContentsMargins(0, _dp(6 if compact else 8), 0, _dp(6 if compact else 8))
         root.setAlignment(Qt.AlignCenter)
 
         # ── Card ──────────────────────────────────────────────────────────────
         card = QFrame()
         card.setObjectName("card")
-        card.setFixedWidth(_dp(440))
-        card.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.MinimumExpanding)
+        card_w = max(_dp(440), min(_dp(760), int(screen_w * (0.88 if compact else 0.62))))
+        card.setFixedWidth(card_w)
+        card.setMaximumHeight(max(_dp(560), int(screen_h * (0.92 if compact else 0.88))))
+        card.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum)
 
         cl = QVBoxLayout(card)
-        cl.setContentsMargins(_dp(56), _dp(52), _dp(56), _dp(52))
-        cl.setSpacing(0)
+        cl.setContentsMargins(
+            _dp(36 if compact else 56),
+            _dp(28 if compact else 52),
+            _dp(36 if compact else 56),
+            _dp(34 if compact else 56),
+        )
+        cl.setSpacing(_dp(6 if compact else 10))
 
         # ── Back button ───────────────────────────────────────────────────────
         back_row = QHBoxLayout()
@@ -202,7 +215,7 @@ class AdminLoginPage(QWidget):
         back_row.addWidget(bk)
         back_row.addStretch()
         cl.addLayout(back_row)
-        cl.addSpacing(_dp(36))
+        cl.addSpacing(_dp(12 if compact else 36))
 
         # ── Branding (SuperLocker) ─────────────────────────────────────────
         br = QHBoxLayout()
@@ -213,35 +226,35 @@ class AdminLoginPage(QWidget):
         br.addWidget(bicon)
         br.addWidget(bname)
         cl.addLayout(br)
-        cl.addSpacing(_dp(20))
+        cl.addSpacing(_dp(10 if compact else 20))
 
         # ── Eyebrow + Headline ────────────────────────────────────────────────
         cl.addWidget(lbl("ADMINISTRACIÓN", "eyebrow"))
-        cl.addSpacing(_dp(10))
+        cl.addSpacing(_dp(6 if compact else 10))
         cl.addWidget(lbl("Acceso al panel.", "headline"))
-        cl.addSpacing(_dp(32))
+        cl.addSpacing(_dp(12 if compact else 32))
 
         # ── Divider ───────────────────────────────────────────────────────────
         div = QFrame(); div.setObjectName("div")
         cl.addWidget(div)
-        cl.addSpacing(_dp(32))
+        cl.addSpacing(_dp(12 if compact else 32))
 
         # ── Usuario ───────────────────────────────────────────────────────────
         self.user_inp = QLineEdit()
         self.user_inp.setObjectName("inp")
-        self.user_inp.setPlaceholderText("nombre de usuario")
+        self.user_inp.setPlaceholderText("Nombre de usuario")
         cl.addWidget(lbl("USUARIO", "field_lbl"))
-        cl.addSpacing(_dp(8))
+        cl.addSpacing(_dp(8 if compact else 12))
         row_u = QHBoxLayout()
         row_u.setContentsMargins(0, 0, 0, 0)
-        row_u.setSpacing(_dp(10))
+        row_u.setSpacing(_dp(8 if compact else 10))
         uicon = QLabel("👤")
         uicon.setObjectName("field_lbl")
         uicon.setStyleSheet(f"color:#145388;font-size:{_dp(18)}px;")
         row_u.addWidget(uicon)
         row_u.addWidget(self.user_inp, 1)
         cl.addLayout(row_u)
-        cl.addSpacing(_dp(20))
+        cl.addSpacing(_dp(16 if compact else 24))
 
         # ── Contraseña ────────────────────────────────────────────────────────
         self.pass_inp = QLineEdit()
@@ -250,30 +263,32 @@ class AdminLoginPage(QWidget):
         self.pass_inp.setPlaceholderText("••••••••")
         self.pass_inp.returnPressed.connect(self._check)
         cl.addWidget(lbl("CONTRASEÑA", "field_lbl"))
-        cl.addSpacing(_dp(8))
+        cl.addSpacing(_dp(8 if compact else 12))
         row_p = QHBoxLayout()
         row_p.setContentsMargins(0, 0, 0, 0)
-        row_p.setSpacing(_dp(10))
+        row_p.setSpacing(_dp(8 if compact else 10))
         picon = QLabel("🔑")
         picon.setObjectName("field_lbl")
         picon.setStyleSheet(f"color:#145388;font-size:{_dp(18)}px;")
         row_p.addWidget(picon)
         row_p.addWidget(self.pass_inp, 1)
         cl.addLayout(row_p)
-        cl.addSpacing(_dp(8))
+        cl.addSpacing(_dp(18 if compact else 24))
 
         # ── Error label ───────────────────────────────────────────────────────
         self.err_lbl = lbl("", "err")
-        self.err_lbl.setMinimumHeight(_dp(20))
-        cl.addWidget(self.err_lbl)
-        cl.addSpacing(_dp(24))
+        self.err_lbl.setMinimumHeight(_dp(28))
+        self.err_lbl.setWordWrap(True)
+        cl.addSpacing(_dp(18 if compact else 26))
 
         # ── Submit button ─────────────────────────────────────────────────────
-        btn_in = QPushButton("INGRESAR")
+        btn_in = QPushButton("🔐  INGRESAR")
         btn_in.setObjectName("btn_primary")
         btn_in.setCursor(Qt.PointingHandCursor)
         btn_in.clicked.connect(self._check)
         cl.addWidget(btn_in)
+        cl.addSpacing(_dp(14 if compact else 18))
+        cl.addWidget(self.err_lbl)
 
         root.addWidget(card)
 
@@ -286,10 +301,10 @@ class AdminLoginPage(QWidget):
         u = self.user_inp.text().strip()
         p = self.pass_inp.text()
         if not u or not p:
-            self.err_lbl.setText("· Completa todos los campos.")
+            self.err_lbl.setText("⚠ Tienes que llenar todos los campos.")
             return
         if not db_admin_exists(u):
-            self.err_lbl.setText("· Usuario no encontrado.")
+            self.err_lbl.setText("✖ Acceso incorrecto.")
             try:
                 db_log_intento(0, "acceso_admin", "fallido",
                                "Intento con usuario: {}".format(u))
@@ -297,7 +312,7 @@ class AdminLoginPage(QWidget):
                 pass
             return
         if not db_admin_valid(u, p):
-            self.err_lbl.setText("· Contraseña incorrecta.")
+            self.err_lbl.setText("✖ Acceso incorrecto.")
             self.pass_inp.clear()
             try:
                 db_log_intento(0, "acceso_admin", "fallido",

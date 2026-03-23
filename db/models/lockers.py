@@ -5,7 +5,7 @@ import datetime
 def db_get_all_lockers():
     with connectionDB() as con:
         rows = con.execute(
-            "SELECT * FROM Lockers ORDER BY CAST(t_numero_locker AS INTEGER)"
+            "SELECT * FROM Lockers WHERE t_estado!='eliminado' ORDER BY CAST(t_numero_locker AS INTEGER)"
         ).fetchall()
     return [dict(r) for r in rows]
 
@@ -69,6 +69,12 @@ def db_update_locker(id_locker, numero=None, zona=None, tamano=None,
         )
 
 
-def db_delete_locker(id_locker):
+def db_delete_locker(id_locker, id_admin=None):
+    """Soft-delete: marca el locker como 'eliminado' en lugar de borrarlo."""
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with connectionDB() as con:
-        con.execute("DELETE FROM Lockers WHERE ID_locker=?", (id_locker,))
+        con.execute(
+            "UPDATE Lockers SET t_estado=?, d_fecha_modificacion=?, "
+            "ID_usuario_modificacion=? WHERE ID_locker=?",
+            ("eliminado", now, id_admin, id_locker)
+        )
