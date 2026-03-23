@@ -24,6 +24,7 @@ from db.models.usuarios import (
     db_get_all_admins,
     db_register_admin,
     db_set_admin_estado,
+    db_update_admin,
 )
 from views.style.adminDialogs import DlgError, DlgInfo, DlgConfirm
 
@@ -380,6 +381,123 @@ class AdminRegisterDialog(QDialog):
         self.accept()
 
 
+class AdminEditDialog(QDialog):
+    ROLES = ["empleado", "supervisor", "administrador"]
+
+    def __init__(self, admin: dict, parent=None):
+        super().__init__(parent)
+        self.admin = admin
+        self.data = None
+        self.setWindowTitle("Editar Administrador")
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        self.setMinimumWidth(_dp(400))
+        self.setStyleSheet(STYLE)
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(_dp(20), _dp(16), _dp(20), _dp(16))
+        root.setSpacing(_dp(12))
+
+        ttl = QLabel("✏  EDITAR ADMIN")
+        ttl.setStyleSheet(
+            f"color:#1565c0;font-size:{_dp(11)}px;font-weight:900;"
+            "font-family:'Segoe UI';letter-spacing:2px;"
+        )
+        root.addWidget(ttl)
+        d = QFrame()
+        d.setObjectName("h_div")
+        root.addWidget(d)
+
+        grid = QGridLayout()
+        grid.setSpacing(_dp(8))
+        grid.setColumnStretch(1, 1)
+        fs = f"font-size:{_dp(9)}px;"
+
+        def add_row(lbl_text, widget, r):
+            lb = QLabel(lbl_text)
+            lb.setObjectName("flbl")
+            lb.setStyleSheet(fs)
+            grid.addWidget(lb, r, 0, Qt.AlignRight | Qt.AlignVCenter)
+            widget.setStyleSheet(fs)
+            grid.addWidget(widget, r, 1)
+
+        self.e_nombre = QLineEdit(admin.get("t_nombre", ""))
+        self.e_ap = QLineEdit(admin.get("t_apellido_paterno", ""))
+        self.e_am = QLineEdit(admin.get("t_apellido_materno", "") or "")
+        self.e_usuario = QLineEdit(admin.get("t_usuario", ""))
+        self.c_rol = QComboBox()
+        self.c_rol.addItems(self.ROLES)
+        self.c_rol.setCurrentText((admin.get("t_rol", "empleado") or "empleado").lower())
+        self.e_pass = QLineEdit()
+        self.e_pass.setEchoMode(QLineEdit.Password)
+        self.e_pass.setPlaceholderText("Nueva contraseña (opcional)")
+        self.e_pass2 = QLineEdit()
+        self.e_pass2.setEchoMode(QLineEdit.Password)
+        self.e_pass2.setPlaceholderText("Confirmar nueva contraseña")
+
+        add_row("NOMBRE", self.e_nombre, 0)
+        add_row("APELLIDO PATERNO", self.e_ap, 1)
+        add_row("APELLIDO MATERNO", self.e_am, 2)
+        add_row("USUARIO", self.e_usuario, 3)
+        add_row("ROL", self.c_rol, 4)
+        add_row("NUEVA CONTRASEÑA", self.e_pass, 5)
+        add_row("CONFIRMAR", self.e_pass2, 6)
+        root.addLayout(grid)
+
+        self.msg_error = QLabel("")
+        self.msg_error.setObjectName("err")
+        self.msg_error.setStyleSheet(f"color:#c62828;font-size:{_dp(8)}px;")
+        self.msg_error.setAlignment(Qt.AlignCenter)
+        root.addWidget(self.msg_error)
+
+        br = QHBoxLayout()
+        br.addStretch()
+        bn = QPushButton("CANCELAR")
+        bn.setObjectName("dno")
+        bn.setStyleSheet(fs)
+        bn.setCursor(Qt.PointingHandCursor)
+        bn.clicked.connect(self.reject)
+        bo = QPushButton("GUARDAR")
+        bo.setObjectName("dok")
+        bo.setStyleSheet(fs)
+        bo.setCursor(Qt.PointingHandCursor)
+        bo.clicked.connect(self._save)
+        br.addWidget(bn)
+        br.addWidget(bo)
+        root.addLayout(br)
+
+    def _save(self):
+        nombre = self.e_nombre.text().strip()
+        ap = self.e_ap.text().strip()
+        am = self.e_am.text().strip()
+        usuario = self.e_usuario.text().strip()
+        rol = self.c_rol.currentText().strip().lower()
+        pw = self.e_pass.text()
+        pw2 = self.e_pass2.text()
+
+        self.msg_error.setText("")
+        if not all([nombre, ap, usuario, rol]):
+            self.msg_error.setText("Nombre, apellido, usuario y rol son obligatorios.")
+            return
+        if pw or pw2:
+            if len(pw) < 4:
+                self.msg_error.setText("La contraseña debe tener al menos 4 caracteres.")
+                return
+            if pw != pw2:
+                self.msg_error.setText("Las contraseñas no coinciden.")
+                return
+
+        self.data = {
+            "id_admin": self.admin.get("ID_admin"),
+            "nombre": nombre,
+            "apellido_paterno": ap,
+            "apellido_materno": am or None,
+            "usuario": usuario,
+            "rol": rol,
+            "contrasena": pw or None,
+        }
+        self.accept()
+
+
 class AdminCard(QFrame):
     def __init__(self, admin, index, admin_id=None, on_refresh=None, parent=None):
         super().__init__(parent)
@@ -493,6 +611,7 @@ class _AdminUsersPanel(QWidget):
     def __init__(self, admin_id=None):
         super().__init__()
         self.admin_id = admin_id
+        self.role = "administrador"
         self._current_admin = {}  # Inicializar _current_admin
         self.setObjectName("panel")
         self.setStyleSheet(STYLE)
@@ -519,19 +638,19 @@ class _AdminUsersPanel(QWidget):
         hdr.addStretch()
 
         # Botones
-        btn_add = QPushButton("＋  NUEVO ADMIN")
-        btn_add.setObjectName("btn_add")
-        btn_add.setStyleSheet(f"font-size:{_dp(8)}px;padding:{_dp(5)}px {_dp(14)}px;")
-        btn_add.setCursor(Qt.PointingHandCursor)
-        btn_add.clicked.connect(self._agregar)
-        hdr.addWidget(btn_add)
+        self.btn_add = QPushButton("＋  NUEVO ADMIN")
+        self.btn_add.setObjectName("btn_add")
+        self.btn_add.setStyleSheet(f"font-size:{_dp(8)}px;padding:{_dp(5)}px {_dp(14)}px;")
+        self.btn_add.setCursor(Qt.PointingHandCursor)
+        self.btn_add.clicked.connect(self._agregar)
+        hdr.addWidget(self.btn_add)
 
-        btn_ref = QPushButton("↺  ACTUALIZAR")
-        btn_ref.setObjectName("btn_ref")
-        btn_ref.setStyleSheet(f"font-size:{_dp(8)}px;padding:{_dp(5)}px {_dp(14)}px;")
-        btn_ref.setCursor(Qt.PointingHandCursor)
-        btn_ref.clicked.connect(self.refresh)
-        hdr.addWidget(btn_ref)
+        self.btn_ref = QPushButton("↺  ACTUALIZAR")
+        self.btn_ref.setObjectName("btn_ref")
+        self.btn_ref.setStyleSheet(f"font-size:{_dp(8)}px;padding:{_dp(5)}px {_dp(14)}px;")
+        self.btn_ref.setCursor(Qt.PointingHandCursor)
+        self.btn_ref.clicked.connect(self.refresh)
+        hdr.addWidget(self.btn_ref)
 
         root.addLayout(hdr)
         root.addWidget(self._div())
@@ -558,6 +677,14 @@ class _AdminUsersPanel(QWidget):
         """Método requerido para establecer el administrador actual"""
         self._current_admin = admin_data
         self.admin_id = admin_data.get("ID_admin") if admin_data else None
+        self.role = (admin_data.get("t_rol", "empleado") if admin_data else "empleado").lower()
+        can_manage_admins = self.role == "administrador"
+        self.btn_add.setEnabled(can_manage_admins)
+        self.btn_add.setToolTip(
+            "Solo administradores pueden modificar esta sección"
+            if not can_manage_admins else "Registrar administrador"
+        )
+        self.refresh()
 
     def _div(self):
         d = QFrame()
@@ -565,6 +692,9 @@ class _AdminUsersPanel(QWidget):
         return d
 
     def _delete_admin(self, admin: dict):
+        if self.role != "administrador":
+            DlgError.show("No tienes permisos para modificar administradores.", parent=self)
+            return
         usuario = admin.get("t_usuario", "")
         nombre = "{} {} {}".format(
             admin.get("t_nombre", ""),
@@ -607,6 +737,9 @@ class _AdminUsersPanel(QWidget):
             self.refresh()
 
     def _set_admin_status(self, admin: dict, target_status: str):
+        if self.role != "administrador":
+            DlgError.show("No tienes permisos para modificar administradores.", parent=self)
+            return
         usuario = admin.get("t_usuario", "")
         nombre = "{} {} {}".format(
             admin.get("t_nombre", ""),
@@ -658,6 +791,9 @@ class _AdminUsersPanel(QWidget):
         p.end()
 
     def _agregar(self):
+        if self.role != "administrador":
+            DlgError.show("No tienes permisos para crear administradores.", parent=self)
+            return
         dlg = AdminRegisterDialog(self.admin_id, parent=self)
         if dlg.exec_() != QDialog.Accepted or not dlg.data:
             return
@@ -680,6 +816,33 @@ class _AdminUsersPanel(QWidget):
                 DlgError.show("No se pudo registrar. Intenta de nuevo.", parent=self)
         except Exception as ex:
             DlgError.show(str(ex), parent=self)
+
+    def _editar(self, admin: dict):
+        if self.role != "administrador":
+            DlgError.show("No tienes permisos para editar administradores.", parent=self)
+            return
+
+        dlg = AdminEditDialog(admin, parent=self)
+        if dlg.exec_() != QDialog.Accepted or not dlg.data:
+            return
+
+        d = dlg.data
+        try:
+            db_update_admin(
+                id_admin=d["id_admin"],
+                nombre=d["nombre"],
+                ap_paterno=d["apellido_paterno"],
+                ap_materno=d["apellido_materno"],
+                username=d["usuario"],
+                rol=d["rol"],
+                password=d["contrasena"],
+                id_admin_actual=self.admin_id,
+            )
+            DlgInfo.show(f"Administrador '{d['usuario']}' actualizado correctamente.", parent=self)
+        except Exception as ex:
+            DlgError.show(str(ex), parent=self)
+        finally:
+            self.refresh()
 
     def refresh(self):
         admins = db_get_all_admins()
@@ -706,7 +869,7 @@ class _AdminUsersPanel(QWidget):
         self.table.setColumnWidth(2, _dp(170))
         self.table.setColumnWidth(3, _dp(150))
         self.table.setColumnWidth(4, _dp(130))
-        self.table.setColumnWidth(5, _dp(140))
+        self.table.setColumnWidth(5, _dp(240))
 
         for r, admin in enumerate(ordered):
             full_name = "{} {} {}".format(
@@ -746,12 +909,35 @@ class _AdminUsersPanel(QWidget):
             estado_item.setFlags(estado_item.flags() & ~Qt.ItemIsEditable)
             self.table.setItem(r, 4, estado_item)
 
-            # Acciones: desactivar/activar
-            btn = QPushButton("ACTIVAR" if estado == "inactivo" else "DESACT.")
-            btn.setObjectName("btn_toggle_on" if estado == "inactivo" else "btn_toggle_off")
-            btn.setFixedHeight(_dp(28))
-            btn.setCursor(Qt.PointingHandCursor)
-            btn.setEnabled(not (estado == "activo" and active_count <= 1) and admin.get("ID_admin") != self.admin_id)
-            target = "activo" if estado == "inactivo" else "inactivo"
-            btn.clicked.connect(lambda _, a=admin, t=target: self._set_admin_status(a, t))
-            self.table.setCellWidget(r, 5, btn)
+            if self.role == "administrador":
+                acts = QWidget()
+                acts_l = QHBoxLayout(acts)
+                acts_l.setContentsMargins(4, 2, 4, 2)
+                acts_l.setSpacing(6)
+
+                btn_edit = QPushButton("EDITAR")
+                btn_edit.setObjectName("btn_cfg")
+                btn_edit.setFixedHeight(_dp(28))
+                btn_edit.setCursor(Qt.PointingHandCursor)
+                btn_edit.clicked.connect(lambda _, a=admin: self._editar(a))
+                acts_l.addWidget(btn_edit)
+
+                btn = QPushButton("ACTIVAR" if estado == "inactivo" else "DESACT.")
+                btn.setObjectName("btn_toggle_on" if estado == "inactivo" else "btn_toggle_off")
+                btn.setFixedHeight(_dp(28))
+                btn.setCursor(Qt.PointingHandCursor)
+                btn.setEnabled(
+                    not (estado == "activo" and active_count <= 1)
+                    and admin.get("ID_admin") != self.admin_id
+                )
+                target = "activo" if estado == "inactivo" else "inactivo"
+                btn.clicked.connect(lambda _, a=admin, t=target: self._set_admin_status(a, t))
+                acts_l.addWidget(btn)
+
+                self.table.setCellWidget(r, 5, acts)
+            else:
+                ro_item = QTableWidgetItem("SOLO LECTURA")
+                ro_item.setTextAlignment(Qt.AlignCenter)
+                ro_item.setForeground(QColor("#78909c"))
+                ro_item.setFlags(ro_item.flags() & ~Qt.ItemIsEditable)
+                self.table.setItem(r, 5, ro_item)

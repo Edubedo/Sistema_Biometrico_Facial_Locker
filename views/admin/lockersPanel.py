@@ -290,10 +290,11 @@ class LockerCard(QFrame):
     CARD_W = 220
     CARD_H = 250
 
-    def __init__(self, locker, index, admin_id=None, on_refresh=None, parent=None):
+    def __init__(self, locker, index, admin_id=None, role="administrador", on_refresh=None, parent=None):
         super().__init__(parent)
         self.locker     = locker
         self.admin_id   = admin_id
+        self.role       = (role or "empleado").lower()
         self.on_refresh = on_refresh
 
         estado = locker.get("t_estado", "libre").lower()
@@ -385,18 +386,22 @@ class LockerCard(QFrame):
         btn_row = QHBoxLayout()
         btn_row.setSpacing(3)
 
-        btn_config = QPushButton("⚙")
-        btn_config.setFixedSize(44, 38)
-        btn_config.setStyleSheet(
-            f"background:{GRAY_CHIP}; color:{GRAY_TEXT};"
-            "font-size:16px; border:none; border-radius:8px;"
-        )
-        btn_config.setToolTip("Configurar")
-        btn_config.setCursor(Qt.PointingHandCursor)
-        btn_config.clicked.connect(self._config)
-        btn_row.addWidget(btn_config)
+        can_full_manage = self.role in ("administrador", "supervisor")
+        can_release = self.role in ("administrador", "supervisor", "empleado")
 
-        if estado == "ocupado":
+        if can_full_manage:
+            btn_config = QPushButton("⚙")
+            btn_config.setFixedSize(44, 38)
+            btn_config.setStyleSheet(
+                f"background:{GRAY_CHIP}; color:{GRAY_TEXT};"
+                "font-size:16px; border:none; border-radius:8px;"
+            )
+            btn_config.setToolTip("Configurar")
+            btn_config.setCursor(Qt.PointingHandCursor)
+            btn_config.clicked.connect(self._config)
+            btn_row.addWidget(btn_config)
+
+        if estado == "ocupado" and can_release:
             self.btn_liberar = QPushButton("↩")
             self.btn_liberar.setFixedSize(44, 38)
             self.btn_liberar.setToolTip("Liberar")
@@ -410,16 +415,17 @@ class LockerCard(QFrame):
 
         btn_row.addStretch()
 
-        btn_del = QPushButton("✕")
-        btn_del.setFixedSize(44, 38)
-        btn_del.setStyleSheet(
-            f"background:{RED_BG}; color:{RED_TEXT};"
-            "font-size:15px; border:none; border-radius:8px;"
-        )
-        btn_del.setToolTip("Eliminar locker")
-        btn_del.setCursor(Qt.PointingHandCursor)
-        btn_del.clicked.connect(self._eliminar)
-        btn_row.addWidget(btn_del)
+        if can_full_manage:
+            btn_del = QPushButton("✕")
+            btn_del.setFixedSize(44, 38)
+            btn_del.setStyleSheet(
+                f"background:{RED_BG}; color:{RED_TEXT};"
+                "font-size:15px; border:none; border-radius:8px;"
+            )
+            btn_del.setToolTip("Eliminar locker")
+            btn_del.setCursor(Qt.PointingHandCursor)
+            btn_del.clicked.connect(self._eliminar)
+            btn_row.addWidget(btn_del)
 
         vbox.addLayout(btn_row)
 
@@ -550,6 +556,7 @@ class _AdminLockersPanel(QWidget):
     def __init__(self, admin_id=None):
         super().__init__()
         self.admin_id = admin_id
+        self.role = "administrador"
         self.setObjectName("panel")
         self.setStyleSheet(STYLE)
 
@@ -573,6 +580,8 @@ class _AdminLockersPanel(QWidget):
         hdr.addLayout(tc)
         hdr.addStretch()
 
+        self.btn_add = None
+        self.btn_ref = None
         for obj, icon, cb in [
             ("btn_add", "＋  NUEVO",      self._agregar),
             ("btn_ref", "↺  ACTUALIZAR", self.refresh),
@@ -583,6 +592,10 @@ class _AdminLockersPanel(QWidget):
             b.setCursor(Qt.PointingHandCursor)
             b.clicked.connect(cb)
             hdr.addWidget(b)
+            if obj == "btn_add":
+                self.btn_add = b
+            if obj == "btn_ref":
+                self.btn_ref = b
 
         root.addLayout(hdr)
         root.addWidget(self._div())
@@ -631,6 +644,17 @@ class _AdminLockersPanel(QWidget):
         self._cols = 3
         self.refresh()
 
+    def set_admin_context(self, admin_data):
+        self.admin_id = admin_data.get("ID_admin") if admin_data else None
+        self.role = (admin_data.get("t_rol", "empleado") if admin_data else "empleado").lower()
+        can_full_manage = self.role in ("administrador", "supervisor")
+        if self.btn_add:
+            self.btn_add.setEnabled(can_full_manage)
+            self.btn_add.setToolTip(
+                "Solo administradores y supervisores" if not can_full_manage else "Crear locker"
+            )
+        self.refresh()
+
     def _div(self):
         d = QFrame()
         d.setObjectName("h_div")
@@ -645,6 +669,9 @@ class _AdminLockersPanel(QWidget):
         p.end()
 
     def _agregar(self):
+        if self.role not in ("administrador", "supervisor"):
+            DlgError.show("No tienes permiso para crear lockers.", parent=self)
+            return
         num = DlgInput.ask(
             "Ingresa el número del nuevo locker:",
             title="Nuevo Locker",
@@ -697,5 +724,11 @@ class _AdminLockersPanel(QWidget):
         sorted_lockers = sorted(lockers, key=lambda l: _ord.get(l.get("t_estado", ""), 9))
         cols = self._cols
         for i, lk in enumerate(sorted_lockers):
-            card = LockerCard(lk, i + 1, self.admin_id, on_refresh=self.refresh)
+            card = LockerCard(
+                lk,
+                i + 1,
+                self.admin_id,
+                role=self.role,
+                on_refresh=self.refresh,
+            )
             self.grid.addWidget(card, i // cols, i % cols)
