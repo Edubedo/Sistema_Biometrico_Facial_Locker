@@ -223,34 +223,37 @@ class ResultPage(QWidget):
         # Button
         btn = QPushButton("VOLVER AL INICIO")
         btn.setCursor(Qt.PointingHandCursor)
+        btn.setFixedWidth(_dp(260))
         btn.setFixedHeight(_dp(46))
         btn.setStyleSheet(f"""
             QPushButton {{
-                background: {accent_hex};
+                background: #2f80ed;
                 color: #ffffff;
                 border: none;
                 border-radius: {_dp(10)}px;
-                font-size: {_dp(10)}px;
+                font-size: {_dp(14)}px;
                 font-weight: 800;
                 font-family: 'Segoe UI';
                 letter-spacing: 2px;
             }}
-            QPushButton:hover   {{ background: {cfg['accent'].darker(115).name()}; }}
-            QPushButton:pressed {{ background: {cfg['accent'].darker(130).name()}; }}
+            QPushButton:hover   {{ background: #1f6ed8; }}
+            QPushButton:pressed {{ background: #1658b0; }}
         """)
         btn.clicked.connect(self._manual_home)
-        cl.addWidget(btn)
+        cl.addWidget(btn, alignment=Qt.AlignCenter)
 
         self._card = card
         self._root.addWidget(card, alignment=Qt.AlignCenter)
         self._root.addSpacing(_dp(20))
 
         # Timer label
+        self._timer_w.setFixedWidth(_dp(480))
         self._timer_w.setStyleSheet(f"""
-            color: {cfg['accent'].name()};
-            font-size: {_dp(9)}px;
+            color: #2f80ed;
+            font-size: {_dp(14)}px;
+            font-weight: 700;
             font-family: 'Segoe UI';
-            letter-spacing: 2px;
+            letter-spacing: 1px;
             opacity: 0.6;
         """)
         self._root.addWidget(self._timer_w, alignment=Qt.AlignCenter)

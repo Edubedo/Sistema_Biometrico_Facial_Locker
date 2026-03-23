@@ -77,10 +77,19 @@ class MainWindow(QMainWindow):
         self.p_home.go_admin.connect(lambda: self._nav(self.ALOGIN))
 
         self.p_guard.go_back.connect(lambda: self._nav(self.HOME))
-        self.p_guard.done.connect(self._on_guardado)
-        self.p_guard.failed.connect(
-            lambda msg: self._show_result("err", "Sin espacio", msg)
-        )
+        guard_done = getattr(self.p_guard, "done", None)
+        if guard_done is not None:
+            guard_done.connect(self._on_guardado)
+        else:
+            print("[WARN] GuardarPage no expone la senal 'done'.")
+
+        guard_failed = getattr(self.p_guard, "failed", None)
+        if guard_failed is not None:
+            guard_failed.connect(
+                lambda msg: self._show_result("err", "Sin espacio", msg)
+            )
+        else:
+            print("[WARN] GuardarPage no expone la senal 'failed'.")
 
         self.p_retir.go_back.connect(lambda: self._nav(self.HOME))
         self.p_retir.retirar_done.connect(self._on_retirado)
