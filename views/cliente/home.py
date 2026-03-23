@@ -258,7 +258,7 @@ class HomePage(QWidget):
         hl.setContentsMargins(_dp(16), 0, _dp(16), 0)
 
         tcol = QVBoxLayout(); tcol.setSpacing(_dp(1))
-        sl = QLabel("SISTEMA DE CONTROL"); sl.setObjectName("sys_label")
+        sl = QLabel("SUPERLOCKER"); sl.setObjectName("sys_label")
         sl.setStyleSheet(f"font-size: {_dp(8)}px;")
         tl = QLabel("ACCESO"); tl.setObjectName("sys_title")
         tl.setStyleSheet(f"font-size: {_dp(18)}px;")

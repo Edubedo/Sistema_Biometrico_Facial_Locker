@@ -200,10 +200,12 @@ class GuardarPage(QWidget):
         self.cam_thread.start()
 
     def _on_capture_done(self, ok, tmp_uid):
-        self.cam.idle()
         self.start_btn.setEnabled(True)
 
         if not ok:
+            # Captura fallida: borra temporales y muestra feedback
+            self.cam.set_status("No se pudo leer el rostro. Intenta de nuevo.", "#bd0a0a")
+            self.cam.idle()
             # Captura fallida: borrar imagenes temporales y loguear
             delete_face_data(tmp_uid)
             if self._id_locker:
@@ -213,6 +215,10 @@ class GuardarPage(QWidget):
                 )
             self.err_lbl.setText("Error al capturar. Intenta de nuevo.")
             return
+
+        # Captura correcta: avisar explícitamente antes de salir
+        self.cam.set_status("Rostro leído correctamente.", "#B9EA89")
+        QTimer.singleShot(850, self.cam.idle)
 
         # Verificar que el locker sigue libre (puede haber cambiado)
         locker = db_next_free_locker()

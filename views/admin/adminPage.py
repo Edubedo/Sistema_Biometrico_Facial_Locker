@@ -37,6 +37,17 @@ QFrame#admin_header {
     background-color: #1565c0;
     border: none;
 }
+QLabel#brand_icon {
+    color: #ffffff;
+    font-weight: 900;
+    font-family: 'Segoe UI', sans-serif;
+}
+QLabel#brand_name {
+    color: #ffffff;
+    font-weight: 900;
+    font-family: 'Segoe UI', sans-serif;
+    letter-spacing: 2px;
+}
 QLabel#page_title {
     color: #ffffff;
     font-weight: 800;
@@ -85,7 +96,10 @@ QPushButton#tab {
     border-radius: 0;
 }
 QPushButton#tab:hover   { color: #1976d2; border-bottom-color: #90c4f0; }
-QPushButton#tab:checked { color: #1565c0; border-bottom-color: #1565c0; }
+QPushButton#tab:checked {
+    color: #1565c0;
+    border-bottom-color: #1565c0;
+}
 
 /* ── DIVIDER ─────────────────────────────────────────────────────────── */
 QFrame#h_divider {
@@ -126,6 +140,20 @@ class AdminPage(QWidget):
         bk.clicked.connect(self.go_back.emit)
         hl.addWidget(bk)
 
+        # ── Branding (SuperLocker) ─────────────────────────────────────────
+        brand = QWidget()
+        brand_l = QHBoxLayout(brand)
+        brand_l.setContentsMargins(0, 0, 0, 0)
+        brand_l.setSpacing(_dp(10))
+        bicon = lbl("🔒", "brand_icon", Qt.AlignLeft)
+        bicon.setStyleSheet(f"font-size: {_dp(15)}px;")
+        bname = lbl("SUPERLOCKER", "brand_name", Qt.AlignLeft)
+        bname.setStyleSheet(f"font-size: {_dp(12)}px;")
+        brand_l.addWidget(bicon, alignment=Qt.AlignVCenter)
+        brand_l.addWidget(bname, alignment=Qt.AlignVCenter)
+        brand_l.addStretch()
+        hl.addWidget(brand)
+
         tit = lbl("PANEL DE ADMINISTRACIÓN", "page_title")
         tit.setStyleSheet(f"color: #ffffff; font-size: {_dp(14)}px; font-weight: 800; font-family: 'Segoe UI'; letter-spacing: 2px;")
         hl.addWidget(tit)
@@ -145,18 +173,18 @@ class AdminPage(QWidget):
 
         # ── Tab bar ───────────────────────────────────────────────────────────
         tab_bar = QFrame(); tab_bar.setObjectName("tab_bar")
-        tab_bar.setFixedHeight(_dp(46))
+        tab_bar.setFixedHeight(_dp(56))
         tbl = QHBoxLayout(tab_bar)
         tbl.setContentsMargins(_dp(8), 0, _dp(8), 0)
         tbl.setSpacing(0)
 
-        tab_font_size = _dp(10)
-        tab_padding   = f"padding: {_dp(10)}px {_dp(18)}px;"
+        tab_font_size = _dp(12)
+        tab_padding   = f"padding: {_dp(14)}px {_dp(22)}px;"
 
-        self.t_lock = QPushButton("LOCKERS");         self.t_lock.setObjectName("tab"); self.t_lock.setCheckable(True); self.t_lock.setChecked(True)
-        self.t_ses  = QPushButton("SESIONES");        self.t_ses.setObjectName("tab");  self.t_ses.setCheckable(True)
-        self.t_log  = QPushButton("REGISTRO ACCESO"); self.t_log.setObjectName("tab");  self.t_log.setCheckable(True)
-        self.t_adm  = QPushButton("ADMINISTRADORES"); self.t_adm.setObjectName("tab");  self.t_adm.setCheckable(True)
+        self.t_lock = QPushButton("🔒  LOCKERS");              self.t_lock.setObjectName("tab"); self.t_lock.setCheckable(True); self.t_lock.setChecked(True)
+        self.t_ses  = QPushButton("🧾  SESIONES");             self.t_ses.setObjectName("tab");  self.t_ses.setCheckable(True)
+        self.t_log  = QPushButton("📝  REGISTRO ACCESO");      self.t_log.setObjectName("tab");  self.t_log.setCheckable(True)
+        self.t_adm  = QPushButton("👤  ADMINISTRADORES");      self.t_adm.setObjectName("tab");  self.t_adm.setCheckable(True)
 
         for i, b in enumerate([self.t_lock, self.t_ses, self.t_log, self.t_adm]):
             b.setStyleSheet(b.styleSheet() + f"font-size: {tab_font_size}px; {tab_padding}")

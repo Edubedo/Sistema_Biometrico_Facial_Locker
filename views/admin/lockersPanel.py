@@ -78,7 +78,7 @@ QPushButton#btn_ref:hover{color:#1565c0;border-color:#1976d2;background:#e3f0ff;
 class LockerIcon(QWidget):
     def __init__(self, estado="ocupado", parent=None):
         super().__init__(parent)
-        self.setFixedSize(32, 38)
+        self.setFixedSize(40, 48)
         self.estado = estado
         self._bg = QColor(WHITE)
 
@@ -287,8 +287,8 @@ class LockerConfigDialog(QDialog):
 
 
 class LockerCard(QFrame):
-    CARD_W = 140
-    CARD_H = 160
+    CARD_W = 170
+    CARD_H = 190
 
     def __init__(self, locker, index, admin_id=None, on_refresh=None, parent=None):
         super().__init__(parent)
@@ -336,7 +336,7 @@ class LockerCard(QFrame):
         self.badge.setAlignment(Qt.AlignCenter)
         self.badge.setStyleSheet(
             f"background:{badge_bg}; color:{badge_fg};"
-            "font-size:7px; font-weight:700; font-family:'Segoe UI';"
+            "font-size:9px; font-weight:800; font-family:'Segoe UI';"
             "padding:2px 5px; border-radius:5px;"
         )
         icon_row.addWidget(self.badge, alignment=Qt.AlignTop)
@@ -361,7 +361,7 @@ class LockerCard(QFrame):
             chip = QLabel(text)
             chip.setStyleSheet(
                 f"background:{GRAY_CHIP}; color:{GRAY_TEXT};"
-                "font-size:7px; padding:1px 4px; border-radius:4px; font-family:'Segoe UI';"
+                "font-size:8px; padding:2px 6px; border-radius:6px; font-family:'Segoe UI';"
             )
             chips_row.addWidget(chip)
         chips_row.addStretch()
@@ -386,10 +386,10 @@ class LockerCard(QFrame):
         btn_row.setSpacing(3)
 
         btn_config = QPushButton("⚙")
-        btn_config.setFixedSize(22, 20)
+        btn_config.setFixedSize(34, 30)
         btn_config.setStyleSheet(
             f"background:{GRAY_CHIP}; color:{GRAY_TEXT};"
-            "font-size:10px; border:none; border-radius:4px;"
+            "font-size:12px; border:none; border-radius:6px;"
         )
         btn_config.setToolTip("Configurar")
         btn_config.setCursor(Qt.PointingHandCursor)
@@ -398,11 +398,11 @@ class LockerCard(QFrame):
 
         if estado == "ocupado":
             self.btn_liberar = QPushButton("↩")
-            self.btn_liberar.setFixedSize(22, 20)
+            self.btn_liberar.setFixedSize(34, 30)
             self.btn_liberar.setToolTip("Liberar")
             self.btn_liberar.setStyleSheet(
-                f"background:{ORANGE}; color:white; font-size:11px;"
-                "font-weight:bold; border:none; border-radius:4px;"
+                f"background:{ORANGE}; color:white; font-size:13px;"
+                "font-weight:800; border:none; border-radius:6px;"
             )
             self.btn_liberar.setCursor(Qt.PointingHandCursor)
             self.btn_liberar.clicked.connect(self._liberar)
@@ -411,10 +411,10 @@ class LockerCard(QFrame):
         btn_row.addStretch()
 
         btn_del = QPushButton("✕")
-        btn_del.setFixedSize(22, 20)
+        btn_del.setFixedSize(34, 30)
         btn_del.setStyleSheet(
             f"background:{RED_BG}; color:{RED_TEXT};"
-            "font-size:9px; border:none; border-radius:4px;"
+            "font-size:12px; border:none; border-radius:6px;"
         )
         btn_del.setToolTip("Eliminar locker")
         btn_del.setCursor(Qt.PointingHandCursor)
@@ -575,7 +575,7 @@ class _AdminLockersPanel(QWidget):
         ]:
             b = QPushButton(icon)
             b.setObjectName(obj)
-            b.setStyleSheet(f"font-size:{_dp(8)}px;padding:{_dp(5)}px {_dp(14)}px;")
+            b.setStyleSheet(f"font-size:{_dp(10)}px;padding:{_dp(7)}px {_dp(18)}px;")
             b.setCursor(Qt.PointingHandCursor)
             b.clicked.connect(cb)
             hdr.addWidget(b)
@@ -624,7 +624,7 @@ class _AdminLockersPanel(QWidget):
         scroll.setWidget(self.inner)
         root.addWidget(scroll, 1)
 
-        self._cols = 4
+        self._cols = 3
         self.refresh()
 
     def _div(self):

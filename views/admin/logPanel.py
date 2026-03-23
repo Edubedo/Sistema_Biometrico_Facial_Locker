@@ -1,7 +1,7 @@
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QLabel, QFrame, QScrollArea, QSizePolicy, QApplication, QGraphicsDropShadowEffect
+    QLabel, QFrame, QSizePolicy, QApplication, QGraphicsDropShadowEffect, QTableWidget, QTableWidgetItem
 )
 from PyQt5.QtGui import QPainter, QColor, QBrush, QLinearGradient
 
@@ -124,6 +124,30 @@ QFrame#h_divider {
     background: #cfd8e3; border: none;
     min-height: 1px; max-height: 1px;
 }
+
+/* ── Real table ───────────────────────────────────────────────────────── */
+QTableWidget#admin_log_tbl {
+    background: #ffffff;
+    border: 1px solid #cfd8e3;
+    border-radius: 10px;
+    gridline-color: #e3f0ff;
+}
+QHeaderView::section {
+    background: #e3f0ff;
+    color: #1565c0;
+    font-weight: 900;
+    font-family: 'Segoe UI', sans-serif;
+    letter-spacing: 1px;
+    padding: 8px 10px;
+    border: none;
+}
+QTableWidget::item {
+    padding: 8px 10px;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 12px;
+    color: #1a2a3a;
+}
+QTableWidget::item:selected { background: #bbdefb; }
 """
 
 
@@ -289,7 +313,7 @@ class _AdminLogPanel(QWidget):
 
         btn_ref = QPushButton("↺  ACTUALIZAR")
         btn_ref.setObjectName("btn_refresh")
-        btn_ref.setStyleSheet(f"font-size: {_dp(8)}px; padding: {_dp(5)}px {_dp(16)}px;")
+        btn_ref.setStyleSheet(f"font-size: {_dp(10)}px; padding: {_dp(7)}px {_dp(20)}px;")
         btn_ref.setCursor(Qt.PointingHandCursor)
         btn_ref.clicked.connect(self.refresh)
         header_row.addWidget(btn_ref)
@@ -329,20 +353,20 @@ class _AdminLogPanel(QWidget):
         cb_lay.addWidget(status_lbl)
         root.addWidget(counter_block)
 
-        # ── Scroll area ───────────────────────────────────────────────────────
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
-        self.inner = QWidget()
-        self.inner.setObjectName("admin_log_inner")
-        self.il = QVBoxLayout(self.inner)
-        self.il.setContentsMargins(0, _dp(4), _dp(4), 0)
-        self.il.setSpacing(_dp(6))
-        self.il.setAlignment(Qt.AlignTop)
-
-        scroll.setWidget(self.inner)
-        root.addWidget(scroll, 1)
+        # ── Tabla ─────────────────────────────────────────────────────────────
+        self.table = QTableWidget()
+        self.table.setObjectName("admin_log_tbl")
+        self.table.setColumnCount(5)
+        self.table.setHorizontalHeaderLabels(
+            ["TIPO", "LOCKER", "RESULTADO", "FECHA/HORA", "DESCRIPCIÓN"]
+        )
+        self.table.verticalHeader().setVisible(False)
+        self.table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.table.setSelectionMode(QTableWidget.SingleSelection)
+        self.table.horizontalHeader().setStretchLastSection(True)
+        self.table.horizontalHeader().setMinimumSectionSize(_dp(90))
+        root.addWidget(self.table, 1)
 
         self.refresh()
 
@@ -356,21 +380,57 @@ class _AdminLogPanel(QWidget):
         p.end()
 
     def refresh(self):
-        for i in reversed(range(self.il.count())):
-            item = self.il.itemAt(i)
-            if item and item.widget():
-                item.widget().deleteLater()
-
         intentos = db_get_intentos_recientes(50)
         self.counter_lbl.setText(str(len(intentos)))
 
+        self.table.setRowCount(0)
+
         if not intentos:
-            empty = QLabel("·  SIN REGISTROS DE ACCESO  ·")
-            empty.setObjectName("empty_lbl")
-            empty.setAlignment(Qt.AlignCenter)
-            empty.setStyleSheet(f"font-size: {_dp(9)}px;")
-            empty.setContentsMargins(0, _dp(20), 0, _dp(20))
-            self.il.addWidget(empty)
-        else:
-            for i, it in enumerate(intentos, start=1):
-                self.il.addWidget(LogCard(it, i))
+            self.table.setRowCount(1)
+            itm = QTableWidgetItem("SIN REGISTROS DE ACCESO")
+            itm.setTextAlignment(Qt.AlignCenter)
+            itm.setFlags(itm.flags() & ~Qt.ItemIsSelectable)
+            self.table.setItem(0, 0, itm)
+            self.table.setSpan(0, 0, 1, 5)
+            return
+
+        self.table.setRowCount(len(intentos))
+        for r, it in enumerate(intentos):
+            tipo = (it.get("t_tipo_intento", "") or "").upper()
+            locker = it.get("t_numero_locker", "") or ""
+            resultado = (it.get("t_resultado_acceso", "") or "").lower()
+            desc = it.get("t_descripcion_acceso", "") or ""
+            ts = it.get("d_fecha_hora_acceso", "") or ""
+
+            # FECHA/HORA (misma idea del card)
+            ts_text = str(ts)
+            if len(ts_text) >= 16:
+                ts_text = f"{ts_text[8:10]}/{ts_text[5:7]} {ts_text[11:16]}"
+            ts_text = ts_text.replace("T", "  ")
+
+            tipo_item = QTableWidgetItem(f"INTENTO  #{tipo}" if tipo else "INTENTO #—")
+            tipo_item.setTextAlignment(Qt.AlignCenter)
+            self.table.setItem(r, 0, tipo_item)
+
+            locker_item = QTableWidgetItem(str(locker))
+            locker_item.setTextAlignment(Qt.AlignCenter)
+            self.table.setItem(r, 1, locker_item)
+
+            res_item = QTableWidgetItem("EXITOSO" if resultado == "exitoso" else "FALLIDO")
+            res_item.setTextAlignment(Qt.AlignCenter)
+            if resultado == "exitoso":
+                res_item.setBackground(QColor("#e3f0ff"))
+                res_item.setForeground(QColor("#1565c0"))
+            else:
+                res_item.setBackground(QColor("#ffe3e3"))
+                res_item.setForeground(QColor("#c62828"))
+            res_item.setFlags(res_item.flags() & ~Qt.ItemIsEditable)
+            self.table.setItem(r, 2, res_item)
+
+            ts_item = QTableWidgetItem(ts_text)
+            ts_item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+            self.table.setItem(r, 3, ts_item)
+
+            desc_item = QTableWidgetItem(desc[:90] + ("..." if len(desc) > 90 else ""))
+            desc_item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+            self.table.setItem(r, 4, desc_item)

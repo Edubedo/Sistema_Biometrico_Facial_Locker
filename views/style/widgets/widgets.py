@@ -59,6 +59,7 @@ class CamWidget(QWidget):
         self.status = QLabel("")
         self.status.setObjectName("body")
         self.status.setAlignment(Qt.AlignCenter)
+        self.status.setWordWrap(True)
         vl.addWidget(self.status)
 
         # Barra de progreso (visible solo durante captura)
@@ -88,12 +89,14 @@ class CamWidget(QWidget):
         pct = min(n / total, 1.0)
         self.prog_fill.setFixedWidth(max(int(self.prog_bg.width() * pct), 0))
         self.status.setText("Capturando biometria... {}/{}".format(n, total))
-        self.status.setStyleSheet("color:#4d8ec4; font-size:13px; font-family:'Segoe UI';")
+        self.status.setStyleSheet(
+            "color:#4d8ec4; font-size:15px; font-weight:700; font-family:'Segoe UI';"
+        )
 
     def set_status(self, text, color="#7ca8d0"):
         self.status.setText(text)
         self.status.setStyleSheet(
-            "color:{}; font-size:13px; font-family:'Segoe UI';".format(color)
+            "color:{}; font-size:15px; font-weight:700; font-family:'Segoe UI';".format(color)
         )
 
     def idle(self):

@@ -7,12 +7,13 @@ from PyQt5.QtWidgets import (
     QLabel,
     QLineEdit,
     QFrame,
-    QScrollArea,
     QSizePolicy,
     QApplication,
     QDialog,
     QGridLayout,
     QComboBox,
+    QTableWidget,
+    QTableWidgetItem,
 )
 from PyQt5.QtGui import QPainter, QColor, QBrush, QLinearGradient
 
@@ -206,6 +207,30 @@ QLabel#empty{
     color:#b0bec5;font-family:'Segoe UI';
     letter-spacing:3px;
 }
+
+/* ── Real table ───────────────────────────────────────────────────────── */
+QTableWidget#admin_users_tbl {
+    background: #ffffff;
+    border: 1px solid #cfd8e3;
+    border-radius: 10px;
+    gridline-color: #e3f0ff;
+}
+QHeaderView::section {
+    background: #e3f0ff;
+    color: #1565c0;
+    font-weight: 900;
+    font-family: 'Segoe UI', sans-serif;
+    letter-spacing: 1px;
+    padding: 8px 10px;
+    border: none;
+}
+QTableWidget::item {
+    padding: 8px 10px;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 12px;
+    color: #1a2a3a;
+}
+QTableWidget::item:selected { background: #bbdefb; }
 """
 
 
@@ -490,20 +515,18 @@ class _AdminUsersPanel(QWidget):
         root.addLayout(hdr)
         root.addWidget(self._div())
 
-        # Scroll Area
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
-        self.inner = QWidget()
-        self.inner.setObjectName("inner")
-        self.il = QVBoxLayout(self.inner)
-        self.il.setContentsMargins(0, _dp(4), _dp(4), 0)
-        self.il.setSpacing(_dp(5))
-        self.il.setAlignment(Qt.AlignTop)
-
-        scroll.setWidget(self.inner)
-        root.addWidget(scroll, 1)
+        # Tabla (estilo "real" con campos)
+        self.table = QTableWidget()
+        self.table.setObjectName("admin_users_tbl")
+        self.table.setColumnCount(6)
+        self.table.setHorizontalHeaderLabels(["#", "NOMBRE", "USUARIO", "ROL", "ESTADO", "ACCIONES"])
+        self.table.verticalHeader().setVisible(False)
+        self.table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.table.setSelectionMode(QTableWidget.SingleSelection)
+        self.table.horizontalHeader().setStretchLastSection(True)
+        self.table.horizontalHeader().setMinimumSectionSize(_dp(90))
+        root.addWidget(self.table, 1)
 
         self.refresh()
 
@@ -516,6 +539,40 @@ class _AdminUsersPanel(QWidget):
         d = QFrame()
         d.setObjectName("h_div")
         return d
+
+    def _delete_admin(self, admin: dict):
+        usuario = admin.get("t_usuario", "")
+        nombre = "{} {} {}".format(
+            admin.get("t_nombre", ""),
+            admin.get("t_apellido_paterno", ""),
+            admin.get("t_apellido_materno", ""),
+        ).strip()
+
+        if db_count_active_admins() <= 1:
+            DlgError.show(
+                "Debe existir al menos un administrador activo.",
+                title="No se puede desactivar",
+                parent=self,
+            )
+            return
+
+        if not DlgConfirm.ask(
+            f"¿Desactivar permanentemente al administrador <b>{nombre}</b> (@{usuario})?\n"
+            "Esta acción no se puede deshacer.",
+            title="Desactivar Admin",
+            confirm_label="DESACTIVAR",
+            danger=True,
+            parent=self,
+        ):
+            return
+
+        try:
+            db_delete_admin(usuario, self.admin_id)
+            DlgInfo.show(f"Admin '{usuario}' desactivado correctamente.", parent=self)
+        except Exception as ex:
+            DlgError.show(str(ex), parent=self)
+        finally:
+            self.refresh()
 
     def paintEvent(self, e):
         p = QPainter(self)
@@ -550,26 +607,74 @@ class _AdminUsersPanel(QWidget):
             DlgError.show(str(ex), parent=self)
 
     def refresh(self):
-        # Limpiar layout
-        for i in reversed(range(self.il.count())):
-            w = self.il.itemAt(i)
-            if w and w.widget():
-                w.widget().deleteLater()
-
         admins = db_get_all_admins()
 
+        self.table.setRowCount(0)
+
         if not admins:
-            e = QLabel("·  SIN ADMINISTRADORES REGISTRADOS  ·")
-            e.setObjectName("empty")
-            e.setAlignment(Qt.AlignCenter)
-            e.setStyleSheet(f"font-size:{_dp(9)}px;")
-            e.setContentsMargins(0, _dp(20), 0, _dp(20))
-            self.il.addWidget(e)
+            self.table.setRowCount(1)
+            itm = QTableWidgetItem("SIN ADMINISTRADORES REGISTRADOS")
+            itm.setTextAlignment(Qt.AlignCenter)
+            itm.setFlags(itm.flags() & ~Qt.ItemIsSelectable)
+            self.table.setItem(0, 0, itm)
+            self.table.setSpan(0, 0, 1, 6)
             return
 
         # Orden: activos primero, luego inactivos
         _ord = {"activo": 0, "inactivo": 1}
-        for i, admin in enumerate(
-            sorted(admins, key=lambda a: _ord.get(a.get("t_estado", ""), 9)), 1
-        ):
-            self.il.addWidget(AdminCard(admin, i, self.admin_id, on_refresh=self.refresh))
+        ordered = sorted(admins, key=lambda a: _ord.get(a.get("t_estado", ""), 9))
+
+        active_count = db_count_active_admins()
+        self.table.setRowCount(len(ordered))
+
+        for r, admin in enumerate(ordered):
+            full_name = "{} {} {}".format(
+                admin.get("t_nombre", ""),
+                admin.get("t_apellido_paterno", ""),
+                admin.get("t_apellido_materno", ""),
+            ).strip()
+            usuario = admin.get("t_usuario", "") or ""
+            rol = (admin.get("t_rol", "") or "").upper()
+            estado = (admin.get("t_estado", "activo") or "").lower()
+            estado_lbl = estado.upper()
+
+            idx_item = QTableWidgetItem(str(r + 1))
+            idx_item.setTextAlignment(Qt.AlignCenter)
+            self.table.setItem(r, 0, idx_item)
+
+            name_item = QTableWidgetItem(full_name)
+            name_item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+            self.table.setItem(r, 1, name_item)
+
+            user_item = QTableWidgetItem(f"@{usuario}" if usuario else "")
+            user_item.setTextAlignment(Qt.AlignCenter)
+            self.table.setItem(r, 2, user_item)
+
+            rol_item = QTableWidgetItem(rol)
+            rol_item.setTextAlignment(Qt.AlignCenter)
+            self.table.setItem(r, 3, rol_item)
+
+            estado_item = QTableWidgetItem(estado_lbl)
+            estado_item.setTextAlignment(Qt.AlignCenter)
+            if estado == "activo":
+                estado_item.setBackground(QColor("#e8f5e9"))
+                estado_item.setForeground(QColor("#1b5e20"))
+            else:
+                estado_item.setBackground(QColor("#fafafa"))
+                estado_item.setForeground(QColor("#546e7a"))
+            estado_item.setFlags(estado_item.flags() & ~Qt.ItemIsEditable)
+            self.table.setItem(r, 4, estado_item)
+
+            # Acciones
+            can_delete = estado == "activo" and active_count > 1
+            if can_delete:
+                btn = QPushButton("DESACTIVAR")
+                btn.setObjectName("btn_del")
+                btn.setFixedHeight(_dp(32))
+                btn.setCursor(Qt.PointingHandCursor)
+                btn.clicked.connect(lambda _, a=admin: self._delete_admin(a))
+                self.table.setCellWidget(r, 5, btn)
+            else:
+                dash = QLabel("—")
+                dash.setAlignment(Qt.AlignCenter)
+                self.table.setCellWidget(r, 5, dash)

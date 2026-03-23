@@ -2,6 +2,7 @@ import os
 import sys
 
 from dotenv import load_dotenv
+from PyQt5.QtCore import QLibraryInfo
 
 from PyQt5.QtWidgets import (
     QApplication,
@@ -26,6 +27,16 @@ from biometria.biometria import train_model
 load_dotenv()  
 
 DB_PATH = os.getenv("DB_PATH")
+
+
+def _fix_qt_plugin_path_for_linux():
+    """Avoid Qt plugin conflicts caused by OpenCV's bundled Qt plugins."""
+    current = os.environ.get("QT_QPA_PLATFORM_PLUGIN_PATH", "")
+    current_norm = current.replace("\\", "/")
+    if "/site-packages/cv2/qt/plugins" in current_norm:
+        pyqt_plugins = QLibraryInfo.location(QLibraryInfo.PluginsPath)
+        if pyqt_plugins:
+            os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = pyqt_plugins
 
 
 class MainWindow(QMainWindow):
@@ -142,6 +153,8 @@ class MainWindow(QMainWindow):
 # ──────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    _fix_qt_plugin_path_for_linux()
+
     # Verificar que la base de datos existe
     if not os.path.exists(DB_PATH):
         print("[ERROR] No se encontro la base de datos en:")

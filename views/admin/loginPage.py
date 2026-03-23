@@ -50,6 +50,21 @@ QFrame#card {
     margin: 10px;  /* Margen de 10px en todos los bordes */
 }
 
+/* ── Branding ─────────────────────────────────────────────────────────── */
+QLabel#brand_icon {
+    color: #145388;
+    font-size: 26px;
+    font-weight: 900;
+    font-family: 'Segoe UI', sans-serif;
+}
+QLabel#brand_name {
+    color: #145388;
+    font-size: 22px;
+    font-weight: 900;
+    font-family: 'Segoe UI', sans-serif;
+    letter-spacing: 2px;
+}
+
 /* Título grande (Acceso al panel) - usando #h2 del primer código */
 QLabel#headline {
     color: #145388;
@@ -109,11 +124,11 @@ QPushButton#btn_primary {
         stop:0 #5da5ff, stop:1 #3a7cd9);
     color: white;
     border: none;
-    border-radius: 15px;
-    padding: 18px 36px;
-    font-size: 18px;
+    border-radius: 16px;
+    padding: 20px 40px;
+    font-size: 19px;
     font-weight: 700;
-    min-height: 30px;
+    min-height: 34px;
     font-family: 'Segoe UI', 'Inter', sans-serif;
 }
 QPushButton#btn_primary:hover {
@@ -189,6 +204,17 @@ class AdminLoginPage(QWidget):
         cl.addLayout(back_row)
         cl.addSpacing(_dp(36))
 
+        # ── Branding (SuperLocker) ─────────────────────────────────────────
+        br = QHBoxLayout()
+        br.setSpacing(_dp(10))
+        br.setAlignment(Qt.AlignCenter)
+        bicon = lbl("🔒", "brand_icon", Qt.AlignCenter)
+        bname = lbl("SuperLocker", "brand_name", Qt.AlignCenter)
+        br.addWidget(bicon)
+        br.addWidget(bname)
+        cl.addLayout(br)
+        cl.addSpacing(_dp(20))
+
         # ── Eyebrow + Headline ────────────────────────────────────────────────
         cl.addWidget(lbl("ADMINISTRACIÓN", "eyebrow"))
         cl.addSpacing(_dp(10))
@@ -201,23 +227,39 @@ class AdminLoginPage(QWidget):
         cl.addSpacing(_dp(32))
 
         # ── Usuario ───────────────────────────────────────────────────────────
-        cl.addWidget(lbl("USUARIO", "field_lbl"))
-        cl.addSpacing(_dp(8))
         self.user_inp = QLineEdit()
         self.user_inp.setObjectName("inp")
         self.user_inp.setPlaceholderText("nombre de usuario")
-        cl.addWidget(self.user_inp)
+        cl.addWidget(lbl("USUARIO", "field_lbl"))
+        cl.addSpacing(_dp(8))
+        row_u = QHBoxLayout()
+        row_u.setContentsMargins(0, 0, 0, 0)
+        row_u.setSpacing(_dp(10))
+        uicon = QLabel("👤")
+        uicon.setObjectName("field_lbl")
+        uicon.setStyleSheet(f"color:#145388;font-size:{_dp(18)}px;")
+        row_u.addWidget(uicon)
+        row_u.addWidget(self.user_inp, 1)
+        cl.addLayout(row_u)
         cl.addSpacing(_dp(20))
 
         # ── Contraseña ────────────────────────────────────────────────────────
-        cl.addWidget(lbl("CONTRASEÑA", "field_lbl"))
-        cl.addSpacing(_dp(8))
         self.pass_inp = QLineEdit()
         self.pass_inp.setObjectName("inp")
         self.pass_inp.setEchoMode(QLineEdit.Password)
         self.pass_inp.setPlaceholderText("••••••••")
         self.pass_inp.returnPressed.connect(self._check)
-        cl.addWidget(self.pass_inp)
+        cl.addWidget(lbl("CONTRASEÑA", "field_lbl"))
+        cl.addSpacing(_dp(8))
+        row_p = QHBoxLayout()
+        row_p.setContentsMargins(0, 0, 0, 0)
+        row_p.setSpacing(_dp(10))
+        picon = QLabel("🔑")
+        picon.setObjectName("field_lbl")
+        picon.setStyleSheet(f"color:#145388;font-size:{_dp(18)}px;")
+        row_p.addWidget(picon)
+        row_p.addWidget(self.pass_inp, 1)
+        cl.addLayout(row_p)
         cl.addSpacing(_dp(8))
 
         # ── Error label ───────────────────────────────────────────────────────
