@@ -132,7 +132,7 @@ QPushButton#btn_sm:hover { color: #305bab; border-color: #838383; }
 QPushButton#btn_sm:pressed { background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #95a49f, stop:0.5 #c1cac7, stop:1 #5681cf); }
 QFrame#carousel_card { background: white; border-radius: 14px; border: none; }
 QLabel#carousel_text {
-    color: #1a3a6b; font-size: 17px; font-weight: 600;
+    color: #000000; font-size: 19px; font-weight: 700;
     font-family: 'Segoe UI', sans-serif;
 }
 QFrame#actions_card {
@@ -478,6 +478,7 @@ class RetirarPage(QWidget):
         self.scan_frame.setStyleSheet(
             "border: 4px solid #B9EA89; border-radius: 10px; background: transparent;")
         self.scan_frame.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.scan_frame.setVisible(False)
 
         self.scan_line = ScanLine(self.cam)
 
@@ -509,18 +510,29 @@ class RetirarPage(QWidget):
         if not labels:
             self.scan_lbl.setText("No hay biometrias registradas.")
             return
+        if self.cam_thread:
+            self.cam_thread.stop()
+            self.cam_thread = None
+
+        self.scan_frame.setVisible(True)
+        self.face_guide.setVisible(True)
+        self._update_overlay()
         self.scan_btn.setEnabled(False)
         self.opts.setVisible(False)
         self.scan_lbl.setText("")
+        self.cam.set_status("Escaneando biometria...", "#000000")
         self.cam_thread = CamThread(CamThread.RECOGNIZE, labels=labels)
         self.cam_thread.frame_sig.connect(self.cam.update_frame)
         self.cam_thread.rec_done.connect(self._on_recognized)
         self.cam_thread.start()
 
     def _on_recognized(self, face_uid):
+        self.cam_thread = None
         self.scan_btn.setEnabled(True)
         if not face_uid:
             self.cam.idle()
+            self.scan_frame.setVisible(False)
+            self.scan_line.hide()
             db_log_intento(1, "retirar", "fallido",
                            "Rostro no reconocido en escaneo de retirar")
             self.scan_lbl.setText("No se reconocio el rostro. Intenta de nuevo.")
@@ -529,6 +541,8 @@ class RetirarPage(QWidget):
         sesion = db_get_active_sesion_by_face(face_uid)
         if not sesion:
             self.cam.idle()
+            self.scan_frame.setVisible(False)
+            self.scan_line.hide()
             self.scan_lbl.setText("No tienes una sesion activa.")
             return
 
@@ -543,6 +557,8 @@ class RetirarPage(QWidget):
         self.scan_lbl.setText("")
         self.id_lbl.setText("Identidad verificada")
         self.locker_lbl.setText("Tu locker: #{}".format(num_locker))
+        self.scan_frame.setVisible(False)
+        self.scan_line.hide()
         self.scan_btn.setVisible(False)
         self.opts.setVisible(False)
         self._show_detected_dialog()

@@ -41,10 +41,10 @@ QLabel#section_title {
     font-size: 18px;
 }
 QLabel#section_sub {
-    color: #90a4ae;
+    color: #000000;
     font-family: 'Segoe UI', sans-serif;
     letter-spacing: 2px;
-    font-size: 13px;
+    font-size: 15px;
 }
 
 QFrame#card {
@@ -60,12 +60,12 @@ QLabel#card_id {
     font-family: 'Segoe UI', sans-serif;
 }
 QLabel#card_locker {
-    color: #546e7a;
+    color: #000000;
     font-family: 'Segoe UI', sans-serif;
     letter-spacing: 1px;
 }
 QLabel#card_time {
-    color: #90a4ae;
+    color: #000000;
     font-family: 'Segoe UI', sans-serif;
 }
 QLabel#badge_active {
@@ -83,14 +83,14 @@ QLabel#card_idx {
     font-family: 'Segoe UI', sans-serif;
 }
 QLabel#empty_lbl {
-    color: #b0bec5;
+    color: #000000;
     font-family: 'Segoe UI', sans-serif;
     letter-spacing: 3px;
 }
 
 QPushButton#btn_refresh {
     background: transparent;
-    color: #90a4ae;
+    color: #000000;
     border: 1px solid #cfd8e3;
     border-radius: 6px;
     font-family: 'Segoe UI', sans-serif;
@@ -111,12 +111,12 @@ QLabel#counter_num {
     font-family: 'Segoe UI', sans-serif;
 }
 QLabel#counter_key {
-    color: #90a4ae;
+    color: #000000;
     font-family: 'Segoe UI', sans-serif;
     letter-spacing: 2px;
 }
 QLabel#status_text {
-    color: #1976d2;
+    color: #000000;
     font-family: 'Segoe UI', sans-serif;
     letter-spacing: 2px;
     font-weight: 600;
@@ -218,7 +218,7 @@ class SessionCard(QFrame):
         id_lbl.setStyleSheet(f"font-size: {_dp(12)}px;")
         locker_lbl = QLabel(f"LOCKER  ·  #{sesion['t_numero_locker']}")
         locker_lbl.setObjectName("card_locker")
-        locker_lbl.setStyleSheet(f"font-size: {_dp(9)}px;")
+        locker_lbl.setStyleSheet(f"font-size: {_dp(11)}px;")
         info_col.addWidget(id_lbl); info_col.addWidget(locker_lbl)
         lay.addLayout(info_col)
         lay.addStretch()
@@ -227,7 +227,7 @@ class SessionCard(QFrame):
         if ts:
             ts_lbl = QLabel(str(ts).replace("T", "  "))
             ts_lbl.setObjectName("card_time")
-            ts_lbl.setStyleSheet(f"font-size: {_dp(8)}px;")
+            ts_lbl.setStyleSheet(f"font-size: {_dp(11)}px;")
             ts_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             lay.addWidget(ts_lbl)
 
@@ -259,7 +259,7 @@ class _AdminSesionesPanel(QWidget):
         t = QLabel("SESIONES ACTIVAS"); t.setObjectName("section_title")
         t.setStyleSheet(f"font-size: {_dp(12)}px;")
         s = QLabel("LOCKERS ACTUALMENTE EN USO"); s.setObjectName("section_sub")
-        s.setStyleSheet(f"font-size: {_dp(8)}px;")
+        s.setStyleSheet(f"font-size: {_dp(11)}px;")
         title_col.addWidget(t); title_col.addWidget(s)
         header_row.addLayout(title_col); header_row.addStretch()
 
@@ -287,12 +287,12 @@ class _AdminSesionesPanel(QWidget):
         cb_lay.addWidget(self.counter_lbl)
 
         key_lbl = QLabel("SESIONES\nEN CURSO"); key_lbl.setObjectName("counter_key")
-        key_lbl.setStyleSheet(f"font-size: {_dp(7)}px;")
+        key_lbl.setStyleSheet(f"font-size: {_dp(10)}px;")
         cb_lay.addWidget(key_lbl); cb_lay.addStretch()
 
         dot2 = StatusDot()
         status_lbl = QLabel("SISTEMA OPERATIVO"); status_lbl.setObjectName("status_text")
-        status_lbl.setStyleSheet(f"font-size: {_dp(8)}px;")
+        status_lbl.setStyleSheet(f"font-size: {_dp(11)}px;")
         cb_lay.addWidget(dot2); cb_lay.addWidget(status_lbl)
         root.addWidget(counter_block)
 

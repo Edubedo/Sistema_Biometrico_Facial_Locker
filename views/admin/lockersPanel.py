@@ -31,26 +31,26 @@ ORANGE     = "#f97316"
 WHITE      = "#ffffff"
 GRAY_BG    = "#f0f4ff"
 GRAY_CHIP  = "#e8eef8"
-GRAY_TEXT  = "#64748b"
+GRAY_TEXT  = "#000000"
 RED_BG     = "#fee2e2"
 RED_TEXT   = "#b91c1c"
 
 _STATE = {
     "libre":         (WHITE,    BLUE_DARK, BLUE_DARK, "#e0f2fe", "open"),
     "ocupado":       (WHITE,    ORANGE,    "#fff3e8", "#c2410c", "closed"),
-    "mantenimiento": (WHITE,    "#78909c", "#eceff1", "#546e7a", "closed"),
+    "mantenimiento": (WHITE,    "#78909c", "#eceff1", "#000000", "closed"),
 }
 
 STYLE = """
 QWidget#panel{background:transparent;}
 QLabel#ttl{color:#1565c0;font-weight:900;font-family:'Segoe UI';letter-spacing:3px;font-size:18px;}
-QLabel#sub{color:#90a4ae;font-family:'Segoe UI';letter-spacing:2px;font-size:13px;}
+QLabel#sub{color:#000000;font-family:'Segoe UI';letter-spacing:2px;font-size:15px;}
 QFrame#h_div{background:#cfd8e3;border:none;min-height:1px;max-height:1px;}
 QFrame#cnt{background:#fff;border:none;border-left:4px solid #1565c0;border-radius:8px;}
 QLabel#cn_b{color:#1565c0;font-weight:800;font-family:'Segoe UI';}
 QLabel#cn_o{color:#ef6c00;font-weight:800;font-family:'Segoe UI';}
-QLabel#cn_g{color:#546e7a;font-weight:800;font-family:'Segoe UI';}
-QLabel#ck{color:#90a4ae;font-family:'Segoe UI';letter-spacing:2px;}
+QLabel#cn_g{color:#000000;font-weight:800;font-family:'Segoe UI';}
+QLabel#ck{color:#000000;font-family:'Segoe UI';letter-spacing:2px;}
 QScrollArea{border:none;background:transparent;}
 QScrollBar:vertical{background:#e8f0fb;width:4px;margin:0;}
 QScrollBar::handle:vertical{background:#90c4f0;border-radius:2px;min-height:20px;}
@@ -59,17 +59,17 @@ QDialog{background:#f0f6ff;}
 QLineEdit,QComboBox{background:#fff;border:1px solid #cfd8e3;border-radius:5px;
     padding:5px 8px;color:#1565c0;font-family:'Segoe UI';}
 QLineEdit:focus,QComboBox:focus{border-color:#1976d2;}
-QLabel#flbl{color:#546e7a;font-family:'Segoe UI';font-weight:700;letter-spacing:1px;}
+QLabel#flbl{color:#000000;font-family:'Segoe UI';font-weight:700;letter-spacing:1px;}
 QPushButton#dok{background:#1976d2;color:#fff;border:none;border-radius:6px;
     padding:7px 20px;font-family:'Segoe UI';font-weight:700;}
 QPushButton#dok:hover{background:#1565c0;}
-QPushButton#dno{background:transparent;color:#90a4ae;border:1px solid #cfd8e3;
+QPushButton#dno{background:transparent;color:#000000;border:1px solid #cfd8e3;
     border-radius:6px;padding:7px 16px;font-family:'Segoe UI';}
-QLabel#empty{color:#b0bec5;font-family:'Segoe UI';letter-spacing:3px;}
+QLabel#empty{color:#000000;font-family:'Segoe UI';letter-spacing:3px;}
 QPushButton#btn_add{background:#1976d2;color:#fff;border:none;border-radius:7px;
     font-family:'Segoe UI';font-weight:700;letter-spacing:2px;}
 QPushButton#btn_add:hover{background:#1565c0;}
-QPushButton#btn_ref{background:transparent;color:#90a4ae;border:1px solid #cfd8e3;
+QPushButton#btn_ref{background:transparent;color:#000000;border:1px solid #cfd8e3;
     border-radius:6px;font-family:'Segoe UI';letter-spacing:2px;}
 QPushButton#btn_ref:hover{color:#1565c0;border-color:#1976d2;background:#e3f0ff;}
 """
@@ -193,14 +193,14 @@ class LockerIcon(QWidget):
         p.setBrush(QBrush(c(GRP)))
         p.drawEllipse(20, 11, 14, 10)
         p.setPen(Qt.NoPen)
-        p.setBrush(QBrush(c("#546e7a")))
+        p.setBrush(QBrush(c("#000000")))
         p.drawEllipse(24, 14, 7, 4)
         p.setBrush(QBrush(c(WHITE)))
         p.drawEllipse(25, 13, 2, 2)
         p.setBrush(QBrush(c(GR)))
         for y in [26, 30, 34]:
             p.drawRoundedRect(19, y, 16, 3, 1, 1)
-        p.setPen(QPen(c("#546e7a"), 3))
+        p.setPen(QPen(c("#000000"), 3))
         p.drawLine(22, 42, 32, 52)
         p.drawLine(32, 42, 22, 52)
         p.setPen(Qt.NoPen)
@@ -378,7 +378,7 @@ class LockerCard(QFrame):
 
         fecha = str(locker.get("d_fecha_registro", "") or "")[:10]
         date_lbl = QLabel(fecha or "—")
-        date_lbl.setStyleSheet("font-size:9px; color:#9ca3af; font-family:'Segoe UI';")
+        date_lbl.setStyleSheet("font-size:12px; color:#000000; font-family:'Segoe UI';")
         vbox.addWidget(date_lbl)
 
         vbox.addSpacing(8)
@@ -574,7 +574,7 @@ class _AdminLockersPanel(QWidget):
         t.setStyleSheet(f"font-size:{_dp(12)}px;")
         s = QLabel("PANEL ADMIN · LOCKERS DE TIENDA")
         s.setObjectName("sub")
-        s.setStyleSheet(f"font-size:{_dp(8)}px;")
+        s.setStyleSheet(f"font-size:{_dp(11)}px;")
         tc.addWidget(t)
         tc.addWidget(s)
         hdr.addLayout(tc)
@@ -618,7 +618,7 @@ class _AdminLockersPanel(QWidget):
             n.setStyleSheet(f"font-size:{_dp(24)}px;")
             k = QLabel(label)
             k.setObjectName("ck")
-            k.setStyleSheet(f"font-size:{_dp(7)}px;")
+            k.setStyleSheet(f"font-size:{_dp(10)}px;")
             bl.addWidget(n)
             bl.addWidget(k)
             bl.addStretch()

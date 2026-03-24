@@ -359,6 +359,7 @@ class GuardarPage(QWidget):
         self.scan_frame.setStyleSheet(
             "border: 4px solid #B9EA89; border-radius: 10px; background: transparent;")
         self.scan_frame.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.scan_frame.setVisible(False)
 
         self.scan_line = ScanLine(self.cam)
 
@@ -389,6 +390,9 @@ class GuardarPage(QWidget):
         self._face_uid = tmp_uid
         self.start_btn.setEnabled(False)
         self.err_lbl.setText("")
+        self.scan_frame.setVisible(True)
+        self.face_guide.setVisible(True)
+        self._update_overlay()
         self.cam_thread = CamThread(CamThread.CAPTURE, face_uid=tmp_uid)
         self.cam_thread.frame_sig.connect(self.cam.update_frame)
         self.cam_thread.progress.connect(self.cam.set_progress)
@@ -397,6 +401,9 @@ class GuardarPage(QWidget):
 
     def _on_capture_done(self, ok, tmp_uid):
         self.start_btn.setEnabled(True)
+        self.scan_frame.setVisible(False)
+        self.scan_line.hide()
+        self.face_guide.setVisible(True)
         if not ok:
             # Captura fallida: borra temporales y muestra feedback
             self.cam.set_status("No se pudo leer el rostro. Intenta de nuevo.", "#bd0a0a")

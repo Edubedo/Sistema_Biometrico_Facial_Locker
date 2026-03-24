@@ -71,12 +71,13 @@ QLabel#headline {
     font-size: 28px;
     font-weight: 700;
     font-family: 'Segoe UI', 'Inter', sans-serif;
+    padding-bottom: 4px;
 }
 
 /* Etiqueta ADMINISTRACIÓN - usando #tag del primer código */
 QLabel#eyebrow {
-    color: #3a7ca5;
-    font-size: 14px;
+    color: #000000;
+    font-size: 16px;
     font-weight: 600;
     letter-spacing: 4px;
     font-family: 'Segoe UI', 'Inter', sans-serif;
@@ -144,12 +145,13 @@ QPushButton#btn_primary:pressed {
 /* Botón Volver - usando #btn_sm del primer código */
 QPushButton#btn_ghost {
     background-color: transparent;
-    color: #2c6289;
+    color: #000000;
     border: 2px solid #aac9e5;
     border-radius: 12px;
-    padding: 10px 20px;
-    font-size: 14px;
-    font-weight: 500;
+    padding: 12px 22px;
+    min-height: 40px;
+    font-size: 16px;
+    font-weight: 700;
     font-family: 'Segoe UI', 'Inter', sans-serif;
 }
 QPushButton#btn_ghost:hover {
@@ -163,7 +165,7 @@ QPushButton#btn_ghost:pressed {
 /* Mensajes de error */
 QLabel#err {
     color: #c74545;
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 600;
     padding: 2px;
     font-family: 'Segoe UI', 'Inter', sans-serif;
