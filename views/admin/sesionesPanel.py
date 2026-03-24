@@ -151,8 +151,8 @@ QHeaderView::section {
 QTableWidget::item {
     padding: 10px 12px;
     font-family: 'Segoe UI', sans-serif;
-    font-size: 13px;
-    color: #1a2a3a;
+    font-size: 15px;
+    color: #000000;
 }
 QTableWidget::item:selected { background: #bbdefb; }
 """
@@ -218,7 +218,7 @@ class SessionCard(QFrame):
         id_lbl.setStyleSheet(f"font-size: {_dp(12)}px;")
         locker_lbl = QLabel(f"LOCKER  ·  #{sesion['t_numero_locker']}")
         locker_lbl.setObjectName("card_locker")
-        locker_lbl.setStyleSheet(f"font-size: {_dp(11)}px;")
+        locker_lbl.setStyleSheet(f"font-size: {_dp(13)}px;")
         info_col.addWidget(id_lbl); info_col.addWidget(locker_lbl)
         lay.addLayout(info_col)
         lay.addStretch()

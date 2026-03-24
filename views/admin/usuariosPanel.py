@@ -36,7 +36,7 @@ def _dp(v):
 
 _C = {
     "activo":   ("#e8f5e9", "#2e7d32", "#c8e6c9", "#1b5e20", "#a5d6a7"),
-    "inactivo": ("#fafafa", "#78909c", "#eceff1", "#546e7a", "#b0bec5"),
+    "inactivo": ("#fafafa", "#78909c", "#eceff1", "#000000", "#b0bec5"),
 }
 
 STYLE = """
@@ -51,10 +51,10 @@ QLabel#ttl{
     font-size:18px;
 }
 QLabel#sub{
-    color:#90a4ae;
+    color:#000000;
     font-family:'Segoe UI';
     letter-spacing:2px;
-    font-size:13px;
+    font-size:15px;
 }
 QFrame#h_div{
     background:#cfd8e3;
@@ -79,12 +79,12 @@ QLabel#cn_o{
     font-family:'Segoe UI';
 }
 QLabel#cn_g{
-    color:#546e7a;
+    color:#000000;
     font-weight:800;
     font-family:'Segoe UI';
 }
 QLabel#ck  {
-    color:#90a4ae;
+    color:#000000;
     font-family:'Segoe UI';
     letter-spacing:2px;
 }
@@ -101,7 +101,7 @@ QFrame#card_inactivo {
     border-radius:8px;
 }
 QLabel#meta{
-    color:#78909c;
+    color:#000000;
     font-family:'Segoe UI';
     letter-spacing:1px;
 }
@@ -118,7 +118,7 @@ QPushButton#btn_add:hover{
 }
 QPushButton#btn_ref{
     background:transparent;
-    color:#90a4ae;
+    color:#000000;
     border:1px solid #cfd8e3;
     border-radius:6px;
     font-family:'Segoe UI';
@@ -131,7 +131,7 @@ QPushButton#btn_ref:hover{
 }
 QPushButton#btn_cfg{
     background:transparent;
-    color:#b0bec5;
+    color:#000000;
     border:1px solid #e0e8f4;
     border-radius:5px;
     font-family:'Segoe UI';
@@ -183,7 +183,7 @@ QLineEdit:focus,QComboBox:focus{
     border-color:#1976d2;
 }
 QLabel#flbl{
-    color:#546e7a;
+    color:#000000;
     font-family:'Segoe UI';
     font-weight:700;
     letter-spacing:1px;
@@ -201,14 +201,14 @@ QPushButton#dok:hover{
 }
 QPushButton#dno{
     background:transparent;
-    color:#90a4ae;
+    color:#000000;
     border:1px solid #cfd8e3;
     border-radius:6px;
     padding:7px 16px;
     font-family:'Segoe UI';
 }
 QLabel#empty{
-    color:#b0bec5;font-family:'Segoe UI';
+    color:#000000;font-family:'Segoe UI';
     letter-spacing:3px;
 }
 
@@ -231,8 +231,8 @@ QHeaderView::section {
 QTableWidget::item {
     padding: 8px 10px;
     font-family: 'Segoe UI', sans-serif;
-    font-size: 13px;
-    color: #1a2a3a;
+    font-size: 15px;
+    color: #000000;
 }
 QTableWidget::item:selected { background: #bbdefb; }
 QPushButton#btn_toggle_on{
@@ -326,7 +326,7 @@ class AdminRegisterDialog(QDialog):
         # Mensajes de error
         self.msg_error = QLabel("")
         self.msg_error.setObjectName("err")
-        self.msg_error.setStyleSheet(f"color:#c62828;font-size:{_dp(8)}px;")
+        self.msg_error.setStyleSheet(f"color:#c62828;font-size:{_dp(10)}px;")
         self.msg_error.setAlignment(Qt.AlignCenter)
         root.addWidget(self.msg_error)
 
@@ -445,7 +445,7 @@ class AdminEditDialog(QDialog):
 
         self.msg_error = QLabel("")
         self.msg_error.setObjectName("err")
-        self.msg_error.setStyleSheet(f"color:#c62828;font-size:{_dp(8)}px;")
+        self.msg_error.setStyleSheet(f"color:#c62828;font-size:{_dp(10)}px;")
         self.msg_error.setAlignment(Qt.AlignCenter)
         root.addWidget(self.msg_error)
 
@@ -544,14 +544,14 @@ class AdminCard(QFrame):
         ).strip()
         name_lbl = QLabel(nombre_completo)
         name_lbl.setStyleSheet(
-            f"color:{badge_fg};font-size:{_dp(11)}px;font-weight:900;font-family:'Segoe UI';"
+            f"color:#000000;font-size:{_dp(13)}px;font-weight:900;font-family:'Segoe UI';"
         )
         col.addWidget(name_lbl)
 
         # Usuario y rol
         meta = QLabel(f"@{admin.get('t_usuario', '')}   ·   {admin.get('t_rol', '').upper()}")
         meta.setObjectName("meta")
-        meta.setStyleSheet(f"font-size:{_dp(7)}px;")
+        meta.setStyleSheet(f"font-size:{_dp(10)}px;")
         col.addWidget(meta)
         lay.addLayout(col)
         lay.addStretch()
@@ -631,7 +631,7 @@ class _AdminUsersPanel(QWidget):
         t.setStyleSheet(f"font-size:{_dp(12)}px;")
         s = QLabel("PANEL ADMIN · USUARIOS DEL SISTEMA")
         s.setObjectName("sub")
-        s.setStyleSheet(f"font-size:{_dp(8)}px;")
+        s.setStyleSheet(f"font-size:{_dp(11)}px;")
         tc.addWidget(t)
         tc.addWidget(s)
         hdr.addLayout(tc)
@@ -640,14 +640,14 @@ class _AdminUsersPanel(QWidget):
         # Botones
         self.btn_add = QPushButton("＋  NUEVO ADMIN")
         self.btn_add.setObjectName("btn_add")
-        self.btn_add.setStyleSheet(f"font-size:{_dp(8)}px;padding:{_dp(5)}px {_dp(14)}px;")
+        self.btn_add.setStyleSheet(f"font-size:{_dp(11)}px;padding:{_dp(7)}px {_dp(16)}px;")
         self.btn_add.setCursor(Qt.PointingHandCursor)
         self.btn_add.clicked.connect(self._agregar)
         hdr.addWidget(self.btn_add)
 
         self.btn_ref = QPushButton("↺  ACTUALIZAR")
         self.btn_ref.setObjectName("btn_ref")
-        self.btn_ref.setStyleSheet(f"font-size:{_dp(8)}px;padding:{_dp(5)}px {_dp(14)}px;")
+        self.btn_ref.setStyleSheet(f"font-size:{_dp(11)}px;padding:{_dp(7)}px {_dp(16)}px;")
         self.btn_ref.setCursor(Qt.PointingHandCursor)
         self.btn_ref.clicked.connect(self.refresh)
         hdr.addWidget(self.btn_ref)
@@ -905,7 +905,7 @@ class _AdminUsersPanel(QWidget):
                 estado_item.setForeground(QColor("#1b5e20"))
             else:
                 estado_item.setBackground(QColor("#fafafa"))
-                estado_item.setForeground(QColor("#546e7a"))
+                estado_item.setForeground(QColor("#000000"))
             estado_item.setFlags(estado_item.flags() & ~Qt.ItemIsEditable)
             self.table.setItem(r, 4, estado_item)
 
@@ -938,6 +938,6 @@ class _AdminUsersPanel(QWidget):
             else:
                 ro_item = QTableWidgetItem("SOLO LECTURA")
                 ro_item.setTextAlignment(Qt.AlignCenter)
-                ro_item.setForeground(QColor("#78909c"))
+                ro_item.setForeground(QColor("#000000"))
                 ro_item.setFlags(ro_item.flags() & ~Qt.ItemIsEditable)
                 self.table.setItem(r, 5, ro_item)

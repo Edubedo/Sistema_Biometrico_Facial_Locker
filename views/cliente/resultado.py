@@ -212,7 +212,7 @@ class ResultPage(QWidget):
         s_lbl.setWordWrap(True)
         s_lbl.setStyleSheet(f"""
             font-size: {_dp(11)}px;
-            color: #546e7a;
+            color: #000000;
             font-family: 'Segoe UI';
             line-height: 1.6;
         """)
@@ -227,9 +227,9 @@ class ResultPage(QWidget):
             d_lbl = QLabel(detail)
             d_lbl.setAlignment(Qt.AlignCenter)
             d_lbl.setStyleSheet(f"""
-                font-size: {_dp(36)}px;
+                font-size: {_dp(42)}px;
                 font-weight: 900;
-                color: {accent_hex};
+                color: #000000;
                 font-family: 'Segoe UI';
                 letter-spacing: 2px;
             """)

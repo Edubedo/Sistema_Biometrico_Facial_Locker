@@ -348,7 +348,7 @@ class LockerCard(QFrame):
         num_lbl = QLabel(f"Locker #{locker['t_numero_locker']}")
         num_lbl.setWordWrap(True)
         num_lbl.setStyleSheet(
-            f"font-size:14px; font-weight:900; color:{badge_fg}; font-family:'Segoe UI';"
+            "font-size:18px; font-weight:900; color:#000000; font-family:'Segoe UI';"
         )
         vbox.addWidget(num_lbl)
 
