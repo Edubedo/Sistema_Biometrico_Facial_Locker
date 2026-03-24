@@ -55,6 +55,58 @@ def db_delete_admin(username, id_admin_actual):
         )
 
 
+def db_set_admin_estado(username, estado, id_admin_actual):
+    """Actualiza el estado logico de un admin (activo/inactivo)."""
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with connectionDB() as con:
+        con.execute(
+            "UPDATE Usuarios SET t_estado=?, d_fecha_modificacion=?, "
+            "ID_usuario_modificacion=? WHERE t_usuario=?",
+            (estado, now, id_admin_actual, username)
+        )
+
+
+def db_update_admin(id_admin, nombre, ap_paterno, ap_materno, username,
+                    rol, password=None, id_admin_actual=None):
+    """Actualiza datos base de un admin. Password es opcional."""
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with connectionDB() as con:
+        exists = con.execute(
+            "SELECT ID_admin FROM Usuarios WHERE t_usuario=? AND ID_admin<>?",
+            (username, id_admin)
+        ).fetchone()
+        if exists:
+            raise ValueError("Ya existe un admin con ese usuario.")
+
+        fields = [
+            "t_nombre=?",
+            "t_apellido_paterno=?",
+            "t_apellido_materno=?",
+            "t_usuario=?",
+            "t_rol=?",
+            "d_fecha_modificacion=?",
+            "ID_usuario_modificacion=?",
+        ]
+        params = [
+            nombre,
+            ap_paterno,
+            ap_materno,
+            username,
+            rol,
+            now,
+            id_admin_actual,
+        ]
+        if password:
+            fields.insert(5, "t_contrasena_hash=?")
+            params.insert(5, hash_password(password))
+
+        params.append(id_admin)
+        con.execute(
+            f"UPDATE Usuarios SET {', '.join(fields)} WHERE ID_admin=?",
+            params,
+        )
+
+
 def db_get_all_admins():
     with connectionDB() as con:
         rows = con.execute(

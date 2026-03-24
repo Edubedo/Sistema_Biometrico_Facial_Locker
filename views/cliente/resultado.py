@@ -45,6 +45,17 @@ _KIND = {
         "badge_fg":    "#c62828",
         "label":       "ERROR",
     },
+    "ok_blue": {
+        "icon":        "✓",
+        "bg_top":      QColor(230, 242, 255),
+        "bg_bot":      QColor(205, 226, 250),
+        "accent":      QColor(38,  103, 198),
+        "accent_light":QColor(230, 242, 255),
+        "border":      QColor(135, 178, 235),
+        "badge_bg":    QColor(210, 229, 252),
+        "badge_fg":    "#1f5fb8",
+        "label":       "EXITO",
+    },
 }
 
 
@@ -101,6 +112,16 @@ class ResultPage(QWidget):
         self._root.setContentsMargins(0, 0, 0, 0)
         self._root.setAlignment(Qt.AlignCenter)
 
+    def _clear_root_layout(self):
+        while self._root.count():
+            item = self._root.takeAt(0)
+            w = item.widget()
+            if w is not None:
+                if w == self._timer_w:
+                    w.setParent(None)
+                else:
+                    w.deleteLater()
+
     # ── Background gradient (changes per kind) ────────────────────────────────
     def paintEvent(self, _):
         cfg = _KIND.get(self._kind, _KIND["ok"])
@@ -124,13 +145,9 @@ class ResultPage(QWidget):
         self._kind = kind
         cfg = _KIND.get(kind, _KIND["ok"])
 
-        # Remove old card
-        if self._card:
-            self._root.removeWidget(self._card)
-            self._card.deleteLater()
-            self._card = None
-        if self._root.indexOf(self._timer_w) >= 0:
-            self._root.removeWidget(self._timer_w)
+        # Rebuild root content to avoid accumulated spacers after multiple results.
+        self._clear_root_layout()
+        self._card = None
 
         self._root.addStretch(1)
 
@@ -195,7 +212,7 @@ class ResultPage(QWidget):
         s_lbl.setWordWrap(True)
         s_lbl.setStyleSheet(f"""
             font-size: {_dp(11)}px;
-            color: #546e7a;
+            color: #000000;
             font-family: 'Segoe UI';
             line-height: 1.6;
         """)
@@ -210,9 +227,9 @@ class ResultPage(QWidget):
             d_lbl = QLabel(detail)
             d_lbl.setAlignment(Qt.AlignCenter)
             d_lbl.setStyleSheet(f"""
-                font-size: {_dp(36)}px;
+                font-size: {_dp(42)}px;
                 font-weight: 900;
-                color: {accent_hex};
+                color: #000000;
                 font-family: 'Segoe UI';
                 letter-spacing: 2px;
             """)
@@ -223,34 +240,37 @@ class ResultPage(QWidget):
         # Button
         btn = QPushButton("VOLVER AL INICIO")
         btn.setCursor(Qt.PointingHandCursor)
+        btn.setFixedWidth(_dp(260))
         btn.setFixedHeight(_dp(46))
         btn.setStyleSheet(f"""
             QPushButton {{
-                background: {accent_hex};
+                background: #2f80ed;
                 color: #ffffff;
                 border: none;
                 border-radius: {_dp(10)}px;
-                font-size: {_dp(10)}px;
+                font-size: {_dp(14)}px;
                 font-weight: 800;
                 font-family: 'Segoe UI';
                 letter-spacing: 2px;
             }}
-            QPushButton:hover   {{ background: {cfg['accent'].darker(115).name()}; }}
-            QPushButton:pressed {{ background: {cfg['accent'].darker(130).name()}; }}
+            QPushButton:hover   {{ background: #1f6ed8; }}
+            QPushButton:pressed {{ background: #1658b0; }}
         """)
         btn.clicked.connect(self._manual_home)
-        cl.addWidget(btn)
+        cl.addWidget(btn, alignment=Qt.AlignCenter)
 
         self._card = card
         self._root.addWidget(card, alignment=Qt.AlignCenter)
         self._root.addSpacing(_dp(20))
 
         # Timer label
+        self._timer_w.setFixedWidth(_dp(480))
         self._timer_w.setStyleSheet(f"""
-            color: {cfg['accent'].name()};
-            font-size: {_dp(9)}px;
+            color: #2f80ed;
+            font-size: {_dp(14)}px;
+            font-weight: 700;
             font-family: 'Segoe UI';
-            letter-spacing: 2px;
+            letter-spacing: 1px;
             opacity: 0.6;
         """)
         self._root.addWidget(self._timer_w, alignment=Qt.AlignCenter)

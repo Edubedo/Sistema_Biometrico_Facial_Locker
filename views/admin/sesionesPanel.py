@@ -2,7 +2,7 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QLabel, QFrame, QScrollArea, QSizePolicy,
-    QApplication, QGraphicsDropShadowEffect
+    QApplication, QGraphicsDropShadowEffect, QTableWidget, QTableWidgetItem
 )
 from PyQt5.QtGui import QPainter, QColor, QBrush, QPen, QLinearGradient, QFont
 
@@ -38,11 +38,13 @@ QLabel#section_title {
     font-weight: 900;
     font-family: 'Segoe UI', sans-serif;
     letter-spacing: 3px;
+    font-size: 18px;
 }
 QLabel#section_sub {
-    color: #90a4ae;
+    color: #000000;
     font-family: 'Segoe UI', sans-serif;
     letter-spacing: 2px;
+    font-size: 15px;
 }
 
 QFrame#card {
@@ -58,12 +60,12 @@ QLabel#card_id {
     font-family: 'Segoe UI', sans-serif;
 }
 QLabel#card_locker {
-    color: #546e7a;
+    color: #000000;
     font-family: 'Segoe UI', sans-serif;
     letter-spacing: 1px;
 }
 QLabel#card_time {
-    color: #90a4ae;
+    color: #000000;
     font-family: 'Segoe UI', sans-serif;
 }
 QLabel#badge_active {
@@ -81,14 +83,14 @@ QLabel#card_idx {
     font-family: 'Segoe UI', sans-serif;
 }
 QLabel#empty_lbl {
-    color: #b0bec5;
+    color: #000000;
     font-family: 'Segoe UI', sans-serif;
     letter-spacing: 3px;
 }
 
 QPushButton#btn_refresh {
     background: transparent;
-    color: #90a4ae;
+    color: #000000;
     border: 1px solid #cfd8e3;
     border-radius: 6px;
     font-family: 'Segoe UI', sans-serif;
@@ -109,12 +111,12 @@ QLabel#counter_num {
     font-family: 'Segoe UI', sans-serif;
 }
 QLabel#counter_key {
-    color: #90a4ae;
+    color: #000000;
     font-family: 'Segoe UI', sans-serif;
     letter-spacing: 2px;
 }
 QLabel#status_text {
-    color: #1976d2;
+    color: #000000;
     font-family: 'Segoe UI', sans-serif;
     letter-spacing: 2px;
     font-weight: 600;
@@ -129,6 +131,30 @@ QFrame#h_divider {
     background: #cfd8e3; border: none;
     min-height: 1px; max-height: 1px;
 }
+
+/* ── Real table ───────────────────────────────────────────────────────── */
+QTableWidget#admin_sessions_tbl {
+    background: #ffffff;
+    border: 1px solid #cfd8e3;
+    border-radius: 10px;
+    gridline-color: #e3f0ff;
+}
+QHeaderView::section {
+    background: #e3f0ff;
+    color: #1565c0;
+    font-weight: 900;
+    font-family: 'Segoe UI', sans-serif;
+    letter-spacing: 1px;
+    padding: 10px 12px;
+    border: none;
+}
+QTableWidget::item {
+    padding: 10px 12px;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 15px;
+    color: #000000;
+}
+QTableWidget::item:selected { background: #bbdefb; }
 """
 
 
@@ -192,7 +218,7 @@ class SessionCard(QFrame):
         id_lbl.setStyleSheet(f"font-size: {_dp(12)}px;")
         locker_lbl = QLabel(f"LOCKER  ·  #{sesion['t_numero_locker']}")
         locker_lbl.setObjectName("card_locker")
-        locker_lbl.setStyleSheet(f"font-size: {_dp(9)}px;")
+        locker_lbl.setStyleSheet(f"font-size: {_dp(13)}px;")
         info_col.addWidget(id_lbl); info_col.addWidget(locker_lbl)
         lay.addLayout(info_col)
         lay.addStretch()
@@ -201,7 +227,7 @@ class SessionCard(QFrame):
         if ts:
             ts_lbl = QLabel(str(ts).replace("T", "  "))
             ts_lbl.setObjectName("card_time")
-            ts_lbl.setStyleSheet(f"font-size: {_dp(8)}px;")
+            ts_lbl.setStyleSheet(f"font-size: {_dp(11)}px;")
             ts_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             lay.addWidget(ts_lbl)
 
@@ -233,14 +259,14 @@ class _AdminSesionesPanel(QWidget):
         t = QLabel("SESIONES ACTIVAS"); t.setObjectName("section_title")
         t.setStyleSheet(f"font-size: {_dp(12)}px;")
         s = QLabel("LOCKERS ACTUALMENTE EN USO"); s.setObjectName("section_sub")
-        s.setStyleSheet(f"font-size: {_dp(8)}px;")
+        s.setStyleSheet(f"font-size: {_dp(11)}px;")
         title_col.addWidget(t); title_col.addWidget(s)
         header_row.addLayout(title_col); header_row.addStretch()
 
         btn_ref = QPushButton("↺  ACTUALIZAR"); btn_ref.setObjectName("btn_refresh")
         btn_ref.setStyleSheet(
             btn_ref.styleSheet() +
-            f"font-size: {_dp(8)}px; padding: {_dp(5)}px {_dp(16)}px;"
+            f"font-size: {_dp(10)}px; padding: {_dp(7)}px {_dp(20)}px;"
         )
         btn_ref.setCursor(Qt.PointingHandCursor)
         btn_ref.clicked.connect(self.refresh)
@@ -261,28 +287,34 @@ class _AdminSesionesPanel(QWidget):
         cb_lay.addWidget(self.counter_lbl)
 
         key_lbl = QLabel("SESIONES\nEN CURSO"); key_lbl.setObjectName("counter_key")
-        key_lbl.setStyleSheet(f"font-size: {_dp(7)}px;")
+        key_lbl.setStyleSheet(f"font-size: {_dp(10)}px;")
         cb_lay.addWidget(key_lbl); cb_lay.addStretch()
 
         dot2 = StatusDot()
         status_lbl = QLabel("SISTEMA OPERATIVO"); status_lbl.setObjectName("status_text")
-        status_lbl.setStyleSheet(f"font-size: {_dp(8)}px;")
+        status_lbl.setStyleSheet(f"font-size: {_dp(11)}px;")
         cb_lay.addWidget(dot2); cb_lay.addWidget(status_lbl)
         root.addWidget(counter_block)
 
-        # ── Scroll area ───────────────────────────────────────────────────────
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
-        self.inner = QWidget(); self.inner.setObjectName("admin_sessions_inner")
-        self.il = QVBoxLayout(self.inner)
-        self.il.setContentsMargins(0, _dp(4), _dp(4), 0)
-        self.il.setSpacing(_dp(6))
-        self.il.setAlignment(Qt.AlignTop)               # ← cards pegadas arriba, sin espacio
-
-        scroll.setWidget(self.inner)
-        root.addWidget(scroll, 1)
+        # ── Tabla ─────────────────────────────────────────────────────────────
+        self.table = QTableWidget()
+        self.table.setObjectName("admin_sessions_tbl")
+        self.table.setColumnCount(4)
+        self.table.setHorizontalHeaderLabels(["🔢 ID", "📦 LOCKER", "📅 FECHA/HORA", "✓ ESTADO"])
+        self.table.verticalHeader().setVisible(False)
+        self.table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.table.setSelectionMode(QTableWidget.SingleSelection)
+        self.table.horizontalHeader().setStretchLastSection(False)
+        self.table.horizontalHeader().setMinimumSectionSize(_dp(100))
+        self.table.verticalHeader().setDefaultSectionSize(_dp(46))
+        self.table.setAlternatingRowColors(True)
+        self.table.setWordWrap(True)
+        self.table.setColumnWidth(0, _dp(170))
+        self.table.setColumnWidth(1, _dp(130))
+        self.table.setColumnWidth(2, _dp(280))
+        self.table.setColumnWidth(3, _dp(130))
+        root.addWidget(self.table, 1)
 
         self.refresh()
 
@@ -296,22 +328,47 @@ class _AdminSesionesPanel(QWidget):
         p.end()
 
     def refresh(self):
-        for i in reversed(range(self.il.count())):
-            item = self.il.itemAt(i)
-            if item and item.widget():
-                item.widget().deleteLater()
-
         sesiones = db_get_all_sesiones_activas()
         self.counter_lbl.setText(str(len(sesiones)))
 
+        self.table.setRowCount(0)
+
         if not sesiones:
-            empty = QLabel("·  SIN SESIONES ACTIVAS  ·")
-            empty.setObjectName("empty_lbl")
-            empty.setAlignment(Qt.AlignCenter)
-            empty.setStyleSheet(f"font-size: {_dp(9)}px;")
-            empty.setContentsMargins(0, _dp(20), 0, _dp(20))
-            self.il.addWidget(empty)
-        else:
-            for i, s in enumerate(sesiones, start=1):
-                self.il.addWidget(SessionCard(s, i))
-        # ← sin addStretch() al final — evita el espacio vacío
+            self.table.setRowCount(1)
+            itm = QTableWidgetItem("SIN SESIONES ACTIVAS")
+            itm.setTextAlignment(Qt.AlignCenter)
+            itm.setFlags(itm.flags() & ~Qt.ItemIsSelectable)
+            self.table.setItem(0, 0, itm)
+            # Unir visualmente sobre todo el ancho
+            self.table.setSpan(0, 0, 1, 4)
+            return
+
+        self.table.setRowCount(len(sesiones))
+        for r, s in enumerate(sesiones):
+            id_sesion = s.get("ID_sesion", "")
+            locker = s.get("t_numero_locker", "") or ""
+            ts = s.get("d_fecha_hora_entrada", "") or ""
+            if ts and len(ts) >= 16:
+                ts_text = f"{ts[8:10]}/{ts[5:7]}/{ts[0:4]} {ts[11:16]}"
+            else:
+                ts_text = str(ts).replace("T", " ")
+
+            id_item = QTableWidgetItem(f"SESIÓN #{id_sesion}")
+            id_item.setTextAlignment(Qt.AlignCenter)
+            self.table.setItem(r, 0, id_item)
+
+            locker_item = QTableWidgetItem(str(locker))
+            locker_item.setTextAlignment(Qt.AlignCenter)
+            self.table.setItem(r, 1, locker_item)
+
+            ts_item = QTableWidgetItem(ts_text)
+            ts_item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+            self.table.setItem(r, 2, ts_item)
+
+            estado_item = QTableWidgetItem("ACTIVA")
+            estado_item.setTextAlignment(Qt.AlignCenter)
+            # Badge-like background
+            estado_item.setBackground(QColor("#e3f0ff"))
+            estado_item.setForeground(QColor("#1565c0"))
+            estado_item.setFlags(estado_item.flags() & ~Qt.ItemIsEditable)
+            self.table.setItem(r, 3, estado_item)

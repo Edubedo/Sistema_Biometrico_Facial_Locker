@@ -44,7 +44,6 @@ class CamThread(QThread):
 
             for (x, y, w, h) in faces:
                 roi = cv2.resize(gray[y:y+h, x:x+w], (IMG_W, IMG_H))
-                cv2.rectangle(frame, (x, y), (x+w, y+h), (80, 180, 255), 2)
 
                 if self.mode == self.CAPTURE:
                     cv2.imwrite(os.path.join(sdir, "{}.png".format(cnt)), roi)

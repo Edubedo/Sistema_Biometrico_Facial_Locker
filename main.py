@@ -1,7 +1,26 @@
 import os
 import sys
 
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+except ModuleNotFoundError:
+    def load_dotenv(path=".env"):
+        """Minimal .env loader fallback when python-dotenv is unavailable."""
+        if not os.path.exists(path):
+            return False
+        with open(path, "r", encoding="utf-8") as f:
+            for raw in f:
+                line = raw.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                key = key.strip()
+                value = value.strip().strip('"').strip("'")
+                if key and key not in os.environ:
+                    os.environ[key] = value
+        return True
+
+from PyQt5.QtCore import QLibraryInfo
 
 from PyQt5.QtWidgets import (
     QApplication,
@@ -26,6 +45,16 @@ from biometria.biometria import train_model
 load_dotenv()  
 
 DB_PATH = os.getenv("DB_PATH")
+
+
+def _fix_qt_plugin_path_for_linux():
+    """Avoid Qt plugin conflicts caused by OpenCV's bundled Qt plugins."""
+    current = os.environ.get("QT_QPA_PLATFORM_PLUGIN_PATH", "")
+    current_norm = current.replace("\\", "/")
+    if "/site-packages/cv2/qt/plugins" in current_norm:
+        pyqt_plugins = QLibraryInfo.location(QLibraryInfo.PluginsPath)
+        if pyqt_plugins:
+            os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = pyqt_plugins
 
 
 class MainWindow(QMainWindow):
@@ -66,10 +95,19 @@ class MainWindow(QMainWindow):
         self.p_home.go_admin.connect(lambda: self._nav(self.ALOGIN))
 
         self.p_guard.go_back.connect(lambda: self._nav(self.HOME))
-        self.p_guard.done.connect(self._on_guardado)
-        self.p_guard.failed.connect(
-            lambda msg: self._show_result("err", "Sin espacio", msg)
-        )
+        guard_done = getattr(self.p_guard, "done", None)
+        if guard_done is not None:
+            guard_done.connect(self._on_guardado)
+        else:
+            print("[WARN] GuardarPage no expone la senal 'done'.")
+
+        guard_failed = getattr(self.p_guard, "failed", None)
+        if guard_failed is not None:
+            guard_failed.connect(
+                lambda msg: self._show_result("err", "Sin espacio", msg)
+            )
+        else:
+            print("[WARN] GuardarPage no expone la senal 'failed'.")
 
         self.p_retir.go_back.connect(lambda: self._nav(self.HOME))
         self.p_retir.retirar_done.connect(self._on_retirado)
@@ -104,7 +142,7 @@ class MainWindow(QMainWindow):
         """El cliente registro biometria y se le asigno un locker."""
         self.p_guard.reset()
         self._show_result(
-            "ok",
+            "ok_blue",
             "Locker Asignado",
             "Tus pertenencias quedaran seguras. Recuerda tu numero de locker.",
             "LOCKER  #{}".format(num_locker)
@@ -114,7 +152,7 @@ class MainWindow(QMainWindow):
         """El cliente retiro sus cosas, sesion cerrada, locker liberado."""
         self.p_retir.reset()
         self._show_result(
-            "warn",
+            "ok_blue",
             "Hasta Pronto",
             "El locker #{} ha sido liberado. Recoge tus cosas.".format(num_locker),
             "LOCKER  #{}".format(num_locker)
@@ -125,7 +163,7 @@ class MainWindow(QMainWindow):
         self.p_retir.reset()
         detail = "LOCKER  #{}".format(num_locker) if num_locker else ""
         self._show_result(
-            "ok",
+            "ok_blue",
             "Que sigas comprando",
             "Tus cosas permanecen seguras. Tu locker sigue activo.",
             detail
@@ -142,6 +180,8 @@ class MainWindow(QMainWindow):
 # ──────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    _fix_qt_plugin_path_for_linux()
+
     # Verificar que la base de datos existe
     if not os.path.exists(DB_PATH):
         print("[ERROR] No se encontro la base de datos en:")

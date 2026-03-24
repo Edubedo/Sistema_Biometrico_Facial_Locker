@@ -30,3 +30,5 @@ biometria/locker_faces/sesion_*/
 
 *.jpg
 .env
+
+venv/

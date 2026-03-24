@@ -35,7 +35,7 @@ QLabel#sys_title {
     letter-spacing: 4px;
 }
 QLabel#sys_label {
-    color: rgba(255,255,255,0.65);
+    color: #000000;
     font-family: 'Segoe UI', sans-serif;
     letter-spacing: 3px;
 }
@@ -45,7 +45,7 @@ QLabel#clock_lbl {
     font-family: 'Segoe UI', sans-serif;
 }
 QLabel#date_lbl {
-    color: rgba(255,255,255,0.65);
+    color: #000000;
     font-family: 'Segoe UI', sans-serif;
 }
 QLabel#free_count_lbl {
@@ -54,12 +54,12 @@ QLabel#free_count_lbl {
     font-family: 'Segoe UI', sans-serif;
 }
 QLabel#free_prefix_lbl {
-    color: #546e7a;
+    color: #000000;
     font-family: 'Segoe UI', sans-serif;
 }
 QPushButton#btn_admin {
     background: transparent;
-    color: #90a4ae;
+    color: #000000;
     border: 1px solid #cfd8e3;
     border-radius: 6px;
     font-family: 'Segoe UI', sans-serif;
@@ -68,7 +68,7 @@ QPushButton#btn_admin {
 QPushButton#btn_admin:hover   { color: #1565c0; border-color: #1976d2; background: #e3f0ff; }
 QPushButton#btn_admin:pressed { background: #bbdefb; }
 QLabel#footer_lbl {
-    color: #b0bec5;
+    color: #000000;
     font-family: 'Segoe UI', sans-serif;
 }
 QFrame#h_divider {
@@ -158,7 +158,7 @@ class BigLockerButton(QWidget):
         # ── Circle ──
         circle_r = int(min(W, H) * 0.30)   # radius relative to button size
         cx = W // 2
-        cy = int(H * 0.38)                  # circle center sits in upper 40%
+        cy = int(H * 0.33)                  # circle center sits in upper 40%
 
         # Circle fill
         cc = QColor(self._circle_color)
@@ -210,12 +210,12 @@ class BigLockerButton(QWidget):
 
         # ── Main label ──
         label_top = cy + circle_r + int(H * 0.04)
-        font_size  = max(14, int(H * 0.10))
+        font_size  = max(14, int(H * 0.08))
         font = QFont("Segoe UI", font_size, QFont.Bold)
         p.setFont(font)
         p.setPen(QPen(self._label_color))
-        p.drawText(0, label_top, W, int(H * 0.16),
-                   Qt.AlignHCenter | Qt.AlignTop, self.label)
+        p.drawText(0, label_top, W, H - label_top,
+           Qt.AlignHCenter | Qt.AlignTop, self.label)
 
         # ── Sub-label (e.g. "Lockers desocupados: 5") ──
         if self.sublabel:
@@ -223,9 +223,9 @@ class BigLockerButton(QWidget):
             sub_font_size = max(9, int(H * 0.055))
             sfont = QFont("Segoe UI", sub_font_size)
             p.setFont(sfont)
-            p.setPen(QPen(QColor("#78909c")))
-            p.drawText(0, sub_top, W, int(H * 0.10),
-                       Qt.AlignHCenter | Qt.AlignTop, self.sublabel)
+            p.setPen(QPen(QColor("#000000")))
+            p.drawText(0, sub_top, W, H - sub_top,
+           Qt.AlignHCenter | Qt.AlignTop, self.sublabel)
 
         p.end()
 
@@ -258,8 +258,8 @@ class HomePage(QWidget):
         hl.setContentsMargins(_dp(16), 0, _dp(16), 0)
 
         tcol = QVBoxLayout(); tcol.setSpacing(_dp(1))
-        sl = QLabel("SISTEMA DE CONTROL"); sl.setObjectName("sys_label")
-        sl.setStyleSheet(f"font-size: {_dp(8)}px;")
+        sl = QLabel("SUPERLOCKER"); sl.setObjectName("sys_label")
+        sl.setStyleSheet(f"font-size: {_dp(12)}px;")
         tl = QLabel("ACCESO"); tl.setObjectName("sys_title")
         tl.setStyleSheet(f"font-size: {_dp(18)}px;")
         tcol.addWidget(sl); tcol.addWidget(tl)
@@ -272,7 +272,7 @@ class HomePage(QWidget):
         self.clock_lbl.setStyleSheet(f"font-size: {_dp(15)}px;")
         self.date_lbl = QLabel("---"); self.date_lbl.setObjectName("date_lbl")
         self.date_lbl.setAlignment(Qt.AlignRight)
-        self.date_lbl.setStyleSheet(f"font-size: {_dp(8)}px;")
+        self.date_lbl.setStyleSheet(f"font-size: {_dp(12)}px;")
         ccol.addWidget(self.clock_lbl); ccol.addWidget(self.date_lbl)
         hl.addLayout(ccol)
         root.addWidget(header)
@@ -307,7 +307,7 @@ class HomePage(QWidget):
         sr.addWidget(StatusDot())
         stl = QLabel("EN LÍNEA")
         stl.setStyleSheet(
-            f"color: #1976d2; font-size: {_dp(8)}px;"
+            f"color: #000000; font-size: {_dp(11)}px;"
             f"font-family: 'Segoe UI'; font-weight: 600; letter-spacing: 2px;"
         )
         sr.addWidget(stl)
@@ -317,7 +317,7 @@ class HomePage(QWidget):
         adm = QPushButton("⚙  ADMIN"); adm.setObjectName("btn_admin")
         adm.setStyleSheet(
             adm.styleSheet() +
-            f"font-size: {_dp(8)}px; padding: {_dp(5)}px {_dp(16)}px;"
+            f"font-size: {_dp(11)}px; padding: {_dp(7)}px {_dp(18)}px;"
         )
         adm.setCursor(Qt.PointingHandCursor)
         adm.clicked.connect(self.go_admin.emit)
