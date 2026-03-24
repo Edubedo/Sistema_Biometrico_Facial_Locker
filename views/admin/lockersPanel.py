@@ -52,8 +52,8 @@ QLabel#cn_o{color:#ef6c00;font-weight:800;font-family:'Segoe UI';}
 QLabel#cn_g{color:#546e7a;font-weight:800;font-family:'Segoe UI';}
 QLabel#ck{color:#90a4ae;font-family:'Segoe UI';letter-spacing:2px;}
 QScrollArea{border:none;background:transparent;}
-QScrollBar:vertical{background:#e8f0fb;width:4px;margin:0;}
-QScrollBar::handle:vertical{background:#90c4f0;border-radius:2px;min-height:20px;}
+QScrollBar:vertical{background:#e8f0fb;width:6px;margin:0;}
+QScrollBar::handle:vertical{background:#90c4f0;border-radius:3px;min-height:30px;}
 QScrollBar::add-line:vertical,QScrollBar::sub-line:vertical{height:0;}
 QDialog{background:#f0f6ff;}
 QLineEdit,QComboBox{background:#fff;border:1px solid #cfd8e3;border-radius:5px;
@@ -76,9 +76,10 @@ QPushButton#btn_ref:hover{color:#1565c0;border-color:#1976d2;background:#e3f0ff;
 
 
 class LockerIcon(QWidget):
+    # Duplicado: 32x38 → 64x76
     def __init__(self, estado="ocupado", parent=None):
         super().__init__(parent)
-        self.setFixedSize(32, 38)
+        self.setFixedSize(64, 76)
         self.estado = estado
         self._bg = QColor(WHITE)
 
@@ -287,8 +288,9 @@ class LockerConfigDialog(QDialog):
 
 
 class LockerCard(QFrame):
-    CARD_W = 140
-    CARD_H = 160
+    # ── Dimensiones duplicadas ──────────────────────────────────────────────
+    CARD_W = 280   # antes: 140
+    CARD_H = 320   # antes: 160
 
     def __init__(self, locker, index, admin_id=None, on_refresh=None, parent=None):
         super().__init__(parent)
@@ -309,11 +311,12 @@ class LockerCard(QFrame):
         outer.setContentsMargins(0, 0, 0, 0)
         outer.setSpacing(0)
 
+        # Barra superior — grosor duplicado: 5 → 10
         self.top_bar = QWidget()
-        self.top_bar.setFixedHeight(5)
+        self.top_bar.setFixedHeight(10)
         self.top_bar.setStyleSheet(
             f"background:{bar_color};"
-            "border-top-left-radius:12px; border-top-right-radius:12px;"
+            "border-top-left-radius:14px; border-top-right-radius:14px;"
         )
         outer.addWidget(self.top_bar)
 
@@ -322,46 +325,58 @@ class LockerCard(QFrame):
         outer.addWidget(content, 1)
 
         vbox = QVBoxLayout(content)
-        vbox.setContentsMargins(9, 8, 9, 8)
+        # Márgenes duplicados: 9,8,9,8 → 18,16,18,16
+        vbox.setContentsMargins(18, 16, 18, 16)
         vbox.setSpacing(0)
 
+        # ── Fila icono + badge ─────────────────────────────────────────────
         icon_row = QHBoxLayout()
         icon_row.setSpacing(0)
-        self.icon = LockerIcon(estado=estado)
+        self.icon = LockerIcon(estado=estado)   # ya es 64×76
         icon_row.addWidget(self.icon)
         icon_row.addStretch()
+
         badge_txt = {"libre": "LIBRE", "ocupado": "OCUPADO",
                      "mantenimiento": "MANT."}.get(estado, estado.upper())
         self.badge = QLabel(badge_txt)
         self.badge.setAlignment(Qt.AlignCenter)
         self.badge.setStyleSheet(
             f"background:{badge_bg}; color:{badge_fg};"
-            "font-size:7px; font-weight:700; font-family:'Segoe UI';"
-            "padding:2px 5px; border-radius:5px;"
+            # font-size duplicado: 7 → 14 px
+            "font-size:14px; font-weight:700; font-family:'Segoe UI';"
+            # padding duplicado: 2px 5px → 4px 10px
+            "padding:4px 10px; border-radius:8px;"
         )
         icon_row.addWidget(self.badge, alignment=Qt.AlignTop)
         vbox.addLayout(icon_row)
 
-        vbox.addSpacing(6)
+        # Espaciado duplicado: 6 → 12
+        vbox.addSpacing(12)
 
+        # ── Nombre del locker ──────────────────────────────────────────────
         num_lbl = QLabel(f"Locker #{locker['t_numero_locker']}")
         num_lbl.setWordWrap(True)
         num_lbl.setStyleSheet(
-            f"font-size:11px; font-weight:900; color:{badge_fg}; font-family:'Segoe UI';"
+            # font-size duplicado: 11 → 22 px
+            f"font-size:22px; font-weight:900; color:{badge_fg}; font-family:'Segoe UI';"
         )
         vbox.addWidget(num_lbl)
 
-        vbox.addSpacing(3)
+        # Espaciado duplicado: 3 → 6
+        vbox.addSpacing(6)
 
+        # ── Chips zona / tamaño ────────────────────────────────────────────
         zona   = locker.get("t_zona")   or "—"
         tamano = locker.get("t_tamano") or "—"
         chips_row = QHBoxLayout()
-        chips_row.setSpacing(3)
+        # spacing duplicado: 3 → 6
+        chips_row.setSpacing(6)
         for text in [f"Z:{zona}", tamano]:
             chip = QLabel(text)
             chip.setStyleSheet(
                 f"background:{GRAY_CHIP}; color:{GRAY_TEXT};"
-                "font-size:7px; padding:1px 4px; border-radius:4px; font-family:'Segoe UI';"
+                # font-size duplicado: 7 → 14 px; padding duplicado
+                "font-size:14px; padding:3px 8px; border-radius:6px; font-family:'Segoe UI';"
             )
             chips_row.addWidget(chip)
         chips_row.addStretch()
@@ -373,23 +388,32 @@ class LockerCard(QFrame):
         divider.setFrameShape(QFrame.HLine)
         divider.setStyleSheet("color:#e5e7eb;")
         vbox.addWidget(divider)
-        vbox.addSpacing(5)
 
+        # Espaciado duplicado: 5 → 10
+        vbox.addSpacing(10)
+
+        # ── Fecha ──────────────────────────────────────────────────────────
         fecha = str(locker.get("d_fecha_registro", "") or "")[:10]
         date_lbl = QLabel(fecha or "—")
-        date_lbl.setStyleSheet("font-size:7px; color:#9ca3af; font-family:'Segoe UI';")
+        # font-size duplicado: 7 → 14 px
+        date_lbl.setStyleSheet("font-size:14px; color:#9ca3af; font-family:'Segoe UI';")
         vbox.addWidget(date_lbl)
 
-        vbox.addSpacing(4)
+        # Espaciado duplicado: 4 → 8
+        vbox.addSpacing(8)
 
+        # ── Fila de botones ────────────────────────────────────────────────
         btn_row = QHBoxLayout()
-        btn_row.setSpacing(3)
+        # spacing duplicado: 3 → 8
+        btn_row.setSpacing(8)
 
+        # Tamaño de botones duplicado: 22×20 → 44×40
         btn_config = QPushButton("⚙")
-        btn_config.setFixedSize(22, 20)
+        btn_config.setFixedSize(44, 40)
         btn_config.setStyleSheet(
             f"background:{GRAY_CHIP}; color:{GRAY_TEXT};"
-            "font-size:10px; border:none; border-radius:4px;"
+            # font-size duplicado: 10 → 20 px
+            "font-size:20px; border:none; border-radius:8px;"
         )
         btn_config.setToolTip("Configurar")
         btn_config.setCursor(Qt.PointingHandCursor)
@@ -398,11 +422,12 @@ class LockerCard(QFrame):
 
         if estado == "ocupado":
             self.btn_liberar = QPushButton("↩")
-            self.btn_liberar.setFixedSize(22, 20)
+            self.btn_liberar.setFixedSize(44, 40)
             self.btn_liberar.setToolTip("Liberar")
             self.btn_liberar.setStyleSheet(
-                f"background:{ORANGE}; color:white; font-size:11px;"
-                "font-weight:bold; border:none; border-radius:4px;"
+                f"background:{ORANGE}; color:white;"
+                # font-size duplicado: 11 → 22 px
+                "font-size:22px; font-weight:bold; border:none; border-radius:8px;"
             )
             self.btn_liberar.setCursor(Qt.PointingHandCursor)
             self.btn_liberar.clicked.connect(self._liberar)
@@ -411,10 +436,11 @@ class LockerCard(QFrame):
         btn_row.addStretch()
 
         btn_del = QPushButton("✕")
-        btn_del.setFixedSize(22, 20)
+        btn_del.setFixedSize(44, 40)
         btn_del.setStyleSheet(
             f"background:{RED_BG}; color:{RED_TEXT};"
-            "font-size:9px; border:none; border-radius:4px;"
+            # font-size duplicado: 9 → 18 px
+            "font-size:18px; border:none; border-radius:8px;"
         )
         btn_del.setToolTip("Eliminar locker")
         btn_del.setCursor(Qt.PointingHandCursor)
@@ -426,10 +452,14 @@ class LockerCard(QFrame):
     def paintEvent(self, event):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
-        p.setPen(QPen(self._border, 2))
+        # Borde más grueso: 2 → 3
+        p.setPen(QPen(self._border, 3))
         p.setBrush(QBrush(self._bg))
-        p.drawRoundedRect(1, 1, self.width() - 2, self.height() - 2, 12, 12)
+        # Radio de esquinas aumentado: 12 → 14
+        p.drawRoundedRect(1, 1, self.width() - 2, self.height() - 2, 14, 14)
         p.end()
+
+    # ── Métodos de lógica (sin cambios) ────────────────────────────────────
 
     def _log(self, tipo, resultado, desc, id_sesion=None):
         db_log_intento(
@@ -619,12 +649,14 @@ class _AdminLockersPanel(QWidget):
         self.inner.setStyleSheet("background:transparent;")
         self.grid = QGridLayout(self.inner)
         self.grid.setContentsMargins(_dp(4), _dp(4), _dp(4), _dp(4))
-        self.grid.setSpacing(_dp(10))
+        # Espaciado entre cards duplicado: 10 → 20
+        self.grid.setSpacing(_dp(20))
         self.grid.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         scroll.setWidget(self.inner)
         root.addWidget(scroll, 1)
 
-        self._cols = 4
+        # Columnas reducidas a la mitad para compensar el tamaño doble: 4 → 2
+        self._cols = 2
         self.refresh()
 
     def _div(self):
