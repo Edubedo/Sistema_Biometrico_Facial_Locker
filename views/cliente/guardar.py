@@ -89,7 +89,7 @@ QFrame#sep { background: #305BAB; min-height: 1px; max-height: 1px; }
 QFrame#card { background: #C6DCFF; border: 2px solid #305BAB; border-radius: 14px; }
 QLabel#cam {
     background: #0c1530; border: 4px solid #305bab; border-radius: 10px;
-    color: #1a3a5c; font-family: 'Courier New'; font-size: 0px;
+    color: #1a3a5c; font-family: 'Courier New'; font-size: 1px;
 }
 QFrame#prog_bg { background: #0a1628; border-radius: 6px; min-height: 12px; max-height: 12px; }
 QFrame#prog_fill {

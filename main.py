@@ -134,7 +134,7 @@ class MainWindow(QMainWindow):
         """El cliente retiro sus cosas, sesion cerrada, locker liberado."""
         self.p_retir.reset()
         self._show_result(
-            "warn",
+            "ok_blue",
             "Hasta Pronto",
             "El locker #{} ha sido liberado. Recoge tus cosas.".format(num_locker),
             "LOCKER  #{}".format(num_locker)
@@ -145,7 +145,7 @@ class MainWindow(QMainWindow):
         self.p_retir.reset()
         detail = "LOCKER  #{}".format(num_locker) if num_locker else ""
         self._show_result(
-            "ok",
+            "ok_blue",
             "Que sigas comprando",
             "Tus cosas permanecen seguras. Tu locker sigue activo.",
             detail

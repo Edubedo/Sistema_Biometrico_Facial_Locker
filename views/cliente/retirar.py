@@ -87,7 +87,7 @@ QFrame#sep { background: #305bab; min-height: 1px; max-height: 1px; }
 QFrame#card { background: #c6dcff; border: 2px solid #305bab; border-radius: 14px; }
 QLabel#cam {
     background: #0c1530; border: 4px solid #305bab; border-radius: 10px;
-    color: #1a3a5c; font-family: 'Courier New'; font-size: 0px;
+    color: #1a3a5c; font-family: 'Courier New'; font-size: 1px;
 }
 QFrame#prog_bg { background: #0a1628; border-radius: 6px; min-height: 12px; max-height: 12px; }
 QFrame#prog_fill {
@@ -366,10 +366,14 @@ class RetirarPage(QWidget):
         self._id_sesion  = None
         self._id_locker  = None
         self._detected_msg = None
+        self._closing_detected_msg = False
         self._detected_left = 0
         self._detected_timer = QTimer(self)
         self._detected_timer.setInterval(1000)
         self._detected_timer.timeout.connect(self._tick_detected_dialog)
+        self._detected_force_close = QTimer(self)
+        self._detected_force_close.setSingleShot(True)
+        self._detected_force_close.timeout.connect(self._close_detected_dialog)
 
         vl = QVBoxLayout(self)
         vl.setContentsMargins(60, 40, 60, 40)
@@ -515,25 +519,32 @@ class RetirarPage(QWidget):
 
     def _on_recognized(self, face_uid):
         self.scan_btn.setEnabled(True)
-        self.cam.idle()
         if not face_uid:
+            self.cam.idle()
             db_log_intento(1, "retirar", "fallido",
                            "Rostro no reconocido en escaneo de retirar")
             self.scan_lbl.setText("No se reconocio el rostro. Intenta de nuevo.")
             return
+
         sesion = db_get_active_sesion_by_face(face_uid)
         if not sesion:
+            self.cam.idle()
             self.scan_lbl.setText("No tienes una sesion activa.")
             return
-        self._face_uid  = face_uid
-        self._id_sesion = sesion["ID_sesion"]
-        self._id_locker = sesion["ID_locker"]
+
+        self._face_uid = face_uid
+        if isinstance(sesion, dict):
+            self._id_sesion = sesion["ID_sesion"]
+            self._id_locker = sesion["ID_locker"]
+        else:
+            self._id_sesion, self._id_locker = sesion
+
         num_locker = db_get_locker_num_by_id(self._id_locker)
         self.scan_lbl.setText("")
         self.id_lbl.setText("Identidad verificada")
         self.locker_lbl.setText("Tu locker: #{}".format(num_locker))
-        self.opts.setVisible(True)
         self.scan_btn.setVisible(False)
+        self.opts.setVisible(False)
         self._show_detected_dialog()
 
     def _show_detected_dialog(self):
@@ -577,6 +588,7 @@ class RetirarPage(QWidget):
         self._detected_msg = dlg
         dlg.show()
         self._detected_timer.start()
+        self._detected_force_close.start(3200)
 
     def _tick_detected_dialog(self):
         if not self._detected_msg or not self._detected_msg.isVisible():
@@ -585,23 +597,61 @@ class RetirarPage(QWidget):
 
         self._detected_left -= 1
         if self._detected_left <= 0:
-            self._detected_timer.stop()
-            self._detected_msg.close()
+            self._close_detected_dialog()
             return
 
         self._detected_msg.setInformativeText(
             "Elige una opcion para continuar ({}s)".format(self._detected_left)
         )
 
+    def _close_detected_dialog(self):
+        self._detected_timer.stop()
+        self._detected_force_close.stop()
+        dlg = self._detected_msg
+        self._detected_msg = None
+        if dlg:
+            try:
+                dlg.finished.disconnect(self._on_detected_dialog_closed)
+            except Exception:
+                pass
+            dlg.hide()
+            dlg.deleteLater()
+
+        self._closing_detected_msg = False
+        self.cam.idle()
+        if self._id_sesion:
+            self.opts.setVisible(True)
+
     def _on_detected_dialog_closed(self, _result):
         self._detected_timer.stop()
+        self._detected_force_close.stop()
         self._detected_msg = None
+        self._closing_detected_msg = False
+        self.cam.idle()
+        if self._id_sesion:
+            self.opts.setVisible(True)
+
+    def reset(self):
+        self._close_detected_dialog()
+        if self.cam_thread:
+            self.cam_thread.stop()
+            self.cam_thread = None
+        self.face_guide.setVisible(True)
+        self.scan_frame.setVisible(False)
+        self.scan_line.hide()
+        self.opts.setVisible(False)
+        self.scan_btn.setVisible(True)
+        self.scan_btn.setEnabled(True)
+        self.scan_lbl.setText("")
+        self._face_uid = None
+        self._id_sesion = None
+        self._id_locker = None
+        self.cam.idle()
 
     def _do_retirar(self):
         if not self._id_sesion:
             return
-        if self._detected_msg and self._detected_msg.isVisible():
-            self._detected_msg.close()
+        self._close_detected_dialog()
         self.scan_btn.setVisible(True)
         self.opts.setVisible(False)
         num_locker = db_get_locker_num_by_id(self._id_locker)
@@ -617,8 +667,7 @@ class RetirarPage(QWidget):
     def _do_seguir(self):
         if not self._id_sesion:
             return
-        if self._detected_msg and self._detected_msg.isVisible():
-            self._detected_msg.close()
+        self._close_detected_dialog()
         self.scan_btn.setVisible(True)
         self.opts.setVisible(False)
         num_locker = db_get_locker_num_by_id(self._id_locker)
@@ -628,22 +677,7 @@ class RetirarPage(QWidget):
         self.seguir_done.emit(self._face_uid, num_locker, self._id_sesion)
 
     def _cancel(self):
-        if self._detected_msg and self._detected_msg.isVisible():
-            self._detected_msg.close()
+        self._close_detected_dialog()
         if self.cam_thread:
             self.cam_thread.stop()
         self.go_back.emit()
-
-    def reset(self):
-        if self._detected_msg and self._detected_msg.isVisible():
-            self._detected_msg.close()
-        if self.cam_thread:
-            self.cam_thread.stop()
-        self._face_uid  = None
-        self._id_sesion = None
-        self._id_locker = None
-        self.opts.setVisible(False)
-        self.scan_btn.setVisible(True)
-        self.scan_btn.setEnabled(True)
-        self.scan_lbl.setText("")
-        self.cam.idle()
