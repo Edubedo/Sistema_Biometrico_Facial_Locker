@@ -45,6 +45,17 @@ _KIND = {
         "badge_fg":    "#c62828",
         "label":       "ERROR",
     },
+    "ok_blue": {
+        "icon":        "✓",
+        "bg_top":      QColor(230, 242, 255),
+        "bg_bot":      QColor(205, 226, 250),
+        "accent":      QColor(38,  103, 198),
+        "accent_light":QColor(230, 242, 255),
+        "border":      QColor(135, 178, 235),
+        "badge_bg":    QColor(210, 229, 252),
+        "badge_fg":    "#1f5fb8",
+        "label":       "EXITO",
+    },
 }
 
 
@@ -101,6 +112,16 @@ class ResultPage(QWidget):
         self._root.setContentsMargins(0, 0, 0, 0)
         self._root.setAlignment(Qt.AlignCenter)
 
+    def _clear_root_layout(self):
+        while self._root.count():
+            item = self._root.takeAt(0)
+            w = item.widget()
+            if w is not None:
+                if w == self._timer_w:
+                    w.setParent(None)
+                else:
+                    w.deleteLater()
+
     # ── Background gradient (changes per kind) ────────────────────────────────
     def paintEvent(self, _):
         cfg = _KIND.get(self._kind, _KIND["ok"])
@@ -124,13 +145,9 @@ class ResultPage(QWidget):
         self._kind = kind
         cfg = _KIND.get(kind, _KIND["ok"])
 
-        # Remove old card
-        if self._card:
-            self._root.removeWidget(self._card)
-            self._card.deleteLater()
-            self._card = None
-        if self._root.indexOf(self._timer_w) >= 0:
-            self._root.removeWidget(self._timer_w)
+        # Rebuild root content to avoid accumulated spacers after multiple results.
+        self._clear_root_layout()
+        self._card = None
 
         self._root.addStretch(1)
 

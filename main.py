@@ -124,7 +124,7 @@ class MainWindow(QMainWindow):
         """El cliente registro biometria y se le asigno un locker."""
         self.p_guard.reset()
         self._show_result(
-            "ok",
+            "ok_blue",
             "Locker Asignado",
             "Tus pertenencias quedaran seguras. Recuerda tu numero de locker.",
             "LOCKER  #{}".format(num_locker)

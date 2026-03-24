@@ -365,6 +365,11 @@ class RetirarPage(QWidget):
         self._face_uid   = None
         self._id_sesion  = None
         self._id_locker  = None
+        self._detected_msg = None
+        self._detected_left = 0
+        self._detected_timer = QTimer(self)
+        self._detected_timer.setInterval(1000)
+        self._detected_timer.timeout.connect(self._tick_detected_dialog)
 
         vl = QVBoxLayout(self)
         vl.setContentsMargins(60, 40, 60, 40)
@@ -532,44 +537,71 @@ class RetirarPage(QWidget):
         self._show_detected_dialog()
 
     def _show_detected_dialog(self):
+        if self._detected_msg and self._detected_msg.isVisible():
+            self._detected_msg.close()
+
+        self._detected_left = 3
         dlg = QMessageBox(self)
         dlg.setWindowTitle("Deteccion exitosa")
-        dlg.setText("Cara detectada correctamente.")
-        dlg.setInformativeText("Ya puedes elegir una accion.")
+        dlg.setText("Rostro detectado correctamente")
+        dlg.setInformativeText("Elige una opcion para continuar (3s)")
         dlg.setIcon(QMessageBox.Information)
-        dlg.setStandardButtons(QMessageBox.Ok)
-        dlg.button(QMessageBox.Ok).setText("Continuar")
+        dlg.setStandardButtons(QMessageBox.NoButton)
+        dlg.setWindowModality(Qt.NonModal)
+        dlg.finished.connect(self._on_detected_dialog_closed)
         dlg.setStyleSheet("""
             QMessageBox {
-                background: #eaf3ff;
-                color: #173b6d;
+                background: qlineargradient(x1:0,y1:0,x2:1,y2:1,
+                    stop:0 #eaf3ff, stop:1 #d8ebff);
+                color: #123866;
+                border: 2px solid #2f80ed;
+                border-radius: 14px;
                 font-family: 'Segoe UI';
                 font-size: 16px;
             }
             QMessageBox QLabel {
-                color: #173b6d;
-                font-size: 18px;
+                color: #123866;
+                font-size: 19px;
                 font-weight: 700;
             }
-            QMessageBox QPushButton {
-                background: #2f80ed;
-                color: #ffffff;
-                border: none;
-                border-radius: 8px;
-                min-width: 120px;
-                min-height: 36px;
-                font-size: 15px;
-                font-weight: 700;
-                padding: 6px 16px;
+            QLabel#qt_msgbox_label {
+                font-size: 21px;
+                font-weight: 800;
             }
-            QMessageBox QPushButton:hover { background: #1f6ed8; }
-            QMessageBox QPushButton:pressed { background: #1658b0; }
+            QLabel#qt_msgbox_informativelabel {
+                color: #2f80ed;
+                font-size: 16px;
+                font-weight: 600;
+            }
         """)
-        dlg.exec_()
+        self._detected_msg = dlg
+        dlg.show()
+        self._detected_timer.start()
+
+    def _tick_detected_dialog(self):
+        if not self._detected_msg or not self._detected_msg.isVisible():
+            self._detected_timer.stop()
+            return
+
+        self._detected_left -= 1
+        if self._detected_left <= 0:
+            self._detected_timer.stop()
+            self._detected_msg.close()
+            return
+
+        self._detected_msg.setInformativeText(
+            "Elige una opcion para continuar ({}s)".format(self._detected_left)
+        )
+
+    def _on_detected_dialog_closed(self, _result):
+        self._detected_timer.stop()
+        self._detected_msg = None
 
     def _do_retirar(self):
         if not self._id_sesion:
             return
+        if self._detected_msg and self._detected_msg.isVisible():
+            self._detected_msg.close()
         self.scan_btn.setVisible(True)
         self.opts.setVisible(False)
         num_locker = db_get_locker_num_by_id(self._id_locker)
@@ -585,6 +617,8 @@ class RetirarPage(QWidget):
     def _do_seguir(self):
         if not self._id_sesion:
             return
+        if self._detected_msg and self._detected_msg.isVisible():
+            self._detected_msg.close()
         self.scan_btn.setVisible(True)
         self.opts.setVisible(False)
         num_locker = db_get_locker_num_by_id(self._id_locker)
@@ -594,11 +628,15 @@ class RetirarPage(QWidget):
         self.seguir_done.emit(self._face_uid, num_locker, self._id_sesion)
 
     def _cancel(self):
+        if self._detected_msg and self._detected_msg.isVisible():
+            self._detected_msg.close()
         if self.cam_thread:
             self.cam_thread.stop()
         self.go_back.emit()
 
     def reset(self):
+        if self._detected_msg and self._detected_msg.isVisible():
+            self._detected_msg.close()
         if self.cam_thread:
             self.cam_thread.stop()
         self._face_uid  = None
