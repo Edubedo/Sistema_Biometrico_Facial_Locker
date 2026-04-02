@@ -12,13 +12,9 @@ from PyQt5.QtGui import (
 from db.models.lockers import db_get_all_lockers
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  SCALE HELPER  — calibrado para 7" (800×480, ~133 dpi)
-# ─────────────────────────────────────────────────────────────────────────────
 def _dp(value: float) -> int:
     screen = QApplication.primaryScreen()
     dpi = screen.logicalDotsPerInch() if screen else 96
-    # Factor de escala reducido para pantalla pequeña
     scale = min(dpi / 96, 1.25)
     return max(1, round(value * scale))
 
@@ -37,7 +33,7 @@ QLabel#sys_title {
     letter-spacing: 3px;
 }
 QLabel#sys_label {
-    color: #000000;
+    color: #ccddff;
     font-family: 'Segoe UI', sans-serif;
     letter-spacing: 2px;
 }
@@ -47,19 +43,19 @@ QLabel#clock_lbl {
     font-family: 'Segoe UI', sans-serif;
 }
 QLabel#date_lbl {
-    color: #000000;
+    color: #ccddff;
     font-family: 'Segoe UI', sans-serif;
 }
 QPushButton#btn_admin {
-    background: transparent;
-    color: #000000;
-    border: 1px solid #cfd8e3;
+    background: rgba(255,255,255,0.12);
+    color: #ffffff;
+    border: 1px solid rgba(255,255,255,0.35);
     border-radius: 6px;
     font-family: 'Segoe UI', sans-serif;
     letter-spacing: 2px;
 }
-QPushButton#btn_admin:hover   { color: #1565c0; border-color: #1976d2; background: #e3f0ff; }
-QPushButton#btn_admin:pressed { background: #bbdefb; }
+QPushButton#btn_admin:hover   { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.6); }
+QPushButton#btn_admin:pressed { background: rgba(255,255,255,0.08); }
 QFrame#h_divider {
     background: #cfd8e3; border: none;
     min-height: 1px; max-height: 1px;
@@ -73,7 +69,7 @@ QFrame#h_divider {
 class StatusDot(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        sz = _dp(8)                          # era 10, reducido
+        sz = _dp(8)
         self.setFixedSize(sz, sz)
         self._alpha = 255
         self._growing = False
@@ -100,8 +96,7 @@ class StatusDot(QWidget):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  BIG LOCKER BUTTON  — adaptado para layout HORIZONTAL en 800×480
-#  Los dos botones van lado a lado (no apilados) para aprovechar el ancho
+#  BIG LOCKER BUTTON
 # ─────────────────────────────────────────────────────────────────────────────
 class BigLockerButton(QWidget):
     clicked = pyqtSignal()
@@ -150,18 +145,14 @@ class BigLockerButton(QWidget):
         p.setRenderHint(QPainter.Antialiasing)
         W, H = self.width(), self.height()
 
-        # Hover tint
         if self._pressed:
             p.fillRect(0, 0, W, H, QColor(21, 101, 192, 18))
         elif self._hovered:
             p.fillRect(0, 0, W, H, QColor(21, 101, 192, 9))
 
-        # ── Círculo ──────────────────────────────────────────────────────────
-        # En 800×480 cada botón mide ~370×360px aprox.
-        # Reducimos el radio del círculo para que quepa con el texto debajo.
-        circle_r = int(min(W, H) * 0.26)    # era 0.30
+        circle_r = int(min(W, H) * 0.26)
         cx = W // 2
-        cy = int(H * 0.38)                  # subido un poco (era 0.33)
+        cy = int(H * 0.38)
 
         cc = QColor(self._circle_color)
         if self._pressed:
@@ -171,7 +162,6 @@ class BigLockerButton(QWidget):
         p.drawEllipse(cx - circle_r, cy - circle_r,
                       circle_r * 2, circle_r * 2)
 
-        # ── Ícono de puerta ───────────────────────────────────────────────────
         door_w = int(circle_r * 0.72)
         door_h = int(circle_r * 0.90)
         door_x = cx - door_w // 2
@@ -188,7 +178,6 @@ class BigLockerButton(QWidget):
         p.setBrush(QBrush(self._door_color))
         p.drawRoundedRect(panel_x, panel_y, panel_w, panel_h, 2, 2)
 
-        # Flecha
         arr_len  = int(circle_r * 0.28)
         arr_head = int(arr_len * 0.55)
         ax = cx + int(circle_r * 0.04)
@@ -208,19 +197,17 @@ class BigLockerButton(QWidget):
             p.drawLine(ax + arr_len, ay, ax + arr_len - arr_head, ay - arr_head)
             p.drawLine(ax + arr_len, ay, ax + arr_len - arr_head, ay + arr_head)
 
-        # ── Etiqueta principal ────────────────────────────────────────────────
         label_top = cy + circle_r + int(H * 0.04)
-        font_size  = max(11, int(H * 0.07))      # era 0.08, reducido
+        font_size  = max(11, int(H * 0.07))
         font = QFont("Segoe UI", font_size, QFont.Bold)
         p.setFont(font)
         p.setPen(QPen(self._label_color))
         p.drawText(0, label_top, W, H - label_top,
                    Qt.AlignHCenter | Qt.AlignTop, self.label)
 
-        # ── Sub-etiqueta ──────────────────────────────────────────────────────
         if self.sublabel:
-            sub_top = label_top + int(H * 0.18)      # era 0.22
-            sub_font_size = max(8, int(H * 0.034))   # era 0.038
+            sub_top = label_top + int(H * 0.18)
+            sub_font_size = max(8, int(H * 0.034))
             sfont = QFont("Segoe UI", sub_font_size)
             p.setFont(sfont)
             p.setPen(QPen(QColor("#4F4E4E")))
@@ -252,44 +239,63 @@ class HomePage(QWidget):
         # ── Header ────────────────────────────────────────────────────────────
         header = QFrame()
         header.setObjectName("header_strip")
-        header.setFixedHeight(_dp(42))          # era 54, reducido para 480px alto
+        header.setFixedHeight(_dp(48))
 
         hl = QHBoxLayout(header)
         hl.setContentsMargins(_dp(12), 0, _dp(12), 0)
+        hl.setSpacing(_dp(10))
 
+        # Izquierda: título del sistema
         tcol = QVBoxLayout()
         tcol.setSpacing(0)
         sl = QLabel("SUPERLOCKER")
         sl.setObjectName("sys_label")
-        sl.setStyleSheet(f"font-size: {_dp(9)}px;")    # era 12
+        sl.setStyleSheet(f"font-size: {_dp(9)}px;")
         tl = QLabel("ACCESO")
         tl.setObjectName("sys_title")
-        tl.setStyleSheet(f"font-size: {_dp(14)}px;")   # era 18
+        tl.setStyleSheet(f"font-size: {_dp(14)}px;")
         tcol.addWidget(sl)
         tcol.addWidget(tl)
         hl.addLayout(tcol)
+
         hl.addStretch()
 
+        # Centro: reloj + fecha
         ccol = QVBoxLayout()
         ccol.setSpacing(0)
-        ccol.setAlignment(Qt.AlignRight)
+        ccol.setAlignment(Qt.AlignCenter)
         self.clock_lbl = QLabel("00:00:00")
         self.clock_lbl.setObjectName("clock_lbl")
-        self.clock_lbl.setAlignment(Qt.AlignRight)
-        self.clock_lbl.setStyleSheet(f"font-size: {_dp(12)}px;")   # era 15
+        self.clock_lbl.setAlignment(Qt.AlignCenter)
+        self.clock_lbl.setStyleSheet(f"font-size: {_dp(13)}px;")
         self.date_lbl = QLabel("---")
         self.date_lbl.setObjectName("date_lbl")
-        self.date_lbl.setAlignment(Qt.AlignRight)
-        self.date_lbl.setStyleSheet(f"font-size: {_dp(9)}px;")     # era 12
+        self.date_lbl.setAlignment(Qt.AlignCenter)
+        self.date_lbl.setStyleSheet(f"font-size: {_dp(9)}px;")
         ccol.addWidget(self.clock_lbl)
         ccol.addWidget(self.date_lbl)
         hl.addLayout(ccol)
+
+        hl.addStretch()
+
+        # Derecha: botón ADMIN — vive en el header, sobre fondo azul
+        adm = QPushButton("⚙  ADMIN")
+        adm.setObjectName("btn_admin")
+        adm.setFixedHeight(_dp(30))
+        adm.setStyleSheet(
+            adm.styleSheet() +
+            f"font-size: {_dp(9)}px; padding: 0px {_dp(14)}px;"
+        )
+        adm.setCursor(Qt.PointingHandCursor)
+        adm.clicked.connect(self.go_admin.emit)
+        hl.addWidget(adm, 0, Qt.AlignVCenter)
+
         root.addWidget(header)
 
-        # ── Área de botones — HORIZONTAL para 800×480 ─────────────────────────
+        # ── Área de botones — HORIZONTAL ──────────────────────────────────────
         btn_area = QWidget()
-        bl = QHBoxLayout(btn_area)              # <— cambiado a HBoxLayout
-        bl.setContentsMargins(_dp(16), _dp(10), _dp(16), _dp(6))
+        bl = QHBoxLayout(btn_area)
+        bl.setContentsMargins(_dp(16), _dp(10), _dp(16), _dp(10))
         bl.setSpacing(_dp(12))
 
         self.btn_guardar = BigLockerButton("store",    "Guardar",
@@ -304,7 +310,7 @@ class HomePage(QWidget):
 
         root.addWidget(btn_area, 1)
 
-        # ── Footer ────────────────────────────────────────────────────────────
+        # ── Footer (solo status dot, sin botón admin) ─────────────────────────
         div = QFrame()
         div.setObjectName("h_divider")
         root.addWidget(div)
@@ -324,16 +330,6 @@ class HomePage(QWidget):
         sr.addWidget(stl)
         fwl.addLayout(sr)
         fwl.addStretch()
-
-        adm = QPushButton("⚙  ADMIN")
-        adm.setObjectName("btn_admin")
-        adm.setStyleSheet(
-            adm.styleSheet() +
-            f"font-size: {_dp(9)}px; padding: {_dp(5)}px {_dp(14)}px;"
-        )
-        adm.setCursor(Qt.PointingHandCursor)
-        adm.clicked.connect(self.go_admin.emit)
-        fwl.addWidget(adm)
         root.addWidget(fw)
 
         # ── Reloj ─────────────────────────────────────────────────────────────
@@ -359,6 +355,5 @@ class HomePage(QWidget):
 
     def refresh(self):
         lockers = db_get_all_lockers()
-        total   = len(lockers)
         free    = sum(1 for l in lockers if l["t_estado"] == "libre")
         self.btn_guardar.set_sublabel(f"  {free} lockers libres ")
