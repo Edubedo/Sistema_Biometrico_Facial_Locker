@@ -69,7 +69,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Sistema de Lockers - Supermercado")
-        self.setMinimumSize(1050, 680)
+        self.setMinimumSize(800, 480)
 
         cw = QWidget()
         self.setCentralWidget(cw)

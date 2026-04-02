@@ -194,9 +194,9 @@ class AdminLoginPage(QWidget):
         # ── Card ──────────────────────────────────────────────────────────────
         card = QFrame()
         card.setObjectName("card")
-        card_w = max(_dp(440), min(_dp(760), int(screen_w * (0.88 if compact else 0.62))))
+        card_w = max(_dp(380), min(_dp(480), int(screen_w * (0.60 if compact else 0.38))))
         card.setFixedWidth(card_w)
-        card.setMaximumHeight(max(_dp(560), int(screen_h * (0.92 if compact else 0.88))))
+        card.setMaximumHeight(max(_dp(680), int(screen_h * (0.92 if compact else 0.92))))
         card.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum)
 
         cl = QVBoxLayout(card)
@@ -206,7 +206,7 @@ class AdminLoginPage(QWidget):
             _dp(36 if compact else 56),
             _dp(34 if compact else 56),
         )
-        cl.setSpacing(_dp(6 if compact else 10))
+        cl.setSpacing(_dp(4 if compact else 6))
 
         # ── Back button ───────────────────────────────────────────────────────
         back_row = QHBoxLayout()
@@ -217,7 +217,7 @@ class AdminLoginPage(QWidget):
         back_row.addWidget(bk)
         back_row.addStretch()
         cl.addLayout(back_row)
-        cl.addSpacing(_dp(12 if compact else 36))
+        cl.addSpacing(_dp(8 if compact else 16))
 
         # ── Branding (SuperLocker) ─────────────────────────────────────────
         br = QHBoxLayout()
