@@ -13,7 +13,8 @@ from views.style.widgets.widgets import sep_line
 def _dp(v):
     screen = QApplication.primaryScreen()
     dpi = screen.logicalDotsPerInch() if screen else 96
-    return max(1, round(v * dpi / 96))
+    scale = min(dpi / 96, 1.25)
+    return max(1, round(v * scale))
 
 
 def lbl(text, obj="", align=Qt.AlignLeft):
@@ -24,91 +25,58 @@ def lbl(text, obj="", align=Qt.AlignLeft):
     return l
 
 
-# ─── PALETTE ────────────────────────────────────────────────────────────────
-#   BG      #F7F8FA  (off-white, not glaring)
-#   CARD    #FFFFFF  (pure white card)
-#   INK     #111318  (near-black text)
-#   MUTED   #8B909A  (secondary text)
-#   BORDER  #E4E6EA  (very subtle border)
-#   ACCENT  #2563EB  (single vivid blue)
-#   DANGER  #DC2626  (error red)
-# ────────────────────────────────────────────────────────────────────────────
-
-
 STYLE = """
-/* Fondo principal con azul cielo */
 QWidget#admin_login_page {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
         stop:0 #b3e0ff, stop:1 #87CEEB);
 }
 
-/* Tarjeta blanca - CON MARGEN DE 10px (como en el primer código) */
 QFrame#card {
     background-color: white;
     border: 1px solid #c0dcf0;
-    border-radius: 25px;
-    margin: 10px;  /* Margen de 10px en todos los bordes */
+    border-radius: 20px;
 }
 
-/* ── Branding ─────────────────────────────────────────────────────────── */
 QLabel#brand_icon {
     color: #145388;
-    font-size: 26px;
     font-weight: 900;
     font-family: 'Segoe UI', sans-serif;
 }
 QLabel#brand_name {
     color: #145388;
-    font-size: 22px;
     font-weight: 900;
     font-family: 'Segoe UI', sans-serif;
     letter-spacing: 2px;
 }
-
-/* Título grande (Acceso al panel) - usando #h2 del primer código */
 QLabel#headline {
     color: #145388;
-    font-size: 28px;
     font-weight: 700;
-    font-family: 'Segoe UI', 'Inter', sans-serif;
-    padding-bottom: 4px;
+    font-family: 'Segoe UI', sans-serif;
 }
-
-/* Etiqueta ADMINISTRACIÓN - usando #tag del primer código */
 QLabel#eyebrow {
     color: #000000;
-    font-size: 16px;
     font-weight: 600;
     letter-spacing: 4px;
-    font-family: 'Segoe UI', 'Inter', sans-serif;
+    font-family: 'Segoe UI', sans-serif;
 }
-
-/* Etiquetas normales (Usuario, Contraseña) */
 QLabel#field_lbl {
     color: #1e4b6e;
-    font-size: 16px;
-    font-family: 'Segoe UI', 'Inter', sans-serif;
+    font-family: 'Segoe UI', sans-serif;
     font-weight: 500;
 }
-
-/* Línea separadora - usando #sep del primer código */
 QFrame#div {
     background: #7bb3d9;
-    min-height: 3px;
-    max-height: 3px;
+    min-height: 2px;
+    max-height: 2px;
     border: none;
 }
 
-/* Campos de texto */
 QLineEdit#inp {
     background-color: #f0f8ff;
     border: 2px solid #b8d6f0;
-    border-radius: 15px;
+    border-radius: 10px;
     color: #0a2a44;
-    padding: 14px 18px;
-    min-height: 36px;
-    font-size: 17px;
-    font-family: 'Segoe UI', 'Inter', sans-serif;
+    font-family: 'Segoe UI', sans-serif;
 }
 QLineEdit#inp:focus {
     border-color: #3d8cff;
@@ -116,22 +84,17 @@ QLineEdit#inp:focus {
 }
 QLineEdit#inp::placeholder {
     color: #8fb4d9;
-    font-size: 16px;
-    font-family: 'Segoe UI', 'Inter', sans-serif;
+    font-family: 'Segoe UI', sans-serif;
 }
 
-/* Botón INGRESAR - usando #btn_blue del primer código */
 QPushButton#btn_primary {
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
         stop:0 #5da5ff, stop:1 #3a7cd9);
     color: white;
     border: none;
-    border-radius: 16px;
-    padding: 16px 30px;
-    font-size: 20px;
+    border-radius: 10px;
     font-weight: 700;
-    min-height: 42px;
-    font-family: 'Segoe UI', 'Inter', sans-serif;
+    font-family: 'Segoe UI', sans-serif;
 }
 QPushButton#btn_primary:hover {
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
@@ -142,33 +105,21 @@ QPushButton#btn_primary:pressed {
         stop:0 #3a7cd9, stop:1 #2c6ac9);
 }
 
-/* Botón Volver - usando #btn_sm del primer código */
 QPushButton#btn_ghost {
     background-color: transparent;
     color: #000000;
     border: 2px solid #aac9e5;
-    border-radius: 12px;
-    padding: 12px 22px;
-    min-height: 40px;
-    font-size: 16px;
+    border-radius: 8px;
     font-weight: 700;
-    font-family: 'Segoe UI', 'Inter', sans-serif;
+    font-family: 'Segoe UI', sans-serif;
 }
-QPushButton#btn_ghost:hover {
-    background-color: #e2f0ff;
-    border-color: #5d9fd3;
-}
-QPushButton#btn_ghost:pressed {
-    background-color: #c5e0ff;
-}
+QPushButton#btn_ghost:hover   { background-color: #e2f0ff; border-color: #5d9fd3; }
+QPushButton#btn_ghost:pressed { background-color: #c5e0ff; }
 
-/* Mensajes de error */
 QLabel#err {
     color: #c74545;
-    font-size: 18px;
     font-weight: 600;
-    padding: 2px;
-    font-family: 'Segoe UI', 'Inter', sans-serif;
+    font-family: 'Segoe UI', sans-serif;
 }
 """
 
@@ -182,128 +133,173 @@ class AdminLoginPage(QWidget):
         self.setObjectName("admin_login_page")
         self.setStyleSheet(STYLE)
 
-        screen = QApplication.primaryScreen()
-        screen_w = screen.availableGeometry().width() if screen else 1200
-        screen_h = screen.availableGeometry().height() if screen else 1000
-        compact = screen_h <= 900
-
         root = QVBoxLayout(self)
-        root.setContentsMargins(0, _dp(6 if compact else 8), 0, _dp(6 if compact else 8))
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
         root.setAlignment(Qt.AlignCenter)
 
-        # ── Card ──────────────────────────────────────────────────────────────
+        # ── Layout horizontal: form izquierda | branding derecha ──────────────
+        # En 800×480 la card vertical clásica es muy alta.
+        # Usamos dos columnas dentro de la card para aprovechar el ancho.
         card = QFrame()
         card.setObjectName("card")
-        card_w = max(_dp(380), min(_dp(480), int(screen_w * (0.60 if compact else 0.38))))
-        card.setFixedWidth(card_w)
-        card.setMaximumHeight(max(_dp(680), int(screen_h * (0.92 if compact else 0.92))))
-        card.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum)
+        card.setFixedSize(_dp(720), _dp(360))   # ocupa casi toda la pantalla
+        card.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
-        cl = QVBoxLayout(card)
-        cl.setContentsMargins(
-            _dp(36 if compact else 56),
-            _dp(28 if compact else 52),
-            _dp(36 if compact else 56),
-            _dp(34 if compact else 56),
-        )
-        cl.setSpacing(_dp(4 if compact else 6))
+        card_layout = QHBoxLayout(card)
+        card_layout.setContentsMargins(_dp(28), _dp(24), _dp(28), _dp(24))
+        card_layout.setSpacing(_dp(24))
 
-        # ── Back button ───────────────────────────────────────────────────────
-        back_row = QHBoxLayout()
-        bk = QPushButton("← VOLVER")
-        bk.setObjectName("btn_ghost")
-        bk.setCursor(Qt.PointingHandCursor)
-        bk.clicked.connect(self.go_back.emit)
-        back_row.addWidget(bk)
-        back_row.addStretch()
-        cl.addLayout(back_row)
-        cl.addSpacing(_dp(8 if compact else 16))
+        # ── Columna izquierda: branding ───────────────────────────────────────
+        left = QVBoxLayout()
+        left.setSpacing(_dp(8))
+        left.setAlignment(Qt.AlignVCenter)
 
-        # ── Branding (SuperLocker) ─────────────────────────────────────────
+        # Ícono + nombre
         br = QHBoxLayout()
-        br.setSpacing(_dp(10))
+        br.setSpacing(_dp(8))
         br.setAlignment(Qt.AlignCenter)
         bicon = lbl("🔒", "brand_icon", Qt.AlignCenter)
+        bicon.setStyleSheet(f"font-size: {_dp(28)}px;")
         bname = lbl("SuperLocker", "brand_name", Qt.AlignCenter)
+        bname.setStyleSheet(f"font-size: {_dp(16)}px;")
         br.addWidget(bicon)
         br.addWidget(bname)
-        cl.addLayout(br)
-        cl.addSpacing(_dp(10 if compact else 20))
+        left.addLayout(br)
 
-        # ── Eyebrow + Headline ────────────────────────────────────────────────
-        cl.addWidget(lbl("ADMINISTRACIÓN", "eyebrow"))
-        cl.addSpacing(_dp(6 if compact else 10))
-        cl.addWidget(lbl("Acceso al panel.", "headline"))
-        cl.addSpacing(_dp(12 if compact else 32))
+        left.addSpacing(_dp(12))
 
-        # ── Divider ───────────────────────────────────────────────────────────
+        ew = lbl("ADMINISTRACIÓN", "eyebrow", Qt.AlignCenter)
+        ew.setStyleSheet(f"font-size: {_dp(9)}px;")
+        left.addWidget(ew)
+
+        left.addSpacing(_dp(4))
+
+        hw = lbl("Acceso al panel.", "headline", Qt.AlignCenter)
+        hw.setStyleSheet(f"font-size: {_dp(16)}px;")
+        left.addWidget(hw)
+
+        left.addSpacing(_dp(12))
+
         div = QFrame(); div.setObjectName("div")
-        cl.addWidget(div)
-        cl.addSpacing(_dp(12 if compact else 32))
+        left.addWidget(div)
 
-        # ── Usuario ───────────────────────────────────────────────────────────
+        left.addStretch()
+
+        # Botón volver abajo a la izquierda
+        bk = QPushButton("← VOLVER")
+        bk.setObjectName("btn_ghost")
+        bk.setFixedHeight(_dp(30))
+        bk.setStyleSheet(
+            bk.styleSheet() +
+            f"font-size: {_dp(9)}px; padding: 0px {_dp(14)}px;"
+        )
+        bk.setCursor(Qt.PointingHandCursor)
+        bk.clicked.connect(self.go_back.emit)
+        left.addWidget(bk)
+
+        card_layout.addLayout(left, 1)
+
+        # Separador vertical
+        vsep = QFrame()
+        vsep.setFrameShape(QFrame.VLine)
+        vsep.setStyleSheet("color: #c0dcf0;")
+        card_layout.addWidget(vsep)
+
+        # ── Columna derecha: formulario ───────────────────────────────────────
+        right = QVBoxLayout()
+        right.setSpacing(_dp(6))
+        right.setAlignment(Qt.AlignVCenter)
+
+        # Usuario
+        u_lbl = lbl("USUARIO", "field_lbl")
+        u_lbl.setStyleSheet(f"font-size: {_dp(9)}px;")
+        right.addWidget(u_lbl)
+        right.addSpacing(_dp(3))
+
+        row_u = QHBoxLayout()
+        row_u.setSpacing(_dp(6))
+        uicon = QLabel("👤")
+        uicon.setStyleSheet(f"color:#145388; font-size:{_dp(14)}px;")
         self.user_inp = QLineEdit()
         self.user_inp.setObjectName("inp")
         self.user_inp.setPlaceholderText("Nombre de usuario")
-        cl.addWidget(lbl("USUARIO", "field_lbl"))
-        cl.addSpacing(_dp(8 if compact else 12))
-        row_u = QHBoxLayout()
-        row_u.setContentsMargins(0, 0, 0, 0)
-        row_u.setSpacing(_dp(8 if compact else 10))
-        uicon = QLabel("👤")
-        uicon.setObjectName("field_lbl")
-        uicon.setStyleSheet(f"color:#145388;font-size:{_dp(18)}px;")
+        self.user_inp.setFixedHeight(_dp(34))
+        self.user_inp.setStyleSheet(
+            self.user_inp.styleSheet() +
+            f"font-size: {_dp(11)}px; padding: 0px {_dp(12)}px;"
+        )
         row_u.addWidget(uicon)
         row_u.addWidget(self.user_inp, 1)
-        cl.addLayout(row_u)
-        cl.addSpacing(_dp(16 if compact else 24))
+        right.addLayout(row_u)
 
-        # ── Contraseña ────────────────────────────────────────────────────────
+        right.addSpacing(_dp(12))
+
+        # Contraseña
+        p_lbl = lbl("CONTRASEÑA", "field_lbl")
+        p_lbl.setStyleSheet(f"font-size: {_dp(9)}px;")
+        right.addWidget(p_lbl)
+        right.addSpacing(_dp(3))
+
+        row_p = QHBoxLayout()
+        row_p.setSpacing(_dp(6))
+        picon = QLabel("🔑")
+        picon.setStyleSheet(f"color:#145388; font-size:{_dp(14)}px;")
         self.pass_inp = QLineEdit()
         self.pass_inp.setObjectName("inp")
         self.pass_inp.setEchoMode(QLineEdit.Password)
         self.pass_inp.setPlaceholderText("••••••••")
+        self.pass_inp.setFixedHeight(_dp(34))
+        self.pass_inp.setStyleSheet(
+            self.pass_inp.styleSheet() +
+            f"font-size: {_dp(11)}px; padding: 0px {_dp(12)}px;"
+        )
         self.pass_inp.returnPressed.connect(self._check)
-        cl.addWidget(lbl("CONTRASEÑA", "field_lbl"))
-        cl.addSpacing(_dp(8 if compact else 12))
-        row_p = QHBoxLayout()
-        row_p.setContentsMargins(0, 0, 0, 0)
-        row_p.setSpacing(_dp(8 if compact else 10))
-        picon = QLabel("🔑")
-        picon.setObjectName("field_lbl")
-        picon.setStyleSheet(f"color:#145388;font-size:{_dp(18)}px;")
         row_p.addWidget(picon)
         row_p.addWidget(self.pass_inp, 1)
-        cl.addLayout(row_p)
-        cl.addSpacing(_dp(18 if compact else 24))
+        right.addLayout(row_p)
 
-        # ── Error label ───────────────────────────────────────────────────────
+        right.addSpacing(_dp(14))
+
+        # Error
         self.err_lbl = lbl("", "err")
-        self.err_lbl.setMinimumHeight(_dp(28))
+        self.err_lbl.setStyleSheet(f"font-size: {_dp(9)}px;")
+        self.err_lbl.setMinimumHeight(_dp(18))
         self.err_lbl.setWordWrap(True)
-        cl.addSpacing(_dp(18 if compact else 26))
+        right.addWidget(self.err_lbl)
 
-        # ── Submit button ─────────────────────────────────────────────────────
+        right.addSpacing(_dp(6))
+
+        # Botón ingresar
         btn_in = QPushButton("🔐  INGRESAR")
         btn_in.setObjectName("btn_primary")
+        btn_in.setFixedHeight(_dp(38))
+        btn_in.setStyleSheet(
+            btn_in.styleSheet() +
+            f"font-size: {_dp(11)}px; padding: 0px {_dp(20)}px;"
+        )
         btn_in.setCursor(Qt.PointingHandCursor)
         btn_in.clicked.connect(self._check)
-        cl.addWidget(btn_in)
-        cl.addSpacing(_dp(14 if compact else 18))
-        cl.addWidget(self.err_lbl)
+        right.addWidget(btn_in)
+
+        card_layout.addLayout(right, 1)
 
         root.addWidget(card)
 
     def paintEvent(self, e):
         p = QPainter(self)
-        p.fillRect(self.rect(), QBrush(QColor("#F7F8FA")))
+        W, H = self.width(), self.height()
+        g = QLinearGradient(0, 0, 0, H)
+        g.setColorAt(0.0, QColor("#b3e0ff"))
+        g.setColorAt(1.0, QColor("#87CEEB"))
+        p.fillRect(0, 0, W, H, QBrush(g))
         p.end()
 
     def _check(self):
         u = self.user_inp.text().strip()
         p = self.pass_inp.text()
         if not u or not p:
-            self.err_lbl.setText("⚠ Tienes que llenar todos los campos.")
+            self.err_lbl.setText("⚠ Llena todos los campos.")
             return
         if not db_admin_exists(u):
             self.err_lbl.setText("✖ Acceso incorrecto.")
