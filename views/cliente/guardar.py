@@ -21,7 +21,7 @@ class ScanLine(QWidget):
         super().__init__(parent)
         self.setAttribute(Qt.WA_TransparentForMouseEvents)
         self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setFixedHeight(6)
+        self.setFixedHeight(4)
         self.hide()
         self._y = 0
         self._anim_down = QPropertyAnimation(self, b"scan_y", self)
@@ -41,7 +41,7 @@ class ScanLine(QWidget):
     scan_y = pyqtProperty(int, _get_y, _set_y)
 
     def update_bounds(self, fx, fy, fw, fh):
-        m = 4
+        m = 3
         self._x, self._top = fx + m, fy + m
         self._bot = fy + fh - m - self.height()
         self._width = fw - m * 2
@@ -80,28 +80,42 @@ class ScanLine(QWidget):
 
 STYLE = """
 QWidget#guardar_page { background: #E7E7E7; color: #1f2a44; }
-QLabel#h2 { color: #305BAB; font-size: 24px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
-QLabel#tag { color: #305BAB; font-size: 22px; font-weight: 700; font-family: 'Courier New'; letter-spacing: 4px; }
-QLabel#body { color: #2c3e50; font-size: 20px; font-family: 'Segoe UI',sans-serif; }
-QLabel#small { color: #3a5f84; font-size: 16px; font-family: 'Courier New'; letter-spacing: 1px; }
-QLabel#err { color: #BD0A0A; font-size: 17px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
-QFrame#sep { background: #305BAB; min-height: 1px; max-height: 1px; }
-QFrame#card { background: #C6DCFF; border: 2px solid #305BAB; border-radius: 14px; }
+
+QLabel#h2 {
+    color: #305BAB; font-size: 13px; font-weight: 700;
+    font-family: 'Segoe UI', sans-serif;
+}
+QLabel#tag {
+    color: #305BAB; font-size: 10px; font-weight: 700;
+    font-family: 'Courier New'; letter-spacing: 2px;
+}
+QLabel#body  { color: #2c3e50; font-size: 11px; font-family: 'Segoe UI', sans-serif; }
+QLabel#small { color: #3a5f84; font-size: 9px; font-family: 'Courier New'; }
+QLabel#err   {
+    color: #BD0A0A; font-size: 10px; font-weight: 700;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+QFrame#sep      { background: #305BAB; min-height: 1px; max-height: 1px; }
+QFrame#card     { background: #C6DCFF; border: 2px solid #305BAB; border-radius: 10px; }
+QFrame#cam_card { background: #C6DCFF; border: 2px solid #305BAB; border-radius: 10px; }
+
 QLabel#cam {
-    background: #0c1530; border: 4px solid #305bab; border-radius: 10px;
+    background: #0c1530; border: 3px solid #305bab; border-radius: 8px;
     color: #1a3a5c; font-family: 'Courier New'; font-size: 1px;
 }
-QFrame#prog_bg { background: #0a1628; border-radius: 6px; min-height: 12px; max-height: 12px; }
+QFrame#prog_bg  { background: #0a1628; border-radius: 4px; min-height: 7px; max-height: 7px; }
 QFrame#prog_fill {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #305bab, stop:1 #B9EA89);
-    border-radius: 6px; min-height: 12px; max-height: 12px;
+    border-radius: 4px; min-height: 7px; max-height: 7px;
 }
+
 QPushButton#btn_blue {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
         stop:0 #1a3a6b, stop:0.5 #305bab, stop:1 #678dd3);
-    color: white; border: none; border-radius: 14px;
-    padding: 22px 30px; font-size: 19px; font-weight: 750;
-    font-family: 'Segoe UI', sans-serif; letter-spacing: 2px;
+    color: white; border: none; border-radius: 8px;
+    padding: 8px 14px; font-size: 11px; font-weight: 750;
+    font-family: 'Segoe UI', sans-serif; letter-spacing: 1px;
 }
 QPushButton#btn_blue:hover {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
@@ -112,33 +126,33 @@ QPushButton#btn_blue:pressed {
         stop:0 #1a3a6b, stop:0.5 #305bab, stop:1 #5681cf);
 }
 QPushButton#btn_blue:disabled {
-    background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
-        stop:0 #4a90d9, stop:1 #7ec8f5);
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #4a90d9, stop:1 #7ec8f5);
     color: rgba(0,0,0,120);
 }
 QPushButton#btn_sm {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #96bfe9, stop:1 #b8e1fa);
-    color: #1d3767; border: 3px solid #305bab; border-radius: 8px;
-    padding: 6px 16px; font-size: 19px; font-family: 'Segoe UI',sans-serif;
+    color: #1d3767; border: 2px solid #305bab; border-radius: 5px;
+    padding: 3px 9px; font-size: 10px; font-family: 'Segoe UI', sans-serif;
 }
-QPushButton#btn_sm:hover { color: #305bab; border-color: #838383; }
+QPushButton#btn_sm:hover   { color: #305bab; border-color: #838383; }
 QPushButton#btn_sm:pressed {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
         stop:0 #95a49f, stop:0.5 #c1cac7, stop:1 #5681cf);
 }
-QFrame#carousel_card { background: white; border-radius: 14px; border: none; }
-QLabel#carousel_text {
-    color: #1a3a6b; font-size: 17px; font-weight: 600;
+
+QFrame#carousel_inner { background: white; border-radius: 8px; border: none; }
+QLabel#carousel_text  {
+    color: #1a3a6b; font-size: 10px; font-weight: 600;
     font-family: 'Segoe UI', sans-serif;
 }
 QPushButton#dot_inactive {
-    background: transparent; border: 2px solid #7aaad4; border-radius: 6px;
-    min-width: 11px; max-width: 11px; min-height: 11px; max-height: 11px;
+    background: transparent; border: 2px solid #7aaad4; border-radius: 3px;
+    min-width: 7px; max-width: 7px; min-height: 7px; max-height: 7px;
 }
 QPushButton#dot_inactive:hover { background: #c6dcff; border-color: #305bab; }
 QPushButton#dot_active {
-    background: #305bab; border: 2px solid #1a3a6b; border-radius: 7px;
-    min-width: 14px; max-width: 14px; min-height: 14px; max-height: 14px;
+    background: #305bab; border: 2px solid #1a3a6b; border-radius: 4px;
+    min-width: 9px; max-width: 9px; min-height: 9px; max-height: 9px;
 }
 """
 
@@ -151,7 +165,7 @@ _CAM_ICON_SVG = b"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
 </svg>"""
 
 
-def _svg_to_icon(svg_bytes: bytes, size: int = 28) -> QIcon:
+def _svg_to_icon(svg_bytes: bytes, size: int = 15) -> QIcon:
     renderer = QSvgRenderer(svg_bytes)
     pixmap = QPixmap(size, size)
     pixmap.fill(Qt.transparent)
@@ -168,18 +182,14 @@ CAROUSEL_STEPS = [
               stroke="#185FA5" stroke-width="3" fill="#dceeff" stroke-linejoin="round"/>
         <circle cx="40" cy="40" r="11" stroke="#185FA5" stroke-width="3" fill="white"/>
         <circle cx="40" cy="40" r="4" fill="#185FA5"/>
-     </svg>""",
-     "Mira directo a la cámara"),
-
+     </svg>""", "Mira directo a la camara"),
     (b"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
         <circle cx="40" cy="40" r="38" fill="#EAF3DE"/>
         <rect x="14" y="14" width="22" height="22" rx="5" stroke="#3B6D11" stroke-width="3" fill="#d4edbb"/>
         <rect x="44" y="14" width="22" height="22" rx="5" stroke="#3B6D11" stroke-width="3" fill="#d4edbb"/>
         <rect x="14" y="44" width="22" height="22" rx="5" stroke="#3B6D11" stroke-width="3" fill="#d4edbb"/>
         <rect x="44" y="44" width="22" height="22" rx="5" stroke="#3B6D11" stroke-width="3" fill="#d4edbb"/>
-     </svg>""",
-     "Tu biometría facial es capturada"),
-
+     </svg>""", "Tu biometria facial es capturada"),
     (b"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
         <circle cx="40" cy="40" r="38" fill="#FAEEDA"/>
         <rect x="14" y="22" width="52" height="38" rx="7"
@@ -189,9 +199,7 @@ CAROUSEL_STEPS = [
         <circle cx="40" cy="42" r="6" fill="#BA7517"/>
         <line x1="40" y1="48" x2="40" y2="54"
               stroke="#BA7517" stroke-width="3" stroke-linecap="round"/>
-     </svg>""",
-     "Se te asigna el siguiente locker libre"),
-
+     </svg>""", "Se te asigna el siguiente locker libre"),
     (b"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
         <circle cx="40" cy="40" r="38" fill="#EEEDFE"/>
         <path d="M18 30h44l-7 30H25L18 30z"
@@ -200,56 +208,53 @@ CAROUSEL_STEPS = [
         <circle cx="53" cy="64" r="4.5" fill="#534AB7"/>
         <path d="M10 18h10l7 12" stroke="#534AB7" stroke-width="3"
               fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-     </svg>""",
-     "Guarda tus cosas y disfruta comprando"),
-
+     </svg>""", "Guarda tus cosas y disfruta comprando"),
     (b"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
         <circle cx="40" cy="40" r="38" fill="#FAECE7"/>
         <circle cx="40" cy="40" r="24" stroke="#993C1D" stroke-width="3" fill="#fcd5c5"/>
         <path d="M27 40l9 9 17-18"
               stroke="#993C1D" stroke-width="3.5" fill="none"
               stroke-linecap="round" stroke-linejoin="round"/>
-     </svg>""",
-     "Tus imágenes se borran al terminar"),
+     </svg>""", "Tus imagenes se borran al terminar"),
 ]
 
 
-class CarouselWidget(QFrame):
+class CarouselWidget(QWidget):
+    """Carousel sin QFrame propio — vive dentro del card azul del panel izquierdo."""
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setObjectName("card")
         self._current = 0
         self._dot_btns = []
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(24, 20, 24, 20)
-        layout.setSpacing(0)
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(6)
 
-        layout.addWidget(lbl("COMO FUNCIONA", "tag", Qt.AlignCenter))
-        layout.addStretch(1)
+        root.addWidget(lbl("COMO FUNCIONA", "tag", Qt.AlignCenter))
 
-        self._card = QFrame()
-        self._card.setObjectName("carousel_card")
-        card_l = QVBoxLayout(self._card)
-        card_l.setContentsMargins(20, 28, 20, 28)
-        card_l.setSpacing(16)
-        card_l.setAlignment(Qt.AlignCenter)
+        # Card blanco interior — stretch=1 para llenar espacio disponible
+        self._inner = QFrame()
+        self._inner.setObjectName("carousel_inner")
+        inner_l = QVBoxLayout(self._inner)
+        inner_l.setContentsMargins(10, 10, 10, 10)
+        inner_l.setSpacing(8)
+        inner_l.setAlignment(Qt.AlignCenter)
 
         self._svg = QSvgWidget()
-        self._svg.setFixedSize(100, 100)
+        self._svg.setFixedSize(56, 56)
         self._svg.setStyleSheet("background: transparent;")
-        card_l.addWidget(self._svg, alignment=Qt.AlignCenter)
+        inner_l.addWidget(self._svg, alignment=Qt.AlignCenter)
 
         self._text_lbl = QLabel()
         self._text_lbl.setObjectName("carousel_text")
         self._text_lbl.setAlignment(Qt.AlignCenter)
         self._text_lbl.setWordWrap(True)
-        card_l.addWidget(self._text_lbl)
+        inner_l.addWidget(self._text_lbl)
 
-        layout.addWidget(self._card)
+        root.addWidget(self._inner, 1)   # rellena el espacio
 
         dots_row = QHBoxLayout()
-        dots_row.setSpacing(10)
+        dots_row.setSpacing(6)
         dots_row.setAlignment(Qt.AlignCenter)
         for i in range(len(CAROUSEL_STEPS)):
             btn = QPushButton()
@@ -257,10 +262,7 @@ class CarouselWidget(QFrame):
             btn.clicked.connect(lambda _, idx=i: self._go_to(idx))
             dots_row.addWidget(btn)
             self._dot_btns.append(btn)
-
-        layout.addSpacing(14)
-        layout.addLayout(dots_row)
-        layout.addStretch(1)
+        root.addLayout(dots_row)
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._next)
@@ -290,6 +292,9 @@ class GuardarPage(QWidget):
     failed  = pyqtSignal(str)
     go_back = pyqtSignal()
 
+    _CAM_W = 440
+    _CAM_H = 390
+
     def __init__(self):
         super().__init__()
         self.setObjectName("guardar_page")
@@ -298,37 +303,43 @@ class GuardarPage(QWidget):
         self._face_uid  = None
         self._id_locker = None
 
-        vl = QVBoxLayout(self)
-        vl.setContentsMargins(60, 60, 60, 20)
-        vl.setSpacing(16)
+        root = QVBoxLayout(self)
+        root.setContentsMargins(8, 8, 8, 6)
+        root.setSpacing(4)
 
-        hdr = QHBoxLayout()
+        # Header
+        hdr = QHBoxLayout(); hdr.setSpacing(8)
         back = QPushButton("< Volver")
         back.setObjectName("btn_sm")
+        back.setFixedHeight(26)
         back.setCursor(Qt.PointingHandCursor)
         back.clicked.connect(self._cancel)
-        htxt = QVBoxLayout(); htxt.setSpacing(4)
+        htxt = QVBoxLayout(); htxt.setSpacing(0)
         htxt.addWidget(lbl("GUARDAR PERTENENCIAS", "h2"))
         htxt.addWidget(lbl("ASIGNACION AUTOMATICA DE LOCKER", "tag"))
-        hdr.addWidget(back); hdr.addSpacing(20); hdr.addLayout(htxt); hdr.addStretch()
-        vl.addLayout(hdr)
-        vl.addWidget(sep_line())
+        hdr.addWidget(back); hdr.addSpacing(6); hdr.addLayout(htxt); hdr.addStretch()
+        root.addLayout(hdr)
+        root.addWidget(sep_line())
 
-        body = QHBoxLayout(); body.setSpacing(32)
+        # Body
+        body = QHBoxLayout(); body.setSpacing(8)
 
+        # Panel izquierdo — ancho fijo para dejar espacio a la camara
         left = QFrame(); left.setObjectName("card")
+        left.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+        left.setFixedWidth(270)
         ll = QVBoxLayout(left)
-        ll.setContentsMargins(30, 20, 30, 20)
-        ll.setSpacing(0)
+        ll.setContentsMargins(10, 8, 10, 8)
+        ll.setSpacing(6)
 
         self._carousel = CarouselWidget()
         ll.addWidget(self._carousel, 1)
-        ll.addSpacing(16)
 
         self.start_btn = QPushButton("  REGISTRAR BIOMETRIA")
         self.start_btn.setObjectName("btn_blue")
-        self.start_btn.setIcon(_svg_to_icon(_CAM_ICON_SVG, 26))
-        self.start_btn.setIconSize(QSize(26, 26))
+        self.start_btn.setIcon(_svg_to_icon(_CAM_ICON_SVG, 15))
+        self.start_btn.setIconSize(QSize(15, 15))
+        self.start_btn.setFixedHeight(34)
         self.start_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.start_btn.setCursor(Qt.PointingHandCursor)
         self.start_btn.clicked.connect(self._start_capture)
@@ -336,36 +347,52 @@ class GuardarPage(QWidget):
 
         self.err_lbl = lbl("", "err")
         self.err_lbl.setWordWrap(True)
+        self.err_lbl.setFixedHeight(28)
         ll.addWidget(self.err_lbl)
 
-        right = QWidget()
+        body.addWidget(left)
+
+        # Panel derecho — camara
+        right = QFrame(); right.setObjectName("cam_card")
+        right.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         rl = QVBoxLayout(right)
-        rl.setContentsMargins(0, 0, 0, 0); rl.setSpacing(12)
+        rl.setContentsMargins(6, 6, 6, 6); rl.setSpacing(4)
         rl.addWidget(lbl("ESCANER BIOMETRICO", "tag", Qt.AlignCenter))
-        self.cam = CamWidget(500, 760)
+
+        self.cam = CamWidget(self._CAM_W, self._CAM_H)
         self.cam.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.cam.setMaximumHeight(self._CAM_H)   # evita que se extienda fuera del video
         rl.addWidget(self.cam, 1)
 
+        body.addWidget(right, 1)
+        root.addLayout(body, 1)
+
+        # Overlays (hijos de self.cam — coordenadas relativas al widget de video)
         self.face_guide = QSvgWidget(self.cam)
         self.face_guide.load(b"""
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120">
-            <circle cx="50" cy="28" r="20" fill="#305bab" opacity="0.5"/>
-            <path d="M8 108 Q8 65 50 65 Q92 65 92 108 Z" fill="#305bab" opacity="0.5"/>
+              <circle cx="50" cy="38" r="26"
+                      fill="none" stroke="#B9EA89" stroke-width="2.5"
+                      stroke-dasharray="6 4" opacity="0.85"/>
+              <path d="M4 120 Q4 78 50 78 Q96 78 96 120 Z"
+                    fill="none" stroke="#B9EA89" stroke-width="2.5"
+                    stroke-dasharray="6 4" opacity="0.85"/>
+              <line x1="50" y1="32" x2="50" y2="44"
+                    stroke="#B9EA89" stroke-width="1.5" opacity="0.6"/>
+              <line x1="44" y1="38" x2="56" y2="38"
+                    stroke="#B9EA89" stroke-width="1.5" opacity="0.6"/>
             </svg>""")
         self.face_guide.setStyleSheet("background: transparent;")
         self.face_guide.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.face_guide.setVisible(False)
 
         self.scan_frame = QFrame(self.cam)
         self.scan_frame.setStyleSheet(
-            "border: 4px solid #B9EA89; border-radius: 10px; background: transparent;")
+            "border: 3px solid #B9EA89; border-radius: 8px; background: transparent;")
         self.scan_frame.setAttribute(Qt.WA_TransparentForMouseEvents)
         self.scan_frame.setVisible(False)
 
         self.scan_line = ScanLine(self.cam)
-
-        body.addWidget(left, 1)
-        body.addWidget(right, 2)
-        vl.addLayout(body, 1)
 
     def showEvent(self, e):
         super().showEvent(e)
@@ -373,6 +400,7 @@ class GuardarPage(QWidget):
         if result:
             self._id_locker = result[0]
             self.start_btn.setEnabled(True)
+            self.err_lbl.setText("")
         else:
             self._id_locker = None
             self.err_lbl.setText("No hay lockers disponibles en este momento.")
@@ -403,24 +431,18 @@ class GuardarPage(QWidget):
         self.start_btn.setEnabled(True)
         self.scan_frame.setVisible(False)
         self.scan_line.hide()
-        self.face_guide.setVisible(True)
+        self.face_guide.setVisible(False)
         if not ok:
-            # Captura fallida: borra temporales y muestra feedback
             self.cam.set_status("No se pudo leer el rostro. Intenta de nuevo.", "#bd0a0a")
             self.cam.idle()
-            # Captura fallida: borrar imagenes temporales y loguear
             delete_face_data(tmp_uid)
             if self._id_locker:
                 db_log_intento(self._id_locker, "registro_biometrico", "fallido",
                                "Error durante la captura de imagenes")
             self.err_lbl.setText("Error al capturar. Intenta de nuevo.")
             return
-
-        # Captura correcta: avisar explícitamente antes de salir
-        self.cam.set_status("Rostro leído correctamente.", "#B9EA89")
+        self.cam.set_status("Rostro leido correctamente.", "#B9EA89")
         QTimer.singleShot(850, self.cam.idle)
-
-        # Verificar que el locker sigue libre (puede haber cambiado)
         locker = db_next_free_locker()
         if not locker:
             delete_face_data(tmp_uid)
@@ -460,18 +482,19 @@ class GuardarPage(QWidget):
         self.err_lbl.setText("")
         self.cam.idle()
         self.start_btn.setEnabled(True)
+        self.scan_frame.setVisible(False)
+        self.scan_line.hide()
+        self.face_guide.setVisible(False)
 
     def _update_overlay(self):
         cam_w = self.cam.width()
         cam_h = self.cam.height()
-        frame_w = int(cam_w * 0.45)
-        frame_h = int(cam_h * 0.55)
+        # Marco: proporcion vertical alta para cubrir cabeza + hombros
+        frame_w = int(cam_w * 0.42)
+        frame_h = int(cam_h * 0.80)
         frame_x = (cam_w - frame_w) // 2
         frame_y = (cam_h - frame_h) // 2
         self.scan_frame.setGeometry(frame_x, frame_y, frame_w, frame_h)
-        icon_w = int(frame_w * 0.40)
-        icon_h = int(frame_h * 0.40)
-        icon_x = frame_x + (frame_w - icon_w) // 2
-        icon_y = frame_y + (frame_h - icon_h) // 2
-        self.face_guide.setGeometry(icon_x, icon_y, icon_w, icon_h)
+        # Silueta coincide exactamente con el marco
+        self.face_guide.setGeometry(frame_x, frame_y, frame_w, frame_h)
         self.scan_line.update_bounds(frame_x, frame_y, frame_w, frame_h)
