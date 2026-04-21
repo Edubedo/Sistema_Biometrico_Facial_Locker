@@ -75,6 +75,7 @@ opencv-contrib-python >= 4.5.0
 numpy >= 1.19.0
 PyQt5 >= 5.15.0
 python-dotenv >= 0.19.0
+picamera2 >= 0.3.0
 ```
 
 ## 📥 Instalación
@@ -87,8 +88,10 @@ cd Sistema_Biometrico_Facial_Locker
 
 ### 2. Instalar dependencias
 ```bash
-pip install opencv-contrib-python numpy PyQt5 python-dotenv
+pip install opencv-contrib-python numpy PyQt5 python-dotenv picamera2
 ```
+
+**Nota**: Picamera2 está pensado para Raspberry Pi OS con soporte de cámara. Si la librería no está disponible, la aplicación intenta usar OpenCV como respaldo.
 
 ### 3. Configurar la base de datos
 
