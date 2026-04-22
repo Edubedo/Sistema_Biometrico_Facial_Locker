@@ -548,6 +548,15 @@ class RetirarPage(QWidget):
 
     def _on_recognized(self, face_uid):
         self.scan_btn.setEnabled(True)
+        if face_uid == CamThread.CAMERA_ERROR:
+            self.cam.idle()
+            self.scan_frame.setVisible(False)
+            self.scan_line.hide()
+            self.face_guide.setVisible(False)
+            self.scan_lbl.setText("No se pudo abrir la camara. Verifica que no este en uso.")
+            db_log_intento(1, "retirar", "fallido",
+                           "No se pudo abrir la camara en escaneo de retirar")
+            return
         if not face_uid:
             self.cam.idle()
             self.scan_frame.setVisible(False)

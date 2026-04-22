@@ -22,6 +22,7 @@ class CamThread(QThread):
 
     CAPTURE   = "capture"
     RECOGNIZE = "recognize"
+    CAMERA_ERROR = "__CAMERA_ERROR__"
     _disable_picamera2 = False
 
     def __init__(self, mode, face_uid="", labels=None):
@@ -98,14 +99,14 @@ class CamThread(QThread):
             if self.mode == self.CAPTURE:
                 self.cap_done.emit(False, self.face_uid)
             elif self.mode == self.RECOGNIZE:
-                self.rec_done.emit("")
+                self.rec_done.emit(self.CAMERA_ERROR)
             return
 
         if not self.use_picamera2 and (not self.cap or not self.cap.isOpened()):
             if self.mode == self.CAPTURE:
                 self.cap_done.emit(False, self.face_uid)
             elif self.mode == self.RECOGNIZE:
-                self.rec_done.emit("")
+                self.rec_done.emit(self.CAMERA_ERROR)
             return
         
         fc = cv2.CascadeClassifier(CASCADE)
@@ -177,7 +178,9 @@ class CamThread(QThread):
             # Emitimos siempre un resultado para que la UI no se quede esperando.
             if recognized_uid:
                 self.rec_done.emit(recognized_uid)
-            elif (read_failed or self._active is False) and not self._manual_stop:
+            elif read_failed and not self._manual_stop:
+                self.rec_done.emit(self.CAMERA_ERROR)
+            elif self._active is False and not self._manual_stop:
                 self.rec_done.emit("")
 
     def _emit_frame(self, frame):
