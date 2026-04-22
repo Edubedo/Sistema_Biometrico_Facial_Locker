@@ -97,14 +97,14 @@ class CamThread(QThread):
                 self._switch_to_cv_fallback()
         elif not self.cap or not self.cap.isOpened():
             if self.mode == self.CAPTURE:
-                self.cap_done.emit(False, self.face_uid)
+                self.cap_done.emit(False, self.CAMERA_ERROR)
             elif self.mode == self.RECOGNIZE:
                 self.rec_done.emit(self.CAMERA_ERROR)
             return
 
         if not self.use_picamera2 and (not self.cap or not self.cap.isOpened()):
             if self.mode == self.CAPTURE:
-                self.cap_done.emit(False, self.face_uid)
+                self.cap_done.emit(False, self.CAMERA_ERROR)
             elif self.mode == self.RECOGNIZE:
                 self.rec_done.emit(self.CAMERA_ERROR)
             return
@@ -173,7 +173,10 @@ class CamThread(QThread):
 
         if self.mode == self.CAPTURE:
             if capture_count >= 20 or not self._manual_stop:
-                self.cap_done.emit(capture_count >= 20, self.face_uid)
+                ref = self.face_uid
+                if read_failed and capture_count == 0:
+                    ref = self.CAMERA_ERROR
+                self.cap_done.emit(capture_count >= 20, ref)
         elif self.mode == self.RECOGNIZE:
             # Emitimos siempre un resultado para que la UI no se quede esperando.
             if recognized_uid:

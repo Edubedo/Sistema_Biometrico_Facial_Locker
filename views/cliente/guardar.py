@@ -425,13 +425,27 @@ class GuardarPage(QWidget):
         self.cam_thread.frame_sig.connect(self.cam.update_frame)
         self.cam_thread.progress.connect(self.cam.set_progress)
         self.cam_thread.cap_done.connect(self._on_capture_done)
+        self.cam_thread.finished.connect(self._on_capture_thread_finished)
         self.cam_thread.start()
+
+    def _on_capture_thread_finished(self):
+        sender = self.sender()
+        if sender is self.cam_thread:
+            self.cam_thread = None
 
     def _on_capture_done(self, ok, tmp_uid):
         self.start_btn.setEnabled(True)
         self.scan_frame.setVisible(False)
         self.scan_line.hide()
         self.face_guide.setVisible(False)
+        if tmp_uid == CamThread.CAMERA_ERROR:
+            self.cam.set_status("No se pudo abrir la camara.", "#bd0a0a")
+            self.cam.idle()
+            if self._id_locker:
+                db_log_intento(self._id_locker, "registro_biometrico", "fallido",
+                               "No se pudo abrir la camara en registro")
+            self.err_lbl.setText("No se pudo abrir la camara. Verifica que no este en uso.")
+            return
         if not ok:
             self.cam.set_status("No se pudo leer el rostro. Intenta de nuevo.", "#bd0a0a")
             self.cam.idle()
