@@ -29,6 +29,7 @@ class CamThread(QThread):
         self.face_uid = face_uid
         self.labels   = labels or {}
         self._active  = True
+        self._manual_stop = False
         self.use_picamera2 = Picamera2 is not None
         self.picam = None
         self.cap = None
@@ -46,19 +47,26 @@ class CamThread(QThread):
                 self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
     def stop(self):
+        self._manual_stop = True
         self._active = False
         self.wait(3000)
 
     def run(self):
+        capture_count = 0
+        recognized_uid = ""
+        read_failed = False
+
         if self.use_picamera2:
             self.picam.start()
             time.sleep(1.5)
         elif not self.cap or not self.cap.isOpened():
-            self.cap_done.emit(False, "No se pudo abrir la cámara con Picamera2 ni con OpenCV.")
+            if self.mode == self.CAPTURE:
+                self.cap_done.emit(False, self.face_uid)
+            elif self.mode == self.RECOGNIZE:
+                self.rec_done.emit("")
             return
         
         fc = cv2.CascadeClassifier(CASCADE)
-        cnt = 0
         sdir = face_dir_for(self.face_uid) if self.mode == self.CAPTURE else None
         
         if sdir:
@@ -71,6 +79,7 @@ class CamThread(QThread):
             else:
                 ok, frame = self.cap.read()
                 if not ok:
+                    read_failed = True
                     break
 
             # Para detección seguimos usando escala de grises
@@ -81,13 +90,13 @@ class CamThread(QThread):
                 roi = cv2.resize(gray[y:y+h, x:x+w], (IMG_W, IMG_H))
 
                 if self.mode == self.CAPTURE:
-                    cv2.imwrite(os.path.join(sdir, "{}.png".format(cnt)), roi)
-                    cnt += 1
-                    self.progress.emit(cnt)
+                    cv2.imwrite(os.path.join(sdir, "{}.png".format(capture_count)), roi)
+                    capture_count += 1
+                    self.progress.emit(capture_count)
                     # Dibujamos sobre el frame corregido
-                    cv2.putText(frame, f"{cnt}/20", (x, y - 8),
+                    cv2.putText(frame, f"{capture_count}/20", (x, y - 8),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (80, 180, 255), 2)
-                    if cnt >= 20:
+                    if capture_count >= 20:
                         self._active = False
                         break
 
@@ -95,12 +104,11 @@ class CamThread(QThread):
                     try:
                         lbl_idx, conf = face_model.predict(roi)
                         if conf < 100 and lbl_idx in self.labels:
-                            uid = self.labels[lbl_idx]
-                            cv2.putText(frame, uid, (x, y - 8),
+                            recognized_uid = self.labels[lbl_idx]
+                            cv2.putText(frame, recognized_uid, (x, y - 8),
                                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (80, 180, 255), 2)
-                            self._emit_frame(frame)
-                            self.rec_done.emit(uid)
-                            return
+                            self._active = False
+                            break
                     except: pass
 
             self._emit_frame(frame)
@@ -109,6 +117,16 @@ class CamThread(QThread):
             self.picam.stop()
         if self.cap is not None:
             self.cap.release()
+
+        if self.mode == self.CAPTURE:
+            if capture_count >= 20 or not self._manual_stop:
+                self.cap_done.emit(capture_count >= 20, self.face_uid)
+        elif self.mode == self.RECOGNIZE:
+            # Emitimos siempre un resultado para que la UI no se quede esperando.
+            if recognized_uid:
+                self.rec_done.emit(recognized_uid)
+            elif (read_failed or self._active) and not self._manual_stop:
+                self.rec_done.emit("")
 
     def _emit_frame(self, frame):
         h, w, ch = frame.shape
