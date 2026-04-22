@@ -13,7 +13,7 @@ from db.models.lockers import (
 )
 from db.models.sesiones import db_close_sesion, db_get_all_sesiones_activas
 from db.models.intentos_acceso import db_log_intento
-from biometria.biometria import delete_face_data, train_model
+from biometria.biometria import train_model
 from views.style.adminDialogs import DlgError, DlgInfo, DlgInput, DlgLiberar
 
 
@@ -476,11 +476,6 @@ class LockerCard(QFrame):
             if s["ID_locker"] != self.locker["ID_locker"]:
                 continue
             db_close_sesion(s["ID_sesion"])
-            fuid = s.get("b_vector_biometrico_temp")
-            if isinstance(fuid, bytes):
-                fuid = fuid.decode()
-            if fuid:
-                delete_face_data(fuid)
             desc = (
                 f"Sesión #{s['ID_sesion']} cerrada al liberar "
                 f"locker #{self.locker['t_numero_locker']}."

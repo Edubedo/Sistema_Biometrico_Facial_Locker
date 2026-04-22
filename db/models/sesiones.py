@@ -1,6 +1,26 @@
 from db.connection import connectionDB
 import datetime
 
+
+def _delete_session_face_data(id_sesion):
+    with connectionDB() as con:
+        row = con.execute(
+            "SELECT b_vector_biometrico_temp FROM Sesiones WHERE ID_sesion=?",
+            (id_sesion,)
+        ).fetchone()
+    if not row:
+        return
+    face_uid = row["b_vector_biometrico_temp"]
+    if isinstance(face_uid, bytes):
+        face_uid = face_uid.decode("utf-8", errors="ignore")
+    if not face_uid:
+        return
+    try:
+        from biometria.biometria import delete_face_data
+        delete_face_data(face_uid)
+    except Exception:
+        pass
+
 # ──── SESIONES ───────────────────────────────────────────────────────────────
 
 def db_create_sesion(id_locker, face_uid):
@@ -22,8 +42,9 @@ def db_create_sesion(id_locker, face_uid):
 
 
 def db_close_sesion(id_sesion):
-    """Marca una sesion como cerrada y registra la hora de salida."""
+    """Marca una sesion como cerrada, registra la hora de salida y limpia sus imagenes."""
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    _delete_session_face_data(id_sesion)
     with connectionDB() as con:
         con.execute(
             "UPDATE Sesiones SET t_estado='cerrado', d_fecha_hora_salida=? "

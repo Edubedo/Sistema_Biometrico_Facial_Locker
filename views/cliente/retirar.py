@@ -4,7 +4,7 @@ from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                               QFrame, QSizePolicy, QLabel, QMessageBox)
 
-from biometria.biometria import delete_face_data, train_model
+from biometria.biometria import train_model
 from db.models.intentos_acceso import db_log_intento
 from db.models.lockers import db_set_locker_estado
 from db.models.sesiones import db_close_sesion, db_get_active_sesion_by_face
@@ -676,7 +676,6 @@ class RetirarPage(QWidget):
         num_locker = db_get_locker_num_by_id(self._id_locker)
         db_close_sesion(self._id_sesion)
         db_set_locker_estado(self._id_locker, "libre")
-        delete_face_data(self._face_uid)
         train_model()
         db_log_intento(self._id_locker, "retirar", "exitoso",
                        "Cliente retiro sus cosas. Sesion {} cerrada.".format(self._id_sesion),
