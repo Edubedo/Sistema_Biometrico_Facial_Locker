@@ -35,16 +35,35 @@ class CamThread(QThread):
         self.cap = None
 
         if self.use_picamera2:
-            self.picam = Picamera2()
-            config = self.picam.create_video_configuration(
-                main={"size": (640, 480)}
-            )
-            self.picam.configure(config)
+            try:
+                self.picam = Picamera2()
+                config = self.picam.create_video_configuration(
+                    main={"size": (640, 480)}
+                )
+                self.picam.configure(config)
+            except Exception:
+                self.use_picamera2 = False
+                self.picam = None
+                self._open_cv_capture()
         else:
-            self.cap = cv2.VideoCapture(0)
-            if self.cap.isOpened():
-                self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-                self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            self._open_cv_capture()
+
+    def _open_cv_capture(self):
+        self.cap = cv2.VideoCapture(0)
+        if self.cap.isOpened():
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
+    def _switch_to_cv_fallback(self):
+        self.use_picamera2 = False
+        if self.picam is not None:
+            try:
+                self.picam.stop()
+            except Exception:
+                pass
+        self.picam = None
+        if self.cap is None or not self.cap.isOpened():
+            self._open_cv_capture()
 
     def stop(self):
         self._manual_stop = True
@@ -57,9 +76,19 @@ class CamThread(QThread):
         read_failed = False
 
         if self.use_picamera2:
-            self.picam.start()
-            time.sleep(1.5)
+            try:
+                self.picam.start()
+                time.sleep(1.5)
+            except Exception:
+                self._switch_to_cv_fallback()
         elif not self.cap or not self.cap.isOpened():
+            if self.mode == self.CAPTURE:
+                self.cap_done.emit(False, self.face_uid)
+            elif self.mode == self.RECOGNIZE:
+                self.rec_done.emit("")
+            return
+
+        if not self.use_picamera2 and (not self.cap or not self.cap.isOpened()):
             if self.mode == self.CAPTURE:
                 self.cap_done.emit(False, self.face_uid)
             elif self.mode == self.RECOGNIZE:
@@ -74,8 +103,18 @@ class CamThread(QThread):
 
         while self._active:
             if self.use_picamera2:
-                frame = self.picam.capture_array()
-                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                try:
+                    frame = self.picam.capture_array()
+                    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                except Exception:
+                    self._switch_to_cv_fallback()
+                    if not self.cap or not self.cap.isOpened():
+                        read_failed = True
+                        break
+                    ok, frame = self.cap.read()
+                    if not ok:
+                        read_failed = True
+                        break
             else:
                 ok, frame = self.cap.read()
                 if not ok:
