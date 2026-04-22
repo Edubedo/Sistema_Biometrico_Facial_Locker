@@ -538,10 +538,15 @@ class RetirarPage(QWidget):
         self.cam_thread = CamThread(CamThread.RECOGNIZE, labels=labels)
         self.cam_thread.frame_sig.connect(self.cam.update_frame)
         self.cam_thread.rec_done.connect(self._on_recognized)
+        self.cam_thread.finished.connect(self._on_scan_thread_finished)
         self.cam_thread.start()
 
+    def _on_scan_thread_finished(self):
+        sender = self.sender()
+        if sender is self.cam_thread:
+            self.cam_thread = None
+
     def _on_recognized(self, face_uid):
-        self.cam_thread = None
         self.scan_btn.setEnabled(True)
         if not face_uid:
             self.cam.idle()

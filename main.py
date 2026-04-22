@@ -174,6 +174,18 @@ class MainWindow(QMainWindow):
         self.p_admin.set_admin(admin_data)
         self._nav(self.ADMIN)
 
+    def closeEvent(self, event):
+        # Detiene hilos de captura/reconocimiento antes de cerrar Qt.
+        try:
+            self.p_guard.reset()
+        except Exception:
+            pass
+        try:
+            self.p_retir.reset()
+        except Exception:
+            pass
+        super().closeEvent(event)
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # MAIN

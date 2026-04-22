@@ -22,6 +22,7 @@ class CamThread(QThread):
 
     CAPTURE   = "capture"
     RECOGNIZE = "recognize"
+    _disable_picamera2 = False
 
     def __init__(self, mode, face_uid="", labels=None):
         super().__init__()
@@ -30,7 +31,7 @@ class CamThread(QThread):
         self.labels   = labels or {}
         self._active  = True
         self._manual_stop = False
-        self.use_picamera2 = Picamera2 is not None
+        self.use_picamera2 = (Picamera2 is not None) and (not CamThread._disable_picamera2)
         self.picam = None
         self.cap = None
 
@@ -42,6 +43,7 @@ class CamThread(QThread):
                 )
                 self.picam.configure(config)
             except Exception:
+                CamThread._disable_picamera2 = True
                 self.use_picamera2 = False
                 self.picam = None
                 self._open_cv_capture()
@@ -49,13 +51,24 @@ class CamThread(QThread):
             self._open_cv_capture()
 
     def _open_cv_capture(self):
-        self.cap = cv2.VideoCapture(0)
-        if self.cap.isOpened():
-            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        self.cap = None
+        # Probamos multiples indices para evitar depender de /dev/video0.
+        for idx in (0, 1, 2, 3, 4, 5):
+            cap = cv2.VideoCapture(idx, cv2.CAP_V4L2)
+            if not cap.isOpened():
+                cap.release()
+                continue
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            ok, _ = cap.read()
+            if ok:
+                self.cap = cap
+                return
+            cap.release()
 
     def _switch_to_cv_fallback(self):
         self.use_picamera2 = False
+        CamThread._disable_picamera2 = True
         if self.picam is not None:
             try:
                 self.picam.stop()
@@ -164,7 +177,7 @@ class CamThread(QThread):
             # Emitimos siempre un resultado para que la UI no se quede esperando.
             if recognized_uid:
                 self.rec_done.emit(recognized_uid)
-            elif (read_failed or self._active) and not self._manual_stop:
+            elif (read_failed or self._active is False) and not self._manual_stop:
                 self.rec_done.emit("")
 
     def _emit_frame(self, frame):
