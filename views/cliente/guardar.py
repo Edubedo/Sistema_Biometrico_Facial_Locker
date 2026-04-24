@@ -16,44 +16,80 @@ from views.style.widgets.widgets import _step_bullet, lbl, sep_line, CamWidget
 
 STYLE = """
 QWidget#guardar_page { background: #E7E7E7; color: #1f2a44; }
-QLabel#h2 { color: #305BAB; font-size: 24px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
-QLabel#tag { color: #305BAB; font-size: 22px; font-weight: 700; font-family: 'Courier New'; letter-spacing: 4px; }
-QLabel#body { color: #2c3e50; font-size: 20px; font-family: 'Segoe UI',sans-serif; }
-QLabel#small { color: #3a5f84; font-size: 16px; font-family: 'Courier New'; letter-spacing: 1px; }
-QLabel#err { color: #BD0A0A; font-size: 17px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
-QFrame#sep { background: #305BAB; min-height: 1px; max-height: 1px; }
-QFrame#card { background: #C6DCFF; border: 2px solid #305BAB; border-radius: 14px; }
-QLabel#cam {
-    background: #0c1530; border: 4px solid #305bab; border-radius: 10px;
-    color: #1a3a5c; font-family: 'Courier New'; font-size: 0px;
+
+QLabel#h2 {
+    color: #305BAB; font-size: 13px; font-weight: 700;
+    font-family: 'Segoe UI', sans-serif;
 }
-QFrame#status_box { background: #c6dcff; border-radius: 12px; padding: 20px; border: 2px solid #305bab; }
-QFrame#prog_bg { background: #0a1628; border-radius: 6px; min-height: 12px; max-height: 12px; }
+QLabel#tag {
+    color: #305BAB; font-size: 10px; font-weight: 700;
+    font-family: 'Courier New'; letter-spacing: 2px;
+}
+QLabel#body  { color: #2c3e50; font-size: 11px; font-family: 'Segoe UI', sans-serif; }
+QLabel#small { color: #3a5f84; font-size: 9px; font-family: 'Courier New'; }
+QLabel#err   {
+    color: #BD0A0A; font-size: 10px; font-weight: 700;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+QFrame#sep      { background: #305BAB; min-height: 1px; max-height: 1px; }
+QFrame#card     { background: #C6DCFF; border: 2px solid #305BAB; border-radius: 10px; }
+QFrame#cam_card { background: #C6DCFF; border: 2px solid #305BAB; border-radius: 10px; }
+
+QLabel#cam {
+    background: #0c1530; border: 3px solid #305bab; border-radius: 8px;
+    color: #1a3a5c; font-family: 'Courier New'; font-size: 1px;
+}
+QFrame#prog_bg  { background: #0a1628; border-radius: 4px; min-height: 7px; max-height: 7px; }
 QFrame#prog_fill {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #305bab, stop:1 #B9EA89);
-    border-radius: 6px; min-height: 12px; max-height: 12px;
+    border-radius: 4px; min-height: 7px; max-height: 7px;
 }
+
 QPushButton#btn_blue {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
-        stop:0 #1a3a6b, stop:0.5 #305bab, stop:1 #678dd3); color: white; border: none; border-radius: 11px;
-    padding: 20px 30px; font-size: 19px; font-weight: 750; font-family: 'Segoe UI', sans-serif;
-    letter-spacing: 1px;
+        stop:0 #1a3a6b, stop:0.5 #305bab, stop:1 #678dd3);
+    color: white; border: none; border-radius: 8px;
+    padding: 8px 14px; font-size: 11px; font-weight: 750;
+    font-family: 'Segoe UI', sans-serif; letter-spacing: 1px;
 }
-QPushButton#btn_blue:hover { background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
-        stop:0 #2952a3, stop:0.5 #3d6fd1, stop:1 #7aa3e8); }
+QPushButton#btn_blue:hover {
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
+        stop:0 #2952a3, stop:0.5 #3d6fd1, stop:1 #7aa3e8);
+}
 QPushButton#btn_blue:pressed {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
         stop:0 #1a3a6b, stop:0.5 #305bab, stop:1 #5681cf);
 }
-QPushButton#btn_blue:disabled {  background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
-        stop:0 #4a90d9, stop:1 #7ec8f5);
-    color: black; }
-QPushButton#btn_sm {
-     background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #96bfe9, stop:1 #b8e1fa); color: #1d3767; border: 3px solid #305bab; border-radius: 8px;
-    padding: 6px 16px; font-size: 19px; font-family: 'Segoe UI',sans-serif;
+QPushButton#btn_blue:disabled {
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #4a90d9, stop:1 #7ec8f5);
+    color: rgba(0,0,0,120);
 }
-QPushButton#btn_sm:hover { color: #305bab; border-color: #838383; }
-QPushButton#btn_sm:pressed { background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #95a49f, stop:0.5 #c1cac7, stop:1 #5681cf); }
+QPushButton#btn_sm {
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #96bfe9, stop:1 #b8e1fa);
+    color: #1d3767; border: 2px solid #305bab; border-radius: 5px;
+    padding: 3px 9px; font-size: 10px; font-family: 'Segoe UI', sans-serif;
+}
+QPushButton#btn_sm:hover   { color: #305bab; border-color: #838383; }
+QPushButton#btn_sm:pressed {
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
+        stop:0 #95a49f, stop:0.5 #c1cac7, stop:1 #5681cf);
+}
+
+QFrame#carousel_inner { background: white; border-radius: 8px; border: none; }
+QLabel#carousel_text  {
+    color: #1a3a6b; font-size: 10px; font-weight: 600;
+    font-family: 'Segoe UI', sans-serif;
+}
+QPushButton#dot_inactive {
+    background: transparent; border: 2px solid #7aaad4; border-radius: 3px;
+    min-width: 7px; max-width: 7px; min-height: 7px; max-height: 7px;
+}
+QPushButton#dot_inactive:hover { background: #c6dcff; border-color: #305bab; }
+QPushButton#dot_active {
+    background: #305bab; border: 2px solid #1a3a6b; border-radius: 4px;
+    min-width: 9px; max-width: 9px; min-height: 9px; max-height: 9px;
+}
 """
 
 

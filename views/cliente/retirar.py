@@ -132,8 +132,7 @@ QPushButton#btn_blue:pressed {
         stop:0 #1a3a6b, stop:0.5 #305bab, stop:1 #5681cf);
 }
 QPushButton#btn_blue:disabled {
-    background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
-        stop:0 #4a90d9, stop:1 #7ec8f5);
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #4a90d9, stop:1 #7ec8f5);
     color: rgba(0,0,0,120);
 }
 
@@ -199,6 +198,7 @@ QPushButton#dot_active {
     min-width: 9px; max-width: 9px; min-height: 9px; max-height: 9px;
 }
 """
+
 
 _CAM_ICON_SVG = b"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
      fill="none" stroke="white" stroke-width="2"
