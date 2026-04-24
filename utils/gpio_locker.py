@@ -42,7 +42,7 @@ LOCKER_PINS = {
 }
 
 PULSO_SEGUNDOS = 3      # Tiempo que el solenoide permanece abierto
-_RELAY_ACTIVO  = False  # False = LOW activa el relay (lógica invertida, más común)
+_RELAY_ACTIVO  = True  # False = LOW activa el relay (lógica invertida, más común)
                         # True  = HIGH activa el relay (lógica directa)
 
 # ── Setup inicial ─────────────────────────────────────────────────────────────
