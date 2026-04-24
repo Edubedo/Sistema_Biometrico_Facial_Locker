@@ -152,7 +152,7 @@ class BigLockerButton(QWidget):
 
         circle_r = int(min(W, H) * 0.26)
         cx = W // 2
-        cy = int(H * 0.38)
+        cy = int(H * 0.38)                  # circle center sits in upper 40%
 
         cc = QColor(self._circle_color)
         if self._pressed:
@@ -198,11 +198,11 @@ class BigLockerButton(QWidget):
             p.drawLine(ax + arr_len, ay, ax + arr_len - arr_head, ay + arr_head)
 
         label_top = cy + circle_r + int(H * 0.04)
-        font_size  = max(11, int(H * 0.07))
+        font_size  = max(14, int(H * 0.10))
         font = QFont("Segoe UI", font_size, QFont.Bold)
         p.setFont(font)
         p.setPen(QPen(self._label_color))
-        p.drawText(0, label_top, W, H - label_top,
+        p.drawText(0, label_top, W, int(H * 0.16),
                    Qt.AlignHCenter | Qt.AlignTop, self.label)
 
         if self.sublabel:
@@ -210,9 +210,11 @@ class BigLockerButton(QWidget):
             sub_font_size = max(8, int(H * 0.034))
             sfont = QFont("Segoe UI", sub_font_size)
             p.setFont(sfont)
-            p.setPen(QPen(QColor("#4F4E4E")))
-            p.drawText(0, sub_top, W, H - sub_top,
-                       Qt.AlignHCenter | Qt.AlignTop, "🔓  " + self.sublabel)
+            p.setPen(QPen(QColor("#78909c")))
+            p.drawText(0, sub_top, W, int(H * 0.10),
+                       Qt.AlignHCenter | Qt.AlignTop, self.sublabel)
+
+        p.end()
 
     def set_sublabel(self, text: str):
         self.sublabel = text

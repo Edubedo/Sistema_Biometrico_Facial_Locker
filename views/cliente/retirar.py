@@ -9,6 +9,7 @@ from db.models.intentos_acceso import db_log_intento
 from db.models.lockers import db_set_locker_estado
 from db.models.sesiones import db_close_sesion, db_get_active_sesion_by_face
 from utils.camera import CamThread
+from utils.gpio_locker import abrir_locker
 from utils.helpers import db_get_locker_num_by_id
 from views.style.widgets.widgets import lbl, sep_line, CamWidget
 
@@ -688,6 +689,10 @@ class RetirarPage(QWidget):
         self.scan_btn.setVisible(True)
         self.opts.setVisible(False)
         num_locker = db_get_locker_num_by_id(self._id_locker)
+
+        # Abrir cerradura solenoide para que el cliente retire sus cosas
+        abrir_locker(num_locker)
+
         db_close_sesion(self._id_sesion)
         db_set_locker_estado(self._id_locker, "libre")
         train_model()
@@ -713,3 +718,21 @@ class RetirarPage(QWidget):
         if self.cam_thread:
             self.cam_thread.stop()
         self.go_back.emit()
+
+         # ── Reset vista ────────────────────────────────────────────────────────
+    def reset(self):
+
+        if self.cam_thread:
+            self.cam_thread.stop()
+
+        self._face_uid  = None
+        self._id_sesion = None
+        self._id_locker = None
+
+        self.opts.setVisible(False)
+        self.scan_btn.setEnabled(True)
+
+        self.scan_lbl.setText("")
+        self.scan_lbl.setStyleSheet("")
+
+        self.cam.idle()
