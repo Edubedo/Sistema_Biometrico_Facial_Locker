@@ -132,7 +132,8 @@ QPushButton#btn_blue:pressed {
         stop:0 #1a3a6b, stop:0.5 #305bab, stop:1 #5681cf);
 }
 QPushButton#btn_blue:disabled {
-    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #4a90d9, stop:1 #7ec8f5);
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
+        stop:0 #4a90d9, stop:1 #7ec8f5);
     color: rgba(0,0,0,120);
 }
 
@@ -198,7 +199,6 @@ QPushButton#dot_active {
     min-width: 9px; max-width: 9px; min-height: 9px; max-height: 9px;
 }
 """
-
 
 _CAM_ICON_SVG = b"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
      fill="none" stroke="white" stroke-width="2"
@@ -689,13 +689,13 @@ class RetirarPage(QWidget):
         self.scan_btn.setVisible(True)
         self.opts.setVisible(False)
         num_locker = db_get_locker_num_by_id(self._id_locker)
+        db_close_sesion(self._id_sesion)
+        db_set_locker_estado(self._id_locker, "libre")
+        train_model()
 
         # Abrir cerradura solenoide para que el cliente retire sus cosas
         abrir_locker(num_locker)
 
-        db_close_sesion(self._id_sesion)
-        db_set_locker_estado(self._id_locker, "libre")
-        train_model()
         db_log_intento(self._id_locker, "retirar", "exitoso",
                        "Cliente retiro sus cosas. Sesion {} cerrada.".format(self._id_sesion),
                        id_sesion=self._id_sesion)
@@ -718,21 +718,3 @@ class RetirarPage(QWidget):
         if self.cam_thread:
             self.cam_thread.stop()
         self.go_back.emit()
-
-         # ── Reset vista ────────────────────────────────────────────────────────
-    def reset(self):
-
-        if self.cam_thread:
-            self.cam_thread.stop()
-
-        self._face_uid  = None
-        self._id_sesion = None
-        self._id_locker = None
-
-        self.opts.setVisible(False)
-        self.scan_btn.setEnabled(True)
-
-        self.scan_lbl.setText("")
-        self.scan_lbl.setStyleSheet("")
-
-        self.cam.idle()
