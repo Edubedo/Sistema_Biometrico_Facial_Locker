@@ -10,6 +10,7 @@ from views.admin.sesionesPanel import _AdminSesionesPanel
 from views.admin.usuariosPanel import _AdminUsersPanel
 from views.admin.logPanel import _AdminLogPanel
 from views.style.widgets.widgets import lbl, sep_line
+from utils.i18n import tr, get_language
 
 
 def _dp(value: float) -> int:
@@ -114,7 +115,8 @@ class AdminPage(QWidget):
         hl.setSpacing(_dp(8))
 
         # Botón cerrar sesión
-        bk = QPushButton("‹  CERRAR SESIÓN")
+        self.bk = QPushButton("")
+        bk = self.bk
         bk.setObjectName("btn_back")
         bk.setFixedHeight(_dp(28))
         bk.setStyleSheet(
@@ -138,7 +140,8 @@ class AdminPage(QWidget):
         hl.addStretch()
 
         # Título centrado
-        tit = lbl("PANEL DE ADMINISTRACIÓN", "page_title")
+        self.tit = lbl("", "page_title")
+        tit = self.tit
         tit.setStyleSheet(
             f"color: #ffffff; font-size: {_dp(11)}px; font-weight: 800;"
             f"font-family: 'Segoe UI'; letter-spacing: 2px;"
@@ -172,16 +175,16 @@ class AdminPage(QWidget):
         tab_font_size = _dp(9)                  # era 12
         tab_padding   = f"padding: {_dp(10)}px {_dp(14)}px;"  # era 14px 22px
 
-        self.t_lock = QPushButton("🔒  LOCKERS")
+        self.t_lock = QPushButton("")
         self.t_lock.setObjectName("tab"); self.t_lock.setCheckable(True); self.t_lock.setChecked(True)
 
-        self.t_ses  = QPushButton("🧾  SESIONES")
+        self.t_ses  = QPushButton("")
         self.t_ses.setObjectName("tab");  self.t_ses.setCheckable(True)
 
-        self.t_log  = QPushButton("📝  REGISTRO")       # acortado: quitamos "ACCESO"
+        self.t_log  = QPushButton("")
         self.t_log.setObjectName("tab");  self.t_log.setCheckable(True)
 
-        self.t_adm  = QPushButton("👤  ADMINS")         # acortado: quitamos "ADMINISTRADORES"
+        self.t_adm  = QPushButton("")
         self.t_adm.setObjectName("tab");  self.t_adm.setCheckable(True)
 
         for i, b in enumerate([self.t_lock, self.t_ses, self.t_log, self.t_adm]):
@@ -208,6 +211,15 @@ class AdminPage(QWidget):
             self.stack.addWidget(p)
 
         vl.addWidget(self.stack, 1)
+        self.set_language(get_language())
+
+    def set_language(self, _lang: str):
+        self.bk.setText(tr("admin.logout"))
+        self.tit.setText(tr("admin.panel"))
+        self.t_lock.setText("🔒  " + tr("admin.tab.lockers"))
+        self.t_ses.setText("🧾  " + tr("admin.tab.sessions"))
+        self.t_log.setText("📝  " + tr("admin.tab.log"))
+        self.t_adm.setText("👤  " + tr("admin.tab.admins"))
 
     def paintEvent(self, event):
         p = QPainter(self)
@@ -242,7 +254,7 @@ class AdminPage(QWidget):
         role = (admin_data.get("t_rol", "empleado") or "empleado").lower()
         self.t_adm.setEnabled(True)
         self.t_adm.setToolTip(
-            "Solo lectura" if role != "administrador" else "Gestionar administradores"
+            tr("admin.read_only") if role != "administrador" else tr("admin.manage_admins")
         )
     def showEvent(self, e):
         super().showEvent(e)

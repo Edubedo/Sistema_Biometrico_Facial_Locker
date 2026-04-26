@@ -12,6 +12,7 @@ from utils.camera import CamThread
 from utils.gpio_locker import abrir_locker
 from utils.helpers import db_get_locker_num_by_id
 from views.style.widgets.widgets import lbl, sep_line, CamWidget
+from utils.i18n import tr, get_language
 
 
 class ScanLine(QWidget):
@@ -120,7 +121,7 @@ QPushButton#btn_blue {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
         stop:0 #1a3a6b, stop:0.5 #305bab, stop:1 #678dd3);
     color: white; border: none; border-radius: 8px;
-    padding: 8px 14px; font-size: 11px; font-weight: 750;
+    padding: 13px 18px; font-size: 15px; font-weight: 800;
     font-family: 'Segoe UI', sans-serif; letter-spacing: 1px;
 }
 QPushButton#btn_blue:hover {
@@ -140,7 +141,7 @@ QPushButton#btn_blue:disabled {
 QPushButton#btn_sm {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #96bfe9, stop:1 #b8e1fa);
     color: #1d3767; border: 2px solid #305bab; border-radius: 5px;
-    padding: 3px 9px; font-size: 10px; font-family: 'Segoe UI', sans-serif;
+    padding: 6px 14px; font-size: 13px; font-family: 'Segoe UI', sans-serif; font-weight: 700;
 }
 QPushButton#btn_sm:hover   { color: #305bab; border-color: #838383; }
 QPushButton#btn_sm:pressed {
@@ -156,7 +157,7 @@ QPushButton#btn_action_red {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
         stop:0 #a40909, stop:1 #d90b0b);
     color: #ffffff; border: none; border-radius: 8px;
-    padding: 7px 10px; font-size: 10px; font-weight: 800;
+    padding: 12px 14px; font-size: 14px; font-weight: 800;
     font-family: 'Segoe UI', sans-serif;
 }
 QPushButton#btn_action_red:hover {
@@ -171,7 +172,7 @@ QPushButton#btn_action_green {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
         stop:0 #2a7c32, stop:1 #19a85b);
     color: #ffffff; border: none; border-radius: 8px;
-    padding: 7px 10px; font-size: 10px; font-weight: 800;
+    padding: 12px 14px; font-size: 14px; font-weight: 800;
     font-family: 'Segoe UI', sans-serif;
 }
 QPushButton#btn_action_green:hover {
@@ -287,12 +288,16 @@ class CarouselWidget(QWidget):
         super().__init__(parent)
         self._current = 0
         self._dot_btns = []
+        self._step_keys = [
+            "ret.step1", "ret.step2", "ret.step3", "ret.step4", "ret.step5"
+        ]
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(6)
 
-        root.addWidget(lbl("COMO FUNCIONA", "tag", Qt.AlignCenter))
+        self.how_lbl = lbl("", "tag", Qt.AlignCenter)
+        root.addWidget(self.how_lbl)
 
         self._inner = QFrame()
         self._inner.setObjectName("carousel_inner")
@@ -329,12 +334,16 @@ class CarouselWidget(QWidget):
         self._timer.timeout.connect(self._next)
         self._timer.start(2800)
         self._render(0)
+        self.set_language(get_language())
+
+    def set_language(self, _lang: str):
+        self.how_lbl.setText(tr("ret.how"))
 
     def _render(self, idx):
         self._current = idx
-        svg_data, text = CAROUSEL_STEPS[idx]
+        svg_data, _ = CAROUSEL_STEPS[idx]
         self._svg.load(svg_data)
-        self._text_lbl.setText(text)
+        self._text_lbl.setText(tr(self._step_keys[idx]))
         for i, btn in enumerate(self._dot_btns):
             btn.setObjectName("dot_active" if i == idx else "dot_inactive")
             btn.setStyle(btn.style())
@@ -382,14 +391,17 @@ class RetirarPage(QWidget):
 
         # ── Header ────────────────────────────────────────────────────────────
         hdr = QHBoxLayout(); hdr.setSpacing(8)
-        back = QPushButton("< Volver")
+        self.back_btn = QPushButton("")
+        back = self.back_btn
         back.setObjectName("btn_sm")
-        back.setFixedHeight(26)
+        back.setFixedHeight(46)
         back.setCursor(Qt.PointingHandCursor)
         back.clicked.connect(self._cancel)
         htxt = QVBoxLayout(); htxt.setSpacing(0)
-        htxt.addWidget(lbl("RETIRAR / CONTINUAR", "h2"))
-        htxt.addWidget(lbl("VERIFICACION BIOMETRICA", "tag"))
+        self.title_lbl = lbl("", "h2")
+        self.subtitle_lbl = lbl("", "tag")
+        htxt.addWidget(self.title_lbl)
+        htxt.addWidget(self.subtitle_lbl)
         hdr.addWidget(back); hdr.addSpacing(6); hdr.addLayout(htxt); hdr.addStretch()
         root.addLayout(hdr)
         root.addWidget(sep_line())
@@ -400,7 +412,7 @@ class RetirarPage(QWidget):
         # ── Panel izquierdo ───────────────────────────────────────────────────
         left = QFrame(); left.setObjectName("card")
         left.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
-        left.setFixedWidth(270)
+        left.setFixedWidth(300)
         ll = QVBoxLayout(left)
         ll.setContentsMargins(10, 8, 10, 8)
         ll.setSpacing(6)
@@ -410,9 +422,9 @@ class RetirarPage(QWidget):
 
         self.scan_btn = QPushButton("  INICIAR ESCANEO")
         self.scan_btn.setObjectName("btn_blue")
-        self.scan_btn.setIcon(_svg_to_icon(_CAM_ICON_SVG, 15))
-        self.scan_btn.setIconSize(QSize(15, 15))
-        self.scan_btn.setFixedHeight(34)
+        self.scan_btn.setIcon(_svg_to_icon(_CAM_ICON_SVG, 24))
+        self.scan_btn.setIconSize(QSize(24, 24))
+        self.scan_btn.setFixedHeight(80)
         self.scan_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.scan_btn.setCursor(Qt.PointingHandCursor)
         self.scan_btn.clicked.connect(self._start_scan)
@@ -430,7 +442,8 @@ class RetirarPage(QWidget):
         right.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         rl = QVBoxLayout(right)
         rl.setContentsMargins(6, 6, 6, 6); rl.setSpacing(4)
-        rl.addWidget(lbl("ESCANER BIOMETRICO", "tag", Qt.AlignCenter))
+        self.scan_title_lbl = lbl("", "tag", Qt.AlignCenter)
+        rl.addWidget(self.scan_title_lbl)
 
         # ── Card de acciones post-deteccion ───────────────────────────────────
         self.opts = QFrame()
@@ -447,16 +460,16 @@ class RetirarPage(QWidget):
         btn_row = QHBoxLayout(); btn_row.setSpacing(8)
         self.btn_retirar = QPushButton("RETIRAR Y SALIR")
         self.btn_retirar.setObjectName("btn_action_red")
-        self.btn_retirar.setIcon(_svg_to_icon(_RETIRAR_ICON_SVG, 14))
-        self.btn_retirar.setIconSize(QSize(14, 14))
-        self.btn_retirar.setFixedHeight(36)
+        self.btn_retirar.setIcon(_svg_to_icon(_RETIRAR_ICON_SVG, 22))
+        self.btn_retirar.setIconSize(QSize(22, 22))
+        self.btn_retirar.setFixedHeight(62)
         self.btn_retirar.clicked.connect(self._do_retirar)
 
         self.btn_seguir = QPushButton("SEGUIR COMPRANDO")
         self.btn_seguir.setObjectName("btn_action_green")
-        self.btn_seguir.setIcon(_svg_to_icon(_SEGUIR_ICON_SVG, 14))
-        self.btn_seguir.setIconSize(QSize(14, 14))
-        self.btn_seguir.setFixedHeight(36)
+        self.btn_seguir.setIcon(_svg_to_icon(_SEGUIR_ICON_SVG, 22))
+        self.btn_seguir.setIconSize(QSize(22, 22))
+        self.btn_seguir.setFixedHeight(62)
         self.btn_seguir.clicked.connect(self._do_seguir)
 
         btn_row.addWidget(self.btn_retirar, 1)
@@ -500,6 +513,19 @@ class RetirarPage(QWidget):
         self.scan_frame.setVisible(False)
 
         self.scan_line = ScanLine(self.cam)
+        self.set_language(get_language())
+
+    def set_language(self, lang: str):
+        self.back_btn.setText(tr("ret.back"))
+        self.title_lbl.setText(tr("ret.title"))
+        self.subtitle_lbl.setText(tr("ret.subtitle"))
+        self.scan_title_lbl.setText(tr("ret.scan_title"))
+        self.scan_btn.setText(tr("ret.start"))
+        self.btn_retirar.setText(tr("ret.btn_take"))
+        self.btn_seguir.setText(tr("ret.btn_continue"))
+        self._carousel.set_language(lang)
+        self._carousel._render(self._carousel._current)
+        self._carousel.set_language(lang)
 
     # ── Eventos ───────────────────────────────────────────────────────────────
 
@@ -523,7 +549,7 @@ class RetirarPage(QWidget):
     def _start_scan(self):
         labels = train_model()
         if not labels:
-            self.scan_lbl.setText("No hay biometrias registradas.")
+            self.scan_lbl.setText(tr("ret.no_biometrics"))
             return
         if self.cam_thread:
             self.cam_thread.stop()
@@ -554,7 +580,7 @@ class RetirarPage(QWidget):
             self.scan_frame.setVisible(False)
             self.scan_line.hide()
             self.face_guide.setVisible(False)
-            self.scan_lbl.setText("No se pudo abrir la camara. Verifica que no este en uso.")
+            self.scan_lbl.setText(tr("ret.cam_open_error"))
             db_log_intento(1, "retirar", "fallido",
                            "No se pudo abrir la camara en escaneo de retirar")
             return
@@ -565,7 +591,7 @@ class RetirarPage(QWidget):
             self.face_guide.setVisible(False)
             db_log_intento(1, "retirar", "fallido",
                            "Rostro no reconocido en escaneo de retirar")
-            self.scan_lbl.setText("No se reconocio el rostro. Intenta de nuevo.")
+            self.scan_lbl.setText(tr("ret.not_recognized"))
             return
 
         sesion = db_get_active_sesion_by_face(face_uid)
@@ -574,7 +600,7 @@ class RetirarPage(QWidget):
             self.scan_frame.setVisible(False)
             self.scan_line.hide()
             self.face_guide.setVisible(False)
-            self.scan_lbl.setText("No tienes una sesion activa.")
+            self.scan_lbl.setText(tr("ret.no_active_session"))
             return
 
         self._face_uid = face_uid
@@ -586,8 +612,8 @@ class RetirarPage(QWidget):
 
         num_locker = db_get_locker_num_by_id(self._id_locker)
         self.scan_lbl.setText("")
-        self.id_lbl.setText("Identidad verificada")
-        self.locker_lbl.setText("Tu locker: #{}".format(num_locker))
+        self.id_lbl.setText(tr("ret.verified"))
+        self.locker_lbl.setText(tr("ret.your_locker", n=num_locker))
         self.scan_frame.setVisible(False)
         self.scan_line.hide()
         self.scan_btn.setVisible(False)
@@ -602,9 +628,9 @@ class RetirarPage(QWidget):
 
         self._detected_left = 3
         dlg = QMessageBox(self)
-        dlg.setWindowTitle("Deteccion exitosa")
-        dlg.setText("Rostro detectado correctamente")
-        dlg.setInformativeText("Elige una opcion para continuar (3s)")
+        dlg.setWindowTitle(tr("ret.detect_title"))
+        dlg.setText(tr("ret.detect_text"))
+        dlg.setInformativeText(tr("ret.choice_prompt", n=3))
         dlg.setIcon(QMessageBox.Information)
         dlg.setStandardButtons(QMessageBox.NoButton)
         dlg.setWindowModality(Qt.NonModal)
@@ -634,7 +660,7 @@ class RetirarPage(QWidget):
             self._close_detected_dialog()
             return
         self._detected_msg.setInformativeText(
-            "Elige una opcion para continuar ({}s)".format(self._detected_left)
+            tr("ret.choice_prompt", n=self._detected_left)
         )
 
     def _close_detected_dialog(self):

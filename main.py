@@ -41,6 +41,7 @@ from views.admin.adminPage import  AdminPage
 from views.admin.loginPage import AdminLoginPage
 
 from biometria.biometria import train_model
+from utils.i18n import set_language, get_language, tr
 
 load_dotenv()  
 
@@ -93,6 +94,7 @@ class MainWindow(QMainWindow):
         self.p_home.go_guardar.connect(lambda: self._nav(self.GUARD))
         self.p_home.go_retirar.connect(lambda: self._nav(self.RETIR))
         self.p_home.go_admin.connect(lambda: self._nav(self.ALOGIN))
+        self.p_home.language_changed.connect(self._on_language_changed)
 
         self.p_guard.go_back.connect(lambda: self._nav(self.HOME))
         guard_done = getattr(self.p_guard, "done", None)
@@ -104,7 +106,7 @@ class MainWindow(QMainWindow):
         guard_failed = getattr(self.p_guard, "failed", None)
         if guard_failed is not None:
             guard_failed.connect(
-                lambda msg: self._show_result("err", "Sin espacio", msg)
+                lambda msg: self._show_result("err", tr("flow.no_space_title"), msg)
             )
         else:
             print("[WARN] GuardarPage no expone la senal 'failed'.")
@@ -120,7 +122,14 @@ class MainWindow(QMainWindow):
 
         self.p_admin.go_back.connect(lambda: self._nav(self.HOME))
 
+        self._on_language_changed(get_language())
         self._nav(self.HOME)
+
+    def _on_language_changed(self, lang):
+        set_language(lang)
+        for p in (self.p_home, self.p_guard, self.p_retir, self.p_alogin, self.p_admin):
+            if hasattr(p, "set_language"):
+                p.set_language(lang)
 
     # ── Navegacion ────────────────────────────────────────────────────────────
 
@@ -143,8 +152,8 @@ class MainWindow(QMainWindow):
         self.p_guard.reset()
         self._show_result(
             "ok_blue",
-            "Locker Asignado",
-            "Tus pertenencias quedaran seguras. Recuerda tu numero de locker.",
+            tr("flow.assigned_title"),
+            tr("flow.assigned_sub"),
             "LOCKER  #{}".format(num_locker)
         )
 
@@ -153,8 +162,8 @@ class MainWindow(QMainWindow):
         self.p_retir.reset()
         self._show_result(
             "ok_blue",
-            "Hasta Pronto",
-            "El locker #{} ha sido liberado. Recoge tus cosas.".format(num_locker),
+            tr("flow.bye_title"),
+            tr("flow.bye_sub", n=num_locker),
             "LOCKER  #{}".format(num_locker)
         )
 
@@ -164,8 +173,8 @@ class MainWindow(QMainWindow):
         detail = "LOCKER  #{}".format(num_locker) if num_locker else ""
         self._show_result(
             "ok_blue",
-            "Que sigas comprando",
-            "Tus cosas permanecen seguras. Tu locker sigue activo.",
+            tr("flow.keep_title"),
+            tr("flow.keep_sub"),
             detail
         )
 

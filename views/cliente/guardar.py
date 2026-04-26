@@ -15,6 +15,7 @@ from db.models.sesiones import db_create_sesion
 from utils.camera import CamThread
 from utils.gpio_locker import abrir_locker
 from views.style.widgets.widgets import lbl, sep_line, CamWidget
+from utils.i18n import tr, get_language
 
 
 class ScanLine(QWidget):
@@ -115,7 +116,7 @@ QPushButton#btn_blue {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
         stop:0 #1a3a6b, stop:0.5 #305bab, stop:1 #678dd3);
     color: white; border: none; border-radius: 8px;
-    padding: 8px 14px; font-size: 11px; font-weight: 750;
+    padding: 16px 20px; font-size: 17px; font-weight: 800;
     font-family: 'Segoe UI', sans-serif; letter-spacing: 1px;
 }
 QPushButton#btn_blue:hover {
@@ -133,7 +134,7 @@ QPushButton#btn_blue:disabled {
 QPushButton#btn_sm {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #96bfe9, stop:1 #b8e1fa);
     color: #1d3767; border: 2px solid #305bab; border-radius: 5px;
-    padding: 3px 9px; font-size: 10px; font-family: 'Segoe UI', sans-serif;
+    padding: 6px 14px; font-size: 13px; font-family: 'Segoe UI', sans-serif; font-weight: 700;
 }
 QPushButton#btn_sm:hover   { color: #305bab; border-color: #838383; }
 QPushButton#btn_sm:pressed {
@@ -226,12 +227,16 @@ class CarouselWidget(QWidget):
         super().__init__(parent)
         self._current = 0
         self._dot_btns = []
+        self._step_keys = [
+            "guard.step1", "guard.step2", "guard.step3", "guard.step4", "guard.step5"
+        ]
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(6)
 
-        root.addWidget(lbl("COMO FUNCIONA", "tag", Qt.AlignCenter))
+        self.how_lbl = lbl("", "tag", Qt.AlignCenter)
+        root.addWidget(self.how_lbl)
 
         # Card blanco interior — stretch=1 para llenar espacio disponible
         self._inner = QFrame()
@@ -269,12 +274,17 @@ class CarouselWidget(QWidget):
         self._timer.timeout.connect(self._next)
         self._timer.start(2800)
         self._render(0)
+        self.set_language(get_language())
+
+    def set_language(self, _lang: str):
+        self.how_lbl.setText(tr("guard.how"))
+        self._render(self._current)
 
     def _render(self, idx):
         self._current = idx
-        svg_data, text = CAROUSEL_STEPS[idx]
+        svg_data, _ = CAROUSEL_STEPS[idx]
         self._svg.load(svg_data)
-        self._text_lbl.setText(text)
+        self._text_lbl.setText(tr(self._step_keys[idx]))
         for i, btn in enumerate(self._dot_btns):
             btn.setObjectName("dot_active" if i == idx else "dot_inactive")
             btn.setStyle(btn.style())
@@ -310,14 +320,17 @@ class GuardarPage(QWidget):
 
         # Header
         hdr = QHBoxLayout(); hdr.setSpacing(8)
-        back = QPushButton("< Volver")
+        self.back_btn = QPushButton("")
+        back = self.back_btn
         back.setObjectName("btn_sm")
-        back.setFixedHeight(26)
+        back.setFixedHeight(46)
         back.setCursor(Qt.PointingHandCursor)
         back.clicked.connect(self._cancel)
         htxt = QVBoxLayout(); htxt.setSpacing(0)
-        htxt.addWidget(lbl("GUARDAR PERTENENCIAS", "h2"))
-        htxt.addWidget(lbl("ASIGNACION AUTOMATICA DE LOCKER", "tag"))
+        self.title_lbl = lbl("", "h2")
+        self.subtitle_lbl = lbl("", "tag")
+        htxt.addWidget(self.title_lbl)
+        htxt.addWidget(self.subtitle_lbl)
         hdr.addWidget(back); hdr.addSpacing(6); hdr.addLayout(htxt); hdr.addStretch()
         root.addLayout(hdr)
         root.addWidget(sep_line())
@@ -336,11 +349,11 @@ class GuardarPage(QWidget):
         self._carousel = CarouselWidget()
         ll.addWidget(self._carousel, 1)
 
-        self.start_btn = QPushButton("  REGISTRAR BIOMETRIA")
+        self.start_btn = QPushButton("  INICIAR ESCANEO")
         self.start_btn.setObjectName("btn_blue")
-        self.start_btn.setIcon(_svg_to_icon(_CAM_ICON_SVG, 15))
-        self.start_btn.setIconSize(QSize(15, 15))
-        self.start_btn.setFixedHeight(34)
+        self.start_btn.setIcon(_svg_to_icon(_CAM_ICON_SVG, 28))
+        self.start_btn.setIconSize(QSize(28, 28))
+        self.start_btn.setFixedHeight(82)
         self.start_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.start_btn.setCursor(Qt.PointingHandCursor)
         self.start_btn.clicked.connect(self._start_capture)
@@ -358,7 +371,8 @@ class GuardarPage(QWidget):
         right.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         rl = QVBoxLayout(right)
         rl.setContentsMargins(6, 6, 6, 6); rl.setSpacing(4)
-        rl.addWidget(lbl("ESCANER BIOMETRICO", "tag", Qt.AlignCenter))
+        self.scan_title_lbl = lbl("", "tag", Qt.AlignCenter)
+        rl.addWidget(self.scan_title_lbl)
 
         self.cam = CamWidget(self._CAM_W, self._CAM_H)
         self.cam.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -394,6 +408,15 @@ class GuardarPage(QWidget):
         self.scan_frame.setVisible(False)
 
         self.scan_line = ScanLine(self.cam)
+        self.set_language(get_language())
+
+    def set_language(self, lang: str):
+        self.back_btn.setText(tr("guard.back"))
+        self.title_lbl.setText(tr("guard.title"))
+        self.subtitle_lbl.setText(tr("guard.subtitle"))
+        self.scan_title_lbl.setText(tr("guard.scan_title"))
+        self.start_btn.setText(tr("guard.start"))
+        self._carousel.set_language(lang)
 
     def showEvent(self, e):
         super().showEvent(e)
@@ -404,7 +427,7 @@ class GuardarPage(QWidget):
             self.err_lbl.setText("")
         else:
             self._id_locker = None
-            self.err_lbl.setText("No hay lockers disponibles en este momento.")
+            self.err_lbl.setText(tr("guard.no_lockers_now"))
             self.start_btn.setEnabled(False)
 
     def resizeEvent(self, event):
@@ -413,7 +436,7 @@ class GuardarPage(QWidget):
 
     def _start_capture(self):
         if not self._id_locker:
-            self.err_lbl.setText("Sin lockers disponibles.")
+            self.err_lbl.setText(tr("guard.no_lockers"))
             return
         tmp_uid = "tmp_{}".format(datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
         self._face_uid = tmp_uid
@@ -440,28 +463,28 @@ class GuardarPage(QWidget):
         self.scan_line.hide()
         self.face_guide.setVisible(False)
         if tmp_uid == CamThread.CAMERA_ERROR:
-            self.cam.set_status("No se pudo abrir la camara.", "#bd0a0a")
+            self.cam.set_status(tr("guard.cam_open_error"), "#bd0a0a")
             self.cam.idle()
             if self._id_locker:
                 db_log_intento(self._id_locker, "registro_biometrico", "fallido",
                                "No se pudo abrir la camara en registro")
-            self.err_lbl.setText("No se pudo abrir la camara. Verifica que no este en uso.")
+            self.err_lbl.setText(tr("guard.cam_open_error"))
             return
         if not ok:
-            self.cam.set_status("No se pudo leer el rostro. Intenta de nuevo.", "#bd0a0a")
+            self.cam.set_status(tr("guard.capture_error"), "#bd0a0a")
             self.cam.idle()
             delete_face_data(tmp_uid)
             if self._id_locker:
                 db_log_intento(self._id_locker, "registro_biometrico", "fallido",
                                "Error durante la captura de imagenes")
-            self.err_lbl.setText("Error al capturar. Intenta de nuevo.")
+            self.err_lbl.setText(tr("guard.capture_error"))
             return
-        self.cam.set_status("Rostro leido correctamente.", "#B9EA89")
+        self.cam.set_status(tr("guard.face_ok"), "#B9EA89")
         QTimer.singleShot(850, self.cam.idle)
         locker = db_next_free_locker()
         if not locker:
             delete_face_data(tmp_uid)
-            self.failed.emit("Sin lockers disponibles.")
+            self.failed.emit(tr("guard.no_lockers"))
             return
         id_locker, num_locker = locker
         id_sesion = db_create_sesion(id_locker, tmp_uid)

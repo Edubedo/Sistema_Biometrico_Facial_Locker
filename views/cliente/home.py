@@ -6,10 +6,11 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtGui import (
     QPainter, QColor, QBrush, QPen, QFont,
-    QLinearGradient
+    QLinearGradient, QPixmap
 )
 
 from db.models.lockers import db_get_all_lockers
+from utils.i18n import tr, get_language
 
 
 def _dp(value: float) -> int:
@@ -49,16 +50,41 @@ QLabel#date_lbl {
 QPushButton#btn_admin {
     background: rgba(255,255,255,0.12);
     color: #ffffff;
-    border: 1px solid rgba(255,255,255,0.35);
-    border-radius: 6px;
+    border: 2px solid rgba(255,255,255,0.40);
+    border-radius: 9px;
     font-family: 'Segoe UI', sans-serif;
     letter-spacing: 2px;
+    font-weight: 800;
 }
 QPushButton#btn_admin:hover   { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.6); }
 QPushButton#btn_admin:pressed { background: rgba(255,255,255,0.08); }
 QFrame#h_divider {
     background: #cfd8e3; border: none;
     min-height: 1px; max-height: 1px;
+}
+QFrame#lang_switch {
+    background: rgba(255,255,255,0.16);
+    border: 1px solid rgba(255,255,255,0.34);
+    border-radius: 8px;
+}
+QPushButton#lang_btn {
+    background: transparent;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    font-family: 'Segoe UI', sans-serif;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+QPushButton#lang_btn:hover { background: rgba(255,255,255,0.15); }
+QPushButton#lang_btn_active {
+    background: #ffffff;
+    color: #1459a8;
+    border: none;
+    border-radius: 6px;
+    font-family: 'Segoe UI', sans-serif;
+    font-weight: 900;
+    letter-spacing: 1px;
 }
 """
 
@@ -228,6 +254,7 @@ class HomePage(QWidget):
     go_guardar = pyqtSignal()
     go_retirar = pyqtSignal()
     go_admin   = pyqtSignal()
+    language_changed = pyqtSignal(str)
 
     def __init__(self):
         super().__init__()
@@ -241,23 +268,26 @@ class HomePage(QWidget):
         # ── Header ────────────────────────────────────────────────────────────
         header = QFrame()
         header.setObjectName("header_strip")
-        header.setFixedHeight(_dp(48))
+        header.setFixedHeight(_dp(142))
 
         hl = QHBoxLayout(header)
-        hl.setContentsMargins(_dp(12), 0, _dp(12), 0)
+        hl.setContentsMargins(_dp(16), _dp(6), _dp(16), _dp(6))
         hl.setSpacing(_dp(10))
+
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        logo_path = os.path.join(project_root, "logo_LockZtar_Negro.png")
+
+        logo_lbl = QLabel()
+        logo_lbl.setFixedSize(_dp(230), _dp(128))
+        logo_lbl.setAlignment(Qt.AlignCenter)
+        logo_px = QPixmap(logo_path)
+        if not logo_px.isNull():
+            logo_lbl.setPixmap(logo_px.scaled(_dp(214), _dp(118), Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        hl.addWidget(logo_lbl, 0, Qt.AlignVCenter)
 
         # Izquierda: título del sistema
         tcol = QVBoxLayout()
         tcol.setSpacing(0)
-        sl = QLabel("SUPERLOCKER")
-        sl.setObjectName("sys_label")
-        sl.setStyleSheet(f"font-size: {_dp(9)}px;")
-        tl = QLabel("ACCESO")
-        tl.setObjectName("sys_title")
-        tl.setStyleSheet(f"font-size: {_dp(14)}px;")
-        tcol.addWidget(sl)
-        tcol.addWidget(tl)
         hl.addLayout(tcol)
 
         hl.addStretch()
@@ -269,40 +299,76 @@ class HomePage(QWidget):
         self.clock_lbl = QLabel("00:00:00")
         self.clock_lbl.setObjectName("clock_lbl")
         self.clock_lbl.setAlignment(Qt.AlignCenter)
-        self.clock_lbl.setStyleSheet(f"font-size: {_dp(13)}px;")
+        self.clock_lbl.setStyleSheet(f"font-size: {_dp(18)}px;")
         self.date_lbl = QLabel("---")
         self.date_lbl.setObjectName("date_lbl")
         self.date_lbl.setAlignment(Qt.AlignCenter)
-        self.date_lbl.setStyleSheet(f"font-size: {_dp(9)}px;")
+        self.date_lbl.setStyleSheet(f"font-size: {_dp(11)}px;")
         ccol.addWidget(self.clock_lbl)
         ccol.addWidget(self.date_lbl)
         hl.addLayout(ccol)
 
         hl.addStretch()
 
-        # Derecha: botón ADMIN — vive en el header, sobre fondo azul
-        adm = QPushButton("⚙  ADMIN")
-        adm.setObjectName("btn_admin")
-        adm.setFixedHeight(_dp(30))
-        adm.setStyleSheet(
-            adm.styleSheet() +
-            f"font-size: {_dp(9)}px; padding: 0px {_dp(14)}px;"
+        # Derecha: selector de idioma + ADMIN
+        lcol = QVBoxLayout()
+        lcol.setSpacing(_dp(2))
+        lcol.setAlignment(Qt.AlignVCenter)
+
+        self.lang_lbl = QLabel("")
+        self.lang_lbl.setAlignment(Qt.AlignRight)
+        self.lang_lbl.setStyleSheet(
+            f"color:#ffffff; font-size:{_dp(9)}px; font-weight:700; font-family:'Segoe UI';"
         )
-        adm.setCursor(Qt.PointingHandCursor)
-        adm.clicked.connect(self.go_admin.emit)
-        hl.addWidget(adm, 0, Qt.AlignVCenter)
+
+        self.lang_switch = QFrame()
+        self.lang_switch.setObjectName("lang_switch")
+        self.lang_switch.setFixedSize(_dp(122), _dp(34))
+        swl = QHBoxLayout(self.lang_switch)
+        swl.setContentsMargins(_dp(3), _dp(3), _dp(3), _dp(3))
+        swl.setSpacing(_dp(3))
+
+        self.btn_lang_es = QPushButton("ES")
+        self.btn_lang_es.setCursor(Qt.PointingHandCursor)
+        self.btn_lang_es.clicked.connect(lambda: self._set_lang("es", emit=True))
+        self.btn_lang_es.setFixedSize(_dp(55), _dp(26))
+
+        self.btn_lang_en = QPushButton("EN")
+        self.btn_lang_en.setCursor(Qt.PointingHandCursor)
+        self.btn_lang_en.clicked.connect(lambda: self._set_lang("en", emit=True))
+        self.btn_lang_en.setFixedSize(_dp(55), _dp(26))
+
+        swl.addWidget(self.btn_lang_es)
+        swl.addWidget(self.btn_lang_en)
+
+        lcol.addWidget(self.lang_lbl)
+        lcol.addWidget(self.lang_switch)
+        hl.addLayout(lcol)
+
+        self.adm = QPushButton("")
+        self.adm.setObjectName("btn_admin")
+        self.adm.setFixedSize(_dp(184), _dp(52))
+        self.adm.setStyleSheet(
+            self.adm.styleSheet() +
+            f"font-size: {_dp(14)}px; padding: 0px {_dp(20)}px;"
+        )
+        self.adm.setCursor(Qt.PointingHandCursor)
+        self.adm.clicked.connect(self.go_admin.emit)
+        self.adm.setFocusPolicy(Qt.NoFocus)
+        hl.addWidget(self.adm, 0, Qt.AlignVCenter)
 
         root.addWidget(header)
 
         # ── Área de botones — HORIZONTAL ──────────────────────────────────────
         btn_area = QWidget()
         bl = QHBoxLayout(btn_area)
-        bl.setContentsMargins(_dp(16), _dp(10), _dp(16), _dp(10))
-        bl.setSpacing(_dp(12))
+        bl.setContentsMargins(_dp(18), _dp(12), _dp(18), _dp(12))
+        bl.setSpacing(_dp(14))
 
-        self.btn_guardar = BigLockerButton("store",    "Guardar",
-                                           "Lockers desocupados: —")
-        self.btn_recoger = BigLockerButton("retrieve", "Recoger")
+        self.btn_guardar = BigLockerButton("store", "", "")
+        self.btn_recoger = BigLockerButton("retrieve", "")
+        self.btn_guardar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.btn_recoger.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         self.btn_guardar.clicked.connect(self.go_guardar.emit)
         self.btn_recoger.clicked.connect(self.go_retirar.emit)
@@ -324,12 +390,13 @@ class HomePage(QWidget):
         sr = QHBoxLayout()
         sr.setSpacing(_dp(4))
         sr.addWidget(StatusDot())
-        stl = QLabel("EN LÍNEA")
+        stl = QLabel("")
         stl.setStyleSheet(
             f"color: #000000; font-size: {_dp(9)}px;"
             f"font-family: 'Segoe UI'; font-weight: 600; letter-spacing: 2px;"
         )
         sr.addWidget(stl)
+        self.status_lbl = stl
         fwl.addLayout(sr)
         fwl.addStretch()
         root.addWidget(fw)
@@ -339,6 +406,29 @@ class HomePage(QWidget):
         ct.timeout.connect(self._tick_clock)
         ct.start(1000)
         self._tick_clock()
+        self.set_language(get_language())
+
+    def _set_lang(self, lang: str, emit: bool = False):
+        lang = "en" if lang == "en" else "es"
+        self._lang = lang
+        self.btn_lang_es.setObjectName("lang_btn_active" if lang == "es" else "lang_btn")
+        self.btn_lang_en.setObjectName("lang_btn_active" if lang == "en" else "lang_btn")
+        self.btn_lang_es.style().unpolish(self.btn_lang_es)
+        self.btn_lang_es.style().polish(self.btn_lang_es)
+        self.btn_lang_en.style().unpolish(self.btn_lang_en)
+        self.btn_lang_en.style().polish(self.btn_lang_en)
+        if emit:
+            self.language_changed.emit(lang)
+
+    def set_language(self, lang: str):
+        self._set_lang(lang, emit=False)
+        self.lang_lbl.setText(tr("home.lang"))
+        self.adm.setText("⚙  " + tr("home.admin"))
+        self.btn_guardar.label = tr("home.store")
+        self.btn_recoger.label = tr("home.pickup")
+        self.status_lbl.setText(tr("home.online"))
+        self.btn_guardar.update()
+        self.btn_recoger.update()
 
     def paintEvent(self, event):
         p = QPainter(self)
@@ -358,4 +448,4 @@ class HomePage(QWidget):
     def refresh(self):
         lockers = db_get_all_lockers()
         free    = sum(1 for l in lockers if l["t_estado"] == "libre")
-        self.btn_guardar.set_sublabel(f"  {free} lockers libres ")
+        self.btn_guardar.set_sublabel(tr("home.free_lockers", n=free))

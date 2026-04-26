@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLab
 from PyQt5.QtGui import QPainter, QColor, QBrush, QLinearGradient, QRadialGradient, QFont
 
 from views.style.widgets.widgets import AutoTimer, AUTO_HOME_SEC
+from utils.i18n import tr
 
 
 def _dp(v):
@@ -177,7 +178,13 @@ class ResultPage(QWidget):
         cl.addSpacing(_dp(4))
 
         # Status badge
-        badge = QLabel(cfg["label"])
+        badge_key = {
+            "ok": "result.ok",
+            "ok_blue": "result.ok",
+            "warn": "result.warn",
+            "err": "result.err",
+        }.get(kind, "result.ok")
+        badge = QLabel(tr(badge_key))
         badge.setAlignment(Qt.AlignCenter)
         badge.setStyleSheet(f"""
             background: {cfg['badge_bg'].name()};
@@ -238,7 +245,7 @@ class ResultPage(QWidget):
         cl.addSpacing(_dp(8))
 
         # Button
-        btn = QPushButton("VOLVER AL INICIO")
+        btn = QPushButton(tr("result.home"))
         btn.setCursor(Qt.PointingHandCursor)
         btn.setFixedWidth(_dp(260))
         btn.setFixedHeight(_dp(46))
