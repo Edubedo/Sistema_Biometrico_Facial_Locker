@@ -1,5 +1,5 @@
-import os
-import sys
+import os # Sistema operativo
+import sys 
 
 try:
     from dotenv import load_dotenv

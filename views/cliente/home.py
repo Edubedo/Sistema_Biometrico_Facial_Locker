@@ -38,15 +38,8 @@ QLabel#sys_label {
     font-family: 'Segoe UI', sans-serif;
     letter-spacing: 2px;
 }
-QLabel#clock_lbl {
-    color: #ffffff;
-    font-weight: 700;
-    font-family: 'Segoe UI', sans-serif;
-}
-QLabel#date_lbl {
-    color: #ccddff;
-    font-family: 'Segoe UI', sans-serif;
-}
+
+
 QPushButton#btn_admin {
     background: rgba(255,255,255,0.12);
     color: #ffffff;
@@ -75,6 +68,7 @@ QPushButton#lang_btn {
     font-family: 'Segoe UI', sans-serif;
     font-weight: 800;
     letter-spacing: 1px;
+    font-size: 14px;
 }
 QPushButton#lang_btn:hover { background: rgba(255,255,255,0.15); }
 QPushButton#lang_btn_active {
@@ -85,6 +79,7 @@ QPushButton#lang_btn_active {
     font-family: 'Segoe UI', sans-serif;
     font-weight: 900;
     letter-spacing: 1px;
+    font-size: 14px;
 }
 """
 
@@ -296,16 +291,6 @@ class HomePage(QWidget):
         ccol = QVBoxLayout()
         ccol.setSpacing(0)
         ccol.setAlignment(Qt.AlignCenter)
-        self.clock_lbl = QLabel("00:00:00")
-        self.clock_lbl.setObjectName("clock_lbl")
-        self.clock_lbl.setAlignment(Qt.AlignCenter)
-        self.clock_lbl.setStyleSheet(f"font-size: {_dp(18)}px;")
-        self.date_lbl = QLabel("---")
-        self.date_lbl.setObjectName("date_lbl")
-        self.date_lbl.setAlignment(Qt.AlignCenter)
-        self.date_lbl.setStyleSheet(f"font-size: {_dp(11)}px;")
-        ccol.addWidget(self.clock_lbl)
-        ccol.addWidget(self.date_lbl)
         hl.addLayout(ccol)
 
         hl.addStretch()
@@ -318,12 +303,12 @@ class HomePage(QWidget):
         self.lang_lbl = QLabel("")
         self.lang_lbl.setAlignment(Qt.AlignRight)
         self.lang_lbl.setStyleSheet(
-            f"color:#ffffff; font-size:{_dp(9)}px; font-weight:700; font-family:'Segoe UI';"
+            f"color:#ffffff; font-size:{_dp(15)}px; font-weight:700; font-family:'Segoe UI';"
         )
 
         self.lang_switch = QFrame()
         self.lang_switch.setObjectName("lang_switch")
-        self.lang_switch.setFixedSize(_dp(122), _dp(34))
+        self.lang_switch.setFixedSize(_dp(200), _dp(60))
         swl = QHBoxLayout(self.lang_switch)
         swl.setContentsMargins(_dp(3), _dp(3), _dp(3), _dp(3))
         swl.setSpacing(_dp(3))
@@ -331,12 +316,12 @@ class HomePage(QWidget):
         self.btn_lang_es = QPushButton("ES")
         self.btn_lang_es.setCursor(Qt.PointingHandCursor)
         self.btn_lang_es.clicked.connect(lambda: self._set_lang("es", emit=True))
-        self.btn_lang_es.setFixedSize(_dp(55), _dp(26))
+        self.btn_lang_es.setFixedSize(_dp(95), _dp(48))
 
         self.btn_lang_en = QPushButton("EN")
         self.btn_lang_en.setCursor(Qt.PointingHandCursor)
         self.btn_lang_en.clicked.connect(lambda: self._set_lang("en", emit=True))
-        self.btn_lang_en.setFixedSize(_dp(55), _dp(26))
+        self.btn_lang_en.setFixedSize(_dp(95), _dp(48))
 
         swl.addWidget(self.btn_lang_es)
         swl.addWidget(self.btn_lang_en)
@@ -442,8 +427,6 @@ class HomePage(QWidget):
     def _tick_clock(self):
         from PyQt5.QtCore import QDateTime
         dt = QDateTime.currentDateTime()
-        self.clock_lbl.setText(dt.toString("HH:mm:ss"))
-        self.date_lbl.setText(dt.toString("ddd dd MMM").upper())
 
     def refresh(self):
         lockers = db_get_all_lockers()

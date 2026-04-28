@@ -163,17 +163,17 @@ class AdminPage(QWidget):
         vl.addWidget(header)
 
         # ── Tab bar ───────────────────────────────────────────────────────────
-        # En 800px de ancho con 4 tabs, reducimos padding para que quepan bien
+        # En 800px de ancho con 4 tabs, aumentamos tamaño para mejor visibilidad
         tab_bar = QFrame()
         tab_bar.setObjectName("tab_bar")
-        tab_bar.setFixedHeight(_dp(40))         # era 56
+        tab_bar.setFixedHeight(_dp(56))         # aumentado de 40
 
         tbl = QHBoxLayout(tab_bar)
         tbl.setContentsMargins(_dp(4), 0, _dp(4), 0)
         tbl.setSpacing(0)
 
-        tab_font_size = _dp(9)                  # era 12
-        tab_padding   = f"padding: {_dp(10)}px {_dp(14)}px;"  # era 14px 22px
+        tab_font_size = _dp(11)                  # aumentado de 9
+        tab_padding   = f"padding: {_dp(14)}px {_dp(18)}px;"  # aumentado de 10px 14px
 
         self.t_lock = QPushButton("")
         self.t_lock.setObjectName("tab"); self.t_lock.setCheckable(True); self.t_lock.setChecked(True)

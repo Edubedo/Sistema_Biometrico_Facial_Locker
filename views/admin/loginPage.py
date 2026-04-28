@@ -1,9 +1,10 @@
+import os
 from PyQt5.QtCore import Qt, pyqtSignal, QEvent
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QLineEdit, QFrame, QSizePolicy, QLabel, QApplication, QGridLayout
 )
-from PyQt5.QtGui import QPainter, QColor, QBrush, QLinearGradient
+from PyQt5.QtGui import QPainter, QColor, QBrush, QLinearGradient, QPixmap
 
 from db.models.intentos_acceso import db_log_intento
 from db.models.usuarios import db_admin_exists, db_admin_valid, db_get_admin_by_username
@@ -219,10 +220,6 @@ class AdminLoginPage(QWidget):
         super().__init__()
         self.setObjectName("admin_login_page")
         self.setStyleSheet(STYLE)
-        self._active_input = None
-        self._caps = False
-        self._kbd_alpha_btns = []   # (widget, valor_lower)
-        self._caps_btn_ref   = None
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -243,19 +240,6 @@ class AdminLoginPage(QWidget):
         left.setSpacing(_dp(8))
         left.setAlignment(Qt.AlignVCenter)
 
-        br = QHBoxLayout()
-        br.setSpacing(_dp(8))
-        br.setAlignment(Qt.AlignCenter)
-        bicon = lbl("🔒", "brand_icon", Qt.AlignCenter)
-        bicon.setStyleSheet(f"font-size: {_dp(28)}px;")
-        bname = lbl("SuperLocker", "brand_name", Qt.AlignCenter)
-        bname.setStyleSheet(f"font-size: {_dp(16)}px;")
-        br.addWidget(bicon)
-        br.addWidget(bname)
-        left.addLayout(br)
-
-        left.addSpacing(_dp(12))
-
         ew = lbl("ADMINISTRACIÓN", "eyebrow", Qt.AlignCenter)
         ew.setStyleSheet(f"font-size: {_dp(9)}px;")
         left.addWidget(ew)
@@ -266,7 +250,24 @@ class AdminLoginPage(QWidget):
         hw.setStyleSheet(f"font-size: {_dp(16)}px;")
         left.addWidget(hw)
 
-        left.addSpacing(_dp(12))
+        left.addSpacing(_dp(10))
+
+        # Logo PNG debajo del título
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        logo_path = os.path.join(project_root, "logo_LockZtar_Negro.png")
+        bicon = QLabel()
+        bicon.setAlignment(Qt.AlignCenter)
+        bicon.setFixedSize(_dp(140), _dp(72))
+        logo_px = QPixmap(logo_path)
+        if not logo_px.isNull():
+            bicon.setPixmap(logo_px.scaled(_dp(132), _dp(68), Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        else:
+            # Fallback a emoji si el logo no existe
+            bicon.setText("🔒")
+            bicon.setStyleSheet(f"font-size: {_dp(28)}px;")
+        left.addWidget(bicon, 0, Qt.AlignCenter)
+
+        left.addSpacing(_dp(10))
 
         div = QFrame(); div.setObjectName("div")
         left.addWidget(div)
@@ -373,11 +374,8 @@ class AdminLoginPage(QWidget):
         right.addWidget(self.btn_in)
 
         right.addSpacing(_dp(4))
+        right.addStretch()
 
-        self.kbd = self._build_keyboard()
-        right.addWidget(self.kbd)
-
-        self._active_input = self.user_inp
         self.user_inp.setFocus()
         self.set_language(get_language())
 
@@ -385,120 +383,7 @@ class AdminLoginPage(QWidget):
 
         root.addWidget(card)
 
-    # ── Teclado mejorado ──────────────────────────────────────────────────────
-    def _build_keyboard(self):
-        frame = QFrame()
-        frame.setObjectName("kbd_frame")
 
-        g = QGridLayout(frame)
-        g.setContentsMargins(_dp(7), _dp(7), _dp(7), _dp(7))
-        g.setHorizontalSpacing(_dp(5))
-        g.setVerticalSpacing(_dp(5))
-
-        # Columnas: 0-9 letras/números, 10 = ⌫
-        # ── Fila 0: números 1-0  +  ⌫ ────────────────────────────────────────
-        nums = list("1234567890")
-        for c, ch in enumerate(nums):
-            b = self._make_key(ch, "kbd_num", _dp(40))
-            g.addWidget(b, 0, c)
-
-        back = self._make_key("⌫", "kbd_back", _dp(40), value="__BACK__")
-        g.addWidget(back, 0, 10)
-
-        # ── Fila 1: Q-P ──────────────────────────────────────────────────────
-        row1 = list("qwertyuiop")
-        for c, ch in enumerate(row1):
-            b = self._make_key(ch, "kbd_btn", _dp(40))
-            self._kbd_alpha_btns.append((b, ch))
-            g.addWidget(b, 1, c)
-
-        # ── Fila 2: A-L + @ ──────────────────────────────────────────────────
-        row2 = list("asdfghjkl@")
-        for c, ch in enumerate(row2):
-            obj = "kbd_btn"
-            b = self._make_key(ch, obj, _dp(40))
-            if ch.isalpha():
-                self._kbd_alpha_btns.append((b, ch))
-            g.addWidget(b, 2, c)
-
-        # ── Fila 3: Z-M + especiales ─────────────────────────────────────────
-        row3 = list("zxcvbnm")
-        for c, ch in enumerate(row3):
-            b = self._make_key(ch, "kbd_btn", _dp(40))
-            self._kbd_alpha_btns.append((b, ch))
-            g.addWidget(b, 3, c)
-
-        # Caracteres especiales alineados a la derecha de fila 3
-        specials = [".", "_", "-", "#"]
-        for i, ch in enumerate(specials):
-            col = 7 + i
-            b = self._make_key(ch, "kbd_btn", _dp(40))
-            g.addWidget(b, 3, col)
-
-        # ── Fila 4: MAYÚS | ESPACIO | LIMPIAR ────────────────────────────────
-        caps = QPushButton("⇧  MAYÚS")
-        caps.setObjectName("kbd_caps")
-        caps.setFixedHeight(_dp(40))
-        caps.setCursor(Qt.PointingHandCursor)
-        caps.setProperty("kbd_value", "__CAPS__")
-        caps.clicked.connect(self._on_keyboard_key)
-        self._caps_btn_ref = caps
-        g.addWidget(caps, 4, 0, 1, 3)   # 3 columnas
-
-        self.space_btn = self._make_key("", "kbd_special", _dp(40), value=" ")
-        space = self.space_btn
-        g.addWidget(space, 4, 3, 1, 4)  # 4 columnas centrales
-
-        self.clear_btn = self._make_key("", "kbd_special", _dp(40), value="__CLEAR__")
-        clr = self.clear_btn
-        g.addWidget(clr, 4, 7, 1, 4)   # 4 columnas derecha (incluye col 10)
-
-        return frame
-
-    def _make_key(self, label: str, obj: str, height: int, value: str = None) -> QPushButton:
-        """Crea un botón del teclado con estilo y conexión de señal."""
-        btn = QPushButton(label.upper() if (label.isalpha() and self._caps) else label)
-        btn.setObjectName(obj)
-        btn.setFixedHeight(height)
-        btn.setCursor(Qt.PointingHandCursor)
-        btn.setProperty("kbd_value", value if value is not None else label)
-        btn.clicked.connect(self._on_keyboard_key)
-        return btn
-
-    # ── Lógica del teclado ────────────────────────────────────────────────────
-    def _on_keyboard_key(self):
-        value = self.sender().property("kbd_value")
-        if value is None:
-            return
-
-        # Caps toggle — no requiere foco en input
-        if value == "__CAPS__":
-            self._caps = not self._caps
-            self._apply_caps()
-            return
-
-        target = self._active_input or self.user_inp
-        target.setFocus()
-
-        if value == "__BACK__":
-            target.setText(target.text()[:-1])
-        elif value == "__CLEAR__":
-            target.clear()
-        else:
-            char = value.upper() if (value.isalpha() and self._caps) else value
-            target.insert(char)
-
-    def _apply_caps(self):
-        """Actualiza etiquetas de teclas alpha y estilo del botón MAYÚS."""
-        for btn, lower_val in self._kbd_alpha_btns:
-            btn.setText(lower_val.upper() if self._caps else lower_val)
-
-        if self._caps_btn_ref:
-            self._caps_btn_ref.setObjectName("kbd_caps_on" if self._caps else "kbd_caps")
-            self._caps_btn_ref.setText("⇧  " + tr("login.kbd.shift"))
-            # Forzar refresco de estilo
-            self._caps_btn_ref.style().unpolish(self._caps_btn_ref)
-            self._caps_btn_ref.style().polish(self._caps_btn_ref)
 
     def set_language(self, _lang: str):
         self.back_btn.setText(tr("login.back"))
@@ -507,11 +392,6 @@ class AdminLoginPage(QWidget):
         self.user_inp.setPlaceholderText(tr("login.user_ph"))
         self.pass_inp.setPlaceholderText(tr("login.pass_ph"))
         self.btn_in.setText("🔐  " + tr("login.enter"))
-        if self.space_btn:
-            self.space_btn.setText(tr("login.kbd.space"))
-        if self.clear_btn:
-            self.clear_btn.setText("✕ " + tr("login.kbd.clear"))
-        self._apply_caps()
 
     # ── Resto sin cambios ─────────────────────────────────────────────────────
     def paintEvent(self, e):
@@ -524,8 +404,6 @@ class AdminLoginPage(QWidget):
         p.end()
 
     def eventFilter(self, obj, event):
-        if event.type() == QEvent.FocusIn and obj in (self.user_inp, self.pass_inp):
-            self._active_input = obj
         return super().eventFilter(obj, event)
 
     def _check(self):
@@ -567,7 +445,4 @@ class AdminLoginPage(QWidget):
         self.user_inp.clear()
         self.pass_inp.clear()
         self.err_lbl.setText("")
-        self._active_input = self.user_inp
-        self._caps = False
-        self._apply_caps()
         self.user_inp.setFocus()

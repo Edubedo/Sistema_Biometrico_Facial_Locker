@@ -302,12 +302,12 @@ class CarouselWidget(QWidget):
         self._inner = QFrame()
         self._inner.setObjectName("carousel_inner")
         inner_l = QVBoxLayout(self._inner)
-        inner_l.setContentsMargins(10, 10, 10, 10)
-        inner_l.setSpacing(8)
+        inner_l.setContentsMargins(15, 15, 15, 15)
+        inner_l.setSpacing(10)
         inner_l.setAlignment(Qt.AlignCenter)
 
         self._svg = QSvgWidget()
-        self._svg.setFixedSize(56, 56)
+        self._svg.setFixedSize(100, 100)
         self._svg.setStyleSheet("background: transparent;")
         inner_l.addWidget(self._svg, alignment=Qt.AlignCenter)
 
