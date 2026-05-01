@@ -254,7 +254,7 @@ class AdminLoginPage(QWidget):
 
         # Logo PNG debajo del título
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        logo_path = os.path.join(project_root, "logo_LockZtar_Negro.png")
+        logo_path = os.path.join(project_root, "lockztar.png")
         bicon = QLabel()
         bicon.setAlignment(Qt.AlignCenter)
         bicon.setFixedSize(_dp(140), _dp(72))

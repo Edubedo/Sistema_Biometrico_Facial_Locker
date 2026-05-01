@@ -11,7 +11,7 @@ _TRANSLATIONS = {
         "home.store":         "Guardar",
         "home.pickup":        "Recoger",
         "home.online":        "EN LÍNEA",
-        "home.free_lockers":  "  {n} lockers disponibles ",
+        "home.free_lockers":  "  {n} disponibles ",
 
         # ── Guardar pertenencias ────────────────────────────────────────────────
         "guard.back":           "< Volver",
@@ -102,7 +102,7 @@ _TRANSLATIONS = {
         "home.store":         "Deposit",
         "home.pickup":        "Claim",
         "home.online":        "ONLINE",
-        "home.free_lockers":  "  {n} lockers available ",
+        "home.free_lockers":  "  {n} available ",
 
         # ── Store items ─────────────────────────────────────────────────────────
         "guard.back":           "< Back",

@@ -46,7 +46,7 @@ QWidget#panel{background:transparent;}
 QLabel#ttl{color:#1565c0;font-weight:900;font-family:'Segoe UI';letter-spacing:3px;}
 QLabel#sub{color:#90a4ae;font-family:'Segoe UI';letter-spacing:2px;}
 QFrame#h_div{background:#cfd8e3;border:none;min-height:1px;max-height:1px;}
-QFrame#cnt{background:#fff;border:none;border-left:4px solid #1565c0;border-radius:8px;}
+QFrame#cnt{background:#fff;border:none;border-radius:8px;}
 QLabel#cn_b{color:#1565c0;font-weight:800;font-family:'Segoe UI';}
 QLabel#cn_o{color:#ef6c00;font-weight:800;font-family:'Segoe UI';}
 QLabel#cn_g{color:#546e7a;font-weight:800;font-family:'Segoe UI';}
