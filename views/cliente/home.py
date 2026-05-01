@@ -410,37 +410,14 @@ class HomePage(QWidget):
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
         logo_path = os.path.join(project_root, "lockztar.png")
         logo_lbl = QLabel()
-        logo_lbl.setFixedSize(_dp(220), _dp(100))
+        logo_lbl.setFixedSize(_dp(300), _dp(120))
         logo_lbl.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
         logo_px = QPixmap(logo_path)
         if not logo_px.isNull():
             logo_lbl.setPixmap(
-                logo_px.scaled(_dp(200), _dp(90), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                logo_px.scaled(_dp(280), _dp(110), Qt.KeepAspectRatio, Qt.SmoothTransformation)
             )
         hl.addWidget(logo_lbl, 0, Qt.AlignVCenter)
-
-        hl.addStretch()
-
-        # Centro: reloj
-        ccol = QVBoxLayout()
-        ccol.setSpacing(_dp(2))
-        ccol.setAlignment(Qt.AlignCenter)
-
-        self.clock_lbl = QLabel("00:00")
-        self.clock_lbl.setAlignment(Qt.AlignCenter)
-        self.clock_lbl.setStyleSheet(
-            f"color:#ddeeff; font-size:{_dp(30)}px; font-weight:900;"
-            f"font-family:'Segoe UI'; letter-spacing:4px;"
-        )
-        self.date_lbl = QLabel("")
-        self.date_lbl.setAlignment(Qt.AlignCenter)
-        self.date_lbl.setStyleSheet(
-            f"color:rgba(140,180,255,0.80); font-size:{_dp(11)}px;"
-            f"font-family:'Segoe UI'; letter-spacing:2px; font-weight:600;"
-        )
-        ccol.addWidget(self.clock_lbl)
-        ccol.addWidget(self.date_lbl)
-        hl.addLayout(ccol)
 
         hl.addStretch()
 
@@ -456,20 +433,20 @@ class HomePage(QWidget):
 
         self.lang_switch = QFrame()
         self.lang_switch.setObjectName("lang_switch")
-        self.lang_switch.setFixedSize(_dp(170), _dp(54))
+        self.lang_switch.setFixedSize(_dp(220), _dp(70))
         swl = QHBoxLayout(self.lang_switch)
-        swl.setContentsMargins(_dp(3), _dp(3), _dp(3), _dp(3))
-        swl.setSpacing(_dp(3))
+        swl.setContentsMargins(_dp(4), _dp(4), _dp(4), _dp(4))
+        swl.setSpacing(_dp(4))
 
         self.btn_lang_es = QPushButton("ES")
         self.btn_lang_es.setCursor(Qt.PointingHandCursor)
         self.btn_lang_es.clicked.connect(lambda: self._set_lang("es", emit=True))
-        self.btn_lang_es.setFixedSize(_dp(80), _dp(44))
+        self.btn_lang_es.setFixedSize(_dp(104), _dp(58))
 
         self.btn_lang_en = QPushButton("EN")
         self.btn_lang_en.setCursor(Qt.PointingHandCursor)
         self.btn_lang_en.clicked.connect(lambda: self._set_lang("en", emit=True))
-        self.btn_lang_en.setFixedSize(_dp(80), _dp(44))
+        self.btn_lang_en.setFixedSize(_dp(104), _dp(58))
 
         swl.addWidget(self.btn_lang_es)
         swl.addWidget(self.btn_lang_en)
@@ -478,10 +455,10 @@ class HomePage(QWidget):
         # Admin button (kept large) but placed inside a collapsable panel
         self.adm = QPushButton("")
         self.adm.setObjectName("btn_admin")
-        self.adm.setFixedSize(_dp(200), _dp(54))
+        self.adm.setFixedSize(_dp(240), _dp(70))
         self.adm.setStyleSheet(
             self.adm.styleSheet() +
-            f"font-size:{_dp(15)}px; padding:0 {_dp(14)}px;"
+            f"font-size:{_dp(16)}px; padding:0 {_dp(16)}px;"
         )
         self.adm.setCursor(Qt.PointingHandCursor)
         self.adm.clicked.connect(self.go_admin.emit)
@@ -490,7 +467,7 @@ class HomePage(QWidget):
         # Panel para admin (siempre visible)
         self.admin_panel = QFrame()
         self.admin_panel.setObjectName("admin_panel")
-        self.admin_panel.setFixedWidth(_dp(210))
+        self.admin_panel.setFixedWidth(_dp(250))
         ap_layout = QHBoxLayout(self.admin_panel)
         ap_layout.setContentsMargins(0, 0, 0, 0)
         ap_layout.addWidget(self.adm)
@@ -558,10 +535,7 @@ class HomePage(QWidget):
         root.addWidget(fw)
 
         # ── Reloj ──────────────────────────────────────────────────────────────
-        ct = QTimer(self)
-        ct.timeout.connect(self._tick_clock)
-        ct.start(1000)
-        self._tick_clock()
+        # (Reloj y fecha deshabilitados)
         self.set_language(get_language())
 
     # ── Fondo global ────────────────────────────────────────────────────────
@@ -612,21 +586,6 @@ class HomePage(QWidget):
             p.drawRect(0, 0, W, H)
 
         p.end()
-
-    # ── Reloj ────────────────────────────────────────────────────────────────
-    def _tick_clock(self):
-        from PyQt5.QtCore import QDateTime, QLocale
-        dt = QDateTime.currentDateTime()
-        self.clock_lbl.setText(dt.toString("hh:mm"))
-        # Localizar la fecha según el idioma seleccionado
-        lang = getattr(self, "_lang", get_language())
-        ql = QLocale(QLocale.Spanish) if lang == "es" else QLocale(QLocale.English)
-        # Usar QLocale para nombres de día/mes en el idioma correcto
-        date_str = ql.toString(dt.date(), "dddd, d MMM yyyy")
-        # Mantener mayúsculas en inglés para visibilidad similar a antes
-        if lang == "en":
-            date_str = date_str.upper()
-        self.date_lbl.setText(date_str)
 
     # ── Idioma ───────────────────────────────────────────────────────────────
     def _set_lang(self, lang: str, emit: bool = False):
