@@ -84,17 +84,17 @@ STYLE = """
 QWidget#guardar_page { background: #E7E7E7; color: #1f2a44; }
 
 QLabel#h2 {
-    color: #305BAB; font-size: 13px; font-weight: 700;
+    color: #305BAB; font-size: 16px; font-weight: 700;
     font-family: 'Segoe UI', sans-serif;
 }
 QLabel#tag {
-    color: #305BAB; font-size: 10px; font-weight: 700;
+    color: #305BAB; font-size: 12px; font-weight: 700;
     font-family: 'Courier New'; letter-spacing: 2px;
 }
-QLabel#body  { color: #2c3e50; font-size: 11px; font-family: 'Segoe UI', sans-serif; }
-QLabel#small { color: #3a5f84; font-size: 9px; font-family: 'Courier New'; }
+QLabel#body  { color: #2c3e50; font-size: 13px; font-family: 'Segoe UI', sans-serif; }
+QLabel#small { color: #3a5f84; font-size: 10px; font-family: 'Courier New'; }
 QLabel#err   {
-    color: #BD0A0A; font-size: 10px; font-weight: 700;
+    color: #BD0A0A; font-size: 12px; font-weight: 700;
     font-family: 'Segoe UI', sans-serif;
 }
 
@@ -116,7 +116,7 @@ QPushButton#btn_blue {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
         stop:0 #1a3a6b, stop:0.5 #305bab, stop:1 #678dd3);
     color: white; border: none; border-radius: 8px;
-    padding: 16px 20px; font-size: 17px; font-weight: 800;
+    padding: 16px 20px; font-size: 19px; font-weight: 800;
     font-family: 'Segoe UI', sans-serif; letter-spacing: 1px;
 }
 QPushButton#btn_blue:hover {
@@ -134,7 +134,7 @@ QPushButton#btn_blue:disabled {
 QPushButton#btn_sm {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #96bfe9, stop:1 #b8e1fa);
     color: #1d3767; border: 2px solid #305bab; border-radius: 5px;
-    padding: 6px 14px; font-size: 13px; font-family: 'Segoe UI', sans-serif; font-weight: 700;
+    padding: 6px 14px; font-size: 14px; font-family: 'Segoe UI', sans-serif; font-weight: 700;
 }
 QPushButton#btn_sm:hover   { color: #305bab; border-color: #838383; }
 QPushButton#btn_sm:pressed {
@@ -144,7 +144,7 @@ QPushButton#btn_sm:pressed {
 
 QFrame#carousel_inner { background: white; border-radius: 8px; border: none; }
 QLabel#carousel_text  {
-    color: #1a3a6b; font-size: 10px; font-weight: 600;
+    color: #1a3a6b; font-size: 12px; font-weight: 600;
     font-family: 'Segoe UI', sans-serif;
 }
 QPushButton#dot_inactive {
@@ -351,8 +351,8 @@ class GuardarPage(QWidget):
 
         self.start_btn = QPushButton("  INICIAR ESCANEO")
         self.start_btn.setObjectName("btn_blue")
-        self.start_btn.setIcon(_svg_to_icon(_CAM_ICON_SVG, 28))
-        self.start_btn.setIconSize(QSize(28, 28))
+        self.start_btn.setIcon(_svg_to_icon(_CAM_ICON_SVG, 24))
+        self.start_btn.setIconSize(QSize(24, 24))
         self.start_btn.setFixedHeight(82)
         self.start_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.start_btn.setCursor(Qt.PointingHandCursor)

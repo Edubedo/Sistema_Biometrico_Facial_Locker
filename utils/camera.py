@@ -11,6 +11,13 @@ try:
 except ImportError:
     Picamera2 = None
 
+try:
+    import mediapipe as mp
+    MP_AVAILABLE = True
+except Exception:
+    mp = None
+    MP_AVAILABLE = False
+
 # Importamos tus configuraciones locales
 from biometria.biometria import CASCADE, face_dir_for, face_model, IMG_H, IMG_W
 
@@ -132,6 +139,15 @@ class CamThread(QThread):
         fc = cv2.CascadeClassifier(CASCADE)
         sdir = face_dir_for(self.face_uid) if self.mode == self.CAPTURE else None
 
+        mp_face = None
+        if MP_AVAILABLE:
+            try:
+                mp_face = mp.solutions.face_detection.FaceDetection(
+                    model_selection=0, min_detection_confidence=0.5
+                )
+            except Exception:
+                mp_face = None
+
         if sdir:
             os.makedirs(sdir, exist_ok=True)
 
@@ -157,7 +173,30 @@ class CamThread(QThread):
                     break
 
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            faces = fc.detectMultiScale(gray, 1.3, 5)
+
+            # Prefer MediaPipe detections if available (more robust across poses)
+            faces = []
+            h, w = frame.shape[:2]
+            if mp_face is not None:
+                try:
+                    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    results = mp_face.process(rgb)
+                    if results.detections:
+                        for det in results.detections:
+                            bbox = det.location_data.relative_bounding_box
+                            x = int(bbox.xmin * w)
+                            y = int(bbox.ymin * h)
+                            bw = int(bbox.width * w)
+                            bh = int(bbox.height * h)
+                            x = max(0, x)
+                            y = max(0, y)
+                            bw = max(1, min(w - x, bw))
+                            bh = max(1, min(h - y, bh))
+                            faces.append((x, y, bw, bh))
+                except Exception:
+                    faces = fc.detectMultiScale(gray, 1.3, 5)
+            else:
+                faces = fc.detectMultiScale(gray, 1.3, 5)
 
             for (x, y, w, h) in faces:
                 roi = cv2.resize(gray[y:y+h, x:x+w], (IMG_W, IMG_H))
@@ -191,6 +230,12 @@ class CamThread(QThread):
         if self.cap is not None:
             self.cap.release()
             self.cap = None
+
+        if 'mp_face' in locals() and mp_face is not None:
+            try:
+                mp_face.close()
+            except Exception:
+                pass
 
         if self.mode == self.CAPTURE:
             if capture_count >= 20 or not self._manual_stop:
