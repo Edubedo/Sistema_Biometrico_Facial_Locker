@@ -24,7 +24,7 @@ def _dp(v):
     return max(1, round(v * scale))
 
 
-# ── Paleta compartida con HomePage ────────────────────────────────────────────
+# ── Paleta ────────────────────────────────────────────────────────────────────
 BG_TOP      = QColor(10,  20,  45)
 BG_BOT      = QColor(16,  32,  68)
 ACCENT_BLUE = QColor(41, 128, 255)
@@ -36,7 +36,6 @@ STYLE = """
 QWidget#admin_login_page { background: transparent; }
 QFrame#card              { background: transparent; border: none; }
 
-/* ── Inputs ─────────────────────────────────────────────────────────────── */
 QLineEdit#inp {
     background-color: rgba(255,255,255,0.06);
     border: 2px solid rgba(41,128,255,0.28);
@@ -54,7 +53,6 @@ QLineEdit#inp:focus {
     background-color: rgba(41,128,255,0.13);
 }
 
-/* ── Botón primario ─────────────────────────────────────────────────────── */
 QPushButton#btn_primary {
     background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
         stop:0 #3d90ff, stop:1 #1a60e0);
@@ -75,7 +73,6 @@ QPushButton#btn_primary:pressed {
         stop:0 #1050c0, stop:1 #0a3a99);
 }
 
-/* ── Botón fantasma ─────────────────────────────────────────────────────── */
 QPushButton#btn_ghost {
     background: rgba(255,255,255,0.06);
     color: rgba(160,200,255,0.85);
@@ -91,7 +88,6 @@ QPushButton#btn_ghost:hover {
 }
 QPushButton#btn_ghost:pressed { background: rgba(41,128,255,0.07); }
 
-/* ── Error ───────────────────────────────────────────────────────────────── */
 QLabel#err {
     color: #ff7777;
     font-weight: 700;
@@ -101,55 +97,87 @@ QLabel#err {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Teclado nativo del SO
+#  Teclado nativo — con onboard en modo docked para que NO robe el foco
 # ─────────────────────────────────────────────────────────────────────────────
-_kbd_process = None
+_kbd_process  = None
+_main_window  = None   # referencia a la ventana principal para restaurar foco
 
 
-def _open_native_keyboard():
+def _configure_onboard_docked():
+    """
+    Configura onboard para que se ancle en la parte inferior como panel.
+    En modo docked NO roba el foco de la aplicación.
+    """
+    settings = [
+        # Anclar en la parte inferior
+        ("org.onboard.window",         "docking-enabled",        "true"),
+        ("org.onboard.window.docking", "side",                   "'bottom'"),
+        # Que no tome el foco al aparecer
+        ("org.onboard",                "show-tooltips",          "false"),
+        # Layout compacto para pantalla pequeña
+        ("org.onboard",                "layout",
+         "/usr/share/onboard/layouts/Phone.onboard"),
+        ("org.onboard",                "theme",
+         "/usr/share/onboard/themes/Nightshade.theme"),
+    ]
+    for schema, key, value in settings:
+        try:
+            subprocess.run(
+                ["gsettings", "set", schema, key, value],
+                capture_output=True, timeout=2
+            )
+        except Exception:
+            pass
+
+
+def _open_native_keyboard(restore_widget: QWidget = None):
+    """
+    Abre el teclado nativo.  En Linux configura onboard como panel docked
+    antes de lanzarlo para que no robe el foco.
+    `restore_widget` : widget al que se restaura el foco tras abrir el teclado.
+    """
     global _kbd_process
+
+    # Si ya está abierto no volver a lanzar
+    if _kbd_process is not None and _kbd_process.poll() is None:
+        return
+
     try:
         os_name = platform.system()
+
         if os_name == "Windows":
             subprocess.Popen(
                 r"C:\Program Files\Common Files\Microsoft Shared\ink\TabTip.exe",
                 shell=True
             )
+
         elif os_name == "Linux":
-            # Configurar onboard para que aparezca abajo
-            try:
-                # Configurar disposición: Phone (teclado tipo móvil)
-                subprocess.run([
-                    "gsettings", "set", "org.onboard", "layout",
-                    "/usr/share/onboard/layouts/Phone.onboard"
-                ], capture_output=True)
-                
-                # Configurar tema: Nightshade
-                subprocess.run([
-                    "gsettings", "set", "org.onboard", "theme",
-                    "/usr/share/onboard/themes/Nightshade.theme"
-                ], capture_output=True)
-                
-                # Habilitar anclaje en la parte inferior
-                subprocess.run([
-                    "gsettings", "set", "org.onboard.window",
-                    "docking-enabled", "true"
-                ], capture_output=True)
-                
-                # Posicionar en la parte inferior
-                subprocess.run([
-                    "gsettings", "set", "org.onboard.window.docking",
-                    "side", "'bottom'"
-                ], capture_output=True)
-            except Exception:
-                pass
-            
-            # Prueba los teclados virtuales más comunes en orden de preferencia
-            for kbd in ["onboard", "matchbox-keyboard", "florence",
-                        "squeekboard", "wvkbd-mobintl"]:
-                if shutil.which(kbd):
-                    _kbd_process = subprocess.Popen([kbd])
-                    break
+            if shutil.which("onboard"):
+                _configure_onboard_docked()
+                # --keep-aspect evita que redimensione la ventana principal
+                _kbd_process = subprocess.Popen(["onboard", "--keep-aspect"])
+            else:
+                # Fallback a otros teclados disponibles
+                for kbd in ["matchbox-keyboard", "florence",
+                            "squeekboard", "wvkbd-mobintl"]:
+                    if shutil.which(kbd):
+                        _kbd_process = subprocess.Popen([kbd])
+                        break
+
+        # Restaurar foco al campo después de que el teclado haya abierto su
+        # ventana (onboard tarda ~300 ms en dibujarse).
+        if restore_widget is not None:
+            def _restore():
+                try:
+                    top = restore_widget.window()
+                    top.activateWindow()
+                    top.raise_()
+                    restore_widget.setFocus()
+                except Exception:
+                    pass
+
+            QTimer.singleShot(350, _restore)
+
     except Exception:
         pass
 
@@ -167,17 +195,23 @@ def _close_native_keyboard():
             if _kbd_process and _kbd_process.poll() is None:
                 _kbd_process.terminate()
                 _kbd_process = None
+            # Matar cualquier instancia huérfana de onboard
+            try:
+                subprocess.run(["pkill", "-x", "onboard"],
+                               capture_output=True)
+            except Exception:
+                pass
     except Exception:
         pass
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Campo de entrada con hover/focus visual y apertura de teclado nativo
+#  InputField — abre el teclado en mousePressEvent, NO en focusInEvent
+#  Esto evita el ciclo foco → teclado → roba foco → pierde foco
 # ─────────────────────────────────────────────────────────────────────────────
 class InputField(QWidget):
-    focused = pyqtSignal(object)
-
-    def __init__(self, icon: str, placeholder: str, password=False, parent=None):
+    def __init__(self, icon: str, placeholder: str,
+                 password=False, parent=None):
         super().__init__(parent)
         self.setStyleSheet("background: transparent;")
 
@@ -206,26 +240,23 @@ class InputField(QWidget):
             f"font-size: {_dp(15)}px; padding: 0 {_dp(16)}px;"
         )
 
-        # Interceptar foco para abrir teclado nativo
-        orig_focus_in  = self.line.focusInEvent
-        orig_focus_out = self.line.focusOutEvent
+        # ── Clave: abrir teclado en mousePressEvent, no en focusInEvent ───────
+        # focusInEvent puede dispararse por Tab, programáticamente, etc.
+        # mousePressEvent solo se dispara cuando el usuario toca el campo.
+        orig_mouse_press = self.line.mousePressEvent
 
-        def _focus_in(e):
-            self.focused.emit(self.line)
-            _open_native_keyboard()
-            orig_focus_in(e)
+        def _on_mouse_press(e):
+            orig_mouse_press(e)                          # procesar click normal
+            # Abrir teclado y restaurar foco a este campo
+            _open_native_keyboard(restore_widget=self.line)
 
-        def _focus_out(e):
-            # No cerramos aquí para evitar parpadeo al cambiar entre campos
-            orig_focus_out(e)
-
-        self.line.focusInEvent  = _focus_in
-        self.line.focusOutEvent = _focus_out
+        self.line.mousePressEvent = _on_mouse_press
 
         row.addWidget(self.icon_lbl)
         row.addWidget(self.line, 1)
         lay.addLayout(row)
 
+    # ── API pública ───────────────────────────────────────────────────────────
     def text(self):                  return self.line.text()
     def clear(self):                 self.line.clear()
     def setFocus(self):              self.line.setFocus()
@@ -336,7 +367,7 @@ class AdminLoginPage(QWidget):
         self._left = LeftPanel(logo_path)
         card_row.addWidget(self._left)
 
-        # ── Columna derecha: formulario ───────────────────────────────────────
+        # ── Columna derecha ───────────────────────────────────────────────────
         right_w = QWidget()
         right_w.setStyleSheet("background: transparent;")
         right = QVBoxLayout(right_w)
@@ -344,7 +375,6 @@ class AdminLoginPage(QWidget):
         right.setSpacing(0)
         right.setAlignment(Qt.AlignVCenter)
 
-        # Título
         self.title_lbl = QLabel("LOCKZTAR")
         self.title_lbl.setStyleSheet(
             f"color: #ddeeff; font-size: {_dp(22)}px; font-weight: 900;"
@@ -361,20 +391,17 @@ class AdminLoginPage(QWidget):
         right.addWidget(self.sub_lbl)
         right.addSpacing(_dp(24))
 
-        # Campo usuario
         self._user_field = InputField("👤", "", password=False)
         self._user_field.installEventFilter(self)
         right.addWidget(self._user_field)
         right.addSpacing(_dp(14))
 
-        # Campo contraseña
         self._pass_field = InputField("🔒", "", password=True)
         self._pass_field.installEventFilter(self)
         self._pass_field.returnPressed().connect(self._check)
         right.addWidget(self._pass_field)
         right.addSpacing(_dp(10))
 
-        # Error
         self.err_lbl = QLabel("")
         self.err_lbl.setObjectName("err")
         self.err_lbl.setStyleSheet(f"font-size: {_dp(10)}px;")
@@ -383,7 +410,6 @@ class AdminLoginPage(QWidget):
         right.addWidget(self.err_lbl)
         right.addSpacing(_dp(14))
 
-        # Botones
         btn_row = QHBoxLayout()
         btn_row.setSpacing(_dp(12))
 
@@ -415,7 +441,7 @@ class AdminLoginPage(QWidget):
         self._user_field.setFocus()
         self.set_language(get_language())
 
-    # ── Fondo global ──────────────────────────────────────────────────────────
+    # ── Fondo ─────────────────────────────────────────────────────────────────
     def paintEvent(self, _):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
@@ -426,7 +452,6 @@ class AdminLoginPage(QWidget):
         bg.setColorAt(1.0, BG_BOT)
         p.fillRect(0, 0, W, H, QBrush(bg))
 
-        # Cuadrícula decorativa
         p.setPen(QPen(QColor(40, 70, 140, 22), _dp(1)))
         step = _dp(48)
         for x in range(0, W + step, step):
@@ -434,7 +459,6 @@ class AdminLoginPage(QWidget):
         for y in range(0, H + step, step):
             p.drawLine(0, y, W, y)
 
-        # Resplandores de esquina
         for rx, ry, col in [
             (W, 0, QColor(41, 128, 255, 16)),
             (0, H, QColor(20,  80, 200, 12)),
@@ -446,7 +470,6 @@ class AdminLoginPage(QWidget):
             p.setBrush(QBrush(rg))
             p.drawRect(0, 0, W, H)
 
-        # Tarjeta: sombra + fondo + borde
         cw = _dp(self._CARD_W)
         ch = _dp(self._CARD_H)
         cx = (W - cw) // 2
@@ -466,7 +489,6 @@ class AdminLoginPage(QWidget):
         p.setBrush(QBrush(cbg))
         p.drawPath(card_path)
 
-        # Shimmer superior
         shim = QLinearGradient(cx, cy, cx + cw, cy)
         shim.setColorAt(0.0,  QColor(255, 255, 255, 0))
         shim.setColorAt(0.45, QColor(255, 255, 255, 12))
@@ -474,7 +496,6 @@ class AdminLoginPage(QWidget):
         p.setBrush(QBrush(shim))
         p.drawRect(QRectF(cx, cy, cw, _dp(2)))
 
-        # Borde
         p.setPen(QPen(QColor(40, 80, 160, 130), _dp(1.5)))
         p.setBrush(Qt.NoBrush)
         p.drawRoundedRect(
@@ -512,7 +533,6 @@ class AdminLoginPage(QWidget):
         if not u or not pw:
             self.err_lbl.setText("⚠  " + tr("login.fill_fields"))
             return
-
         if not db_admin_exists(u):
             self.err_lbl.setText("✖  " + tr("login.bad_access"))
             try:
@@ -521,7 +541,6 @@ class AdminLoginPage(QWidget):
             except Exception:
                 pass
             return
-
         if not db_admin_valid(u, pw):
             self.err_lbl.setText("✖  " + tr("login.bad_access"))
             self._pass_field.clear()
