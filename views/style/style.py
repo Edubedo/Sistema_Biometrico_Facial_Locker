@@ -70,8 +70,9 @@ QPushButton#btn_red:hover { background: #e01535; }
 
 QPushButton#btn_sm {
     background: #0a1628; color: #4d8ec4;
-    border: 1px solid #1a3a5c; border-radius: 8px;
-    padding: 8px 18px; font-size: 12px; font-family: 'Segoe UI',sans-serif; }
+    border: 1px solid #1a3a5c; border-radius: 10px;
+    padding: 12px 22px; font-size: 15px; font-family: 'Segoe UI',sans-serif;
+    min-height: 48px; min-width: 120px; font-weight: 700; }
 QPushButton#btn_sm:hover { color: #c8dff5; border-color: #4d8ec4; }
 
 QPushButton#btn_admin {

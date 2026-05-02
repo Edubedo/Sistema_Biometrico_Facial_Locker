@@ -133,8 +133,9 @@ QPushButton#btn_blue:disabled {
 }
 QPushButton#btn_sm {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #96bfe9, stop:1 #b8e1fa);
-    color: #1d3767; border: 2px solid #305bab; border-radius: 5px;
-    padding: 6px 14px; font-size: 14px; font-family: 'Segoe UI', sans-serif; font-weight: 700;
+    color: #1d3767; border: 2px solid #305bab; border-radius: 8px;
+    padding: 10px 16px; font-size: 14px; font-family: 'Segoe UI', sans-serif; font-weight: 700;
+    min-height: 48px; min-width: 120px;
 }
 QPushButton#btn_sm:hover   { color: #305bab; border-color: #838383; }
 QPushButton#btn_sm:pressed {
@@ -323,7 +324,7 @@ class GuardarPage(QWidget):
         self.back_btn = QPushButton("")
         back = self.back_btn
         back.setObjectName("btn_sm")
-        back.setFixedHeight(46)
+        back.setFixedHeight(48)
         back.setCursor(Qt.PointingHandCursor)
         back.clicked.connect(self._cancel)
         htxt = QVBoxLayout(); htxt.setSpacing(0)
