@@ -11,6 +11,7 @@ from views.admin.usuariosPanel import _AdminUsersPanel
 from views.admin.logPanel import _AdminLogPanel
 from views.style.widgets.widgets import lbl, sep_line
 from utils.i18n import tr, get_language
+from utils.ui_touch import touch_height
 
 
 def _dp(value: float) -> int:
@@ -108,7 +109,8 @@ class AdminPage(QWidget):
         # ── Header ────────────────────────────────────────────────────────────
         header = QFrame()
         header.setObjectName("admin_header")
-        header.setFixedHeight(_dp(44))          # era 54
+        header_h = touch_height(_dp(44))
+        header.setFixedHeight(header_h)          # adaptive for touch
 
         hl = QHBoxLayout(header)
         hl.setContentsMargins(_dp(10), 0, _dp(10), 0)
@@ -118,11 +120,14 @@ class AdminPage(QWidget):
         self.bk = QPushButton("")
         bk = self.bk
         bk.setObjectName("btn_back")
-        bk.setFixedHeight(_dp(28))
-        bk.setStyleSheet(
-            bk.styleSheet() +
-            f"font-size: {_dp(8)}px; padding: 0px {_dp(10)}px;"
-        )
+        bk_h = touch_height(_dp(28))
+        bk.setFixedHeight(bk_h)
+        # scale fonts/padding proportionally to header height
+        _base_header = max(1, _dp(44))
+        _scale = (header_h / _base_header) if _base_header else 1.0
+        fs = max(8, round(_dp(8) * _scale))
+        pad_h = max(6, round(_dp(10) * _scale))
+        bk.setStyleSheet(bk.styleSheet() + f"font-size: {fs}px; padding: 0px {pad_h}px;")
         bk.setCursor(Qt.PointingHandCursor)
         bk.clicked.connect(self.go_back.emit)
         hl.addWidget(bk, 0, Qt.AlignVCenter)
@@ -131,9 +136,12 @@ class AdminPage(QWidget):
 
         # Branding
         bicon = lbl("🔒", "brand_icon", Qt.AlignLeft)
-        bicon.setStyleSheet(f"font-size: {_dp(13)}px;")
         bname = lbl("SUPERLOCKER", "brand_name", Qt.AlignLeft)
-        bname.setStyleSheet(f"font-size: {_dp(10)}px;")
+        # scale brand fonts for touch
+        bicon_fs = max(10, round(_dp(13) * _scale))
+        bname_fs = max(10, round(_dp(10) * _scale))
+        bicon.setStyleSheet(f"font-size: {bicon_fs}px;")
+        bname.setStyleSheet(f"font-size: {bname_fs}px;")
         hl.addWidget(bicon, 0, Qt.AlignVCenter)
         hl.addWidget(bname, 0, Qt.AlignVCenter)
 
@@ -141,21 +149,24 @@ class AdminPage(QWidget):
 
         # Título centrado
         self.tit = lbl("", "page_title")
-        tit = self.tit
-        tit.setStyleSheet(
-            f"color: #ffffff; font-size: {_dp(11)}px; font-weight: 800;"
+        tit_fs = max(11, round(_dp(11) * _scale))
+        self.tit.setStyleSheet(
+            f"color: #ffffff; font-size: {tit_fs}px; font-weight: 800;"
             f"font-family: 'Segoe UI'; letter-spacing: 2px;"
         )
-        hl.addWidget(tit, 0, Qt.AlignVCenter)
+        hl.addWidget(self.tit, 0, Qt.AlignVCenter)
 
         hl.addStretch()
 
         # Badge usuario
+        badge_fs = max(8, round(_dp(8) * _scale))
+        badge_pr = max(3, round(_dp(3) * _scale))
+        badge_pl = max(6, round(_dp(10) * _scale))
         self.badge = lbl("", "badge_blue")
         self.badge.setStyleSheet(
             f"background: rgba(255,255,255,0.15); color: #ffffff;"
             f"border: 1px solid rgba(255,255,255,0.3); border-radius: {_dp(10)}px;"
-            f"font-size: {_dp(8)}px; padding: {_dp(3)}px {_dp(10)}px;"
+            f"font-size: {badge_fs}px; padding: {badge_pr}px {badge_pl}px;"
             f"font-family: 'Segoe UI'; letter-spacing: 2px; font-weight: 600;"
         )
         hl.addWidget(self.badge, 0, Qt.AlignVCenter)
@@ -166,14 +177,18 @@ class AdminPage(QWidget):
         # En 800px de ancho con 4 tabs, aumentamos tamaño para mejor visibilidad
         tab_bar = QFrame()
         tab_bar.setObjectName("tab_bar")
-        tab_bar.setFixedHeight(_dp(56))         # aumentado de 40
+        tab_h = touch_height(_dp(56))
+        tab_bar.setFixedHeight(tab_h)         # adaptive for touch
 
         tbl = QHBoxLayout(tab_bar)
         tbl.setContentsMargins(_dp(4), 0, _dp(4), 0)
         tbl.setSpacing(0)
 
-        tab_font_size = _dp(11)                  # aumentado de 9
-        tab_padding   = f"padding: {_dp(14)}px {_dp(18)}px;"  # aumentado de 10px 14px
+        # scale tab fonts/padding with header scale
+        tab_font_size = max(10, round(_dp(11) * _scale))
+        pad_v = max(8, round(_dp(14) * _scale))
+        pad_h = max(10, round(_dp(18) * _scale))
+        tab_padding   = f"padding: {pad_v}px {pad_h}px;"
 
         self.t_lock = QPushButton("")
         self.t_lock.setObjectName("tab"); self.t_lock.setCheckable(True); self.t_lock.setChecked(True)

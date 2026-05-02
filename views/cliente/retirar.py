@@ -13,6 +13,7 @@ from utils.gpio_locker import abrir_locker
 from utils.helpers import db_get_locker_num_by_id
 from views.style.widgets.widgets import lbl, sep_line, CamWidget
 from utils.i18n import tr, get_language
+from utils.ui_touch import touch_height
 
 
 class ScanLine(QWidget):
@@ -395,7 +396,7 @@ class RetirarPage(QWidget):
         self.back_btn = QPushButton("")
         back = self.back_btn
         back.setObjectName("btn_sm")
-        back.setFixedHeight(48)
+        back.setFixedHeight(touch_height(48))
         back.setCursor(Qt.PointingHandCursor)
         back.clicked.connect(self._cancel)
         htxt = QVBoxLayout(); htxt.setSpacing(0)
@@ -425,7 +426,7 @@ class RetirarPage(QWidget):
         self.scan_btn.setObjectName("btn_blue")
         self.scan_btn.setIcon(_svg_to_icon(_CAM_ICON_SVG, 24))
         self.scan_btn.setIconSize(QSize(24, 24))
-        self.scan_btn.setFixedHeight(80)
+        self.scan_btn.setFixedHeight(touch_height(80))
         self.scan_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.scan_btn.setCursor(Qt.PointingHandCursor)
         self.scan_btn.clicked.connect(self._start_scan)
@@ -463,14 +464,14 @@ class RetirarPage(QWidget):
         self.btn_retirar.setObjectName("btn_action_red")
         self.btn_retirar.setIcon(_svg_to_icon(_RETIRAR_ICON_SVG, 22))
         self.btn_retirar.setIconSize(QSize(22, 22))
-        self.btn_retirar.setFixedHeight(62)
+        self.btn_retirar.setFixedHeight(touch_height(62))
         self.btn_retirar.clicked.connect(self._do_retirar)
 
         self.btn_seguir = QPushButton("SEGUIR COMPRANDO")
         self.btn_seguir.setObjectName("btn_action_green")
         self.btn_seguir.setIcon(_svg_to_icon(_SEGUIR_ICON_SVG, 22))
         self.btn_seguir.setIconSize(QSize(22, 22))
-        self.btn_seguir.setFixedHeight(62)
+        self.btn_seguir.setFixedHeight(touch_height(62))
         self.btn_seguir.clicked.connect(self._do_seguir)
 
         btn_row.addWidget(self.btn_retirar, 1)

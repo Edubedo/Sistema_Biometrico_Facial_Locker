@@ -16,6 +16,7 @@ from utils.camera import CamThread
 from utils.gpio_locker import abrir_locker
 from views.style.widgets.widgets import lbl, sep_line, CamWidget
 from utils.i18n import tr, get_language
+from utils.ui_touch import touch_height
 
 
 class ScanLine(QWidget):
@@ -324,7 +325,7 @@ class GuardarPage(QWidget):
         self.back_btn = QPushButton("")
         back = self.back_btn
         back.setObjectName("btn_sm")
-        back.setFixedHeight(48)
+        back.setFixedHeight(touch_height(48))
         back.setCursor(Qt.PointingHandCursor)
         back.clicked.connect(self._cancel)
         htxt = QVBoxLayout(); htxt.setSpacing(0)
@@ -354,7 +355,7 @@ class GuardarPage(QWidget):
         self.start_btn.setObjectName("btn_blue")
         self.start_btn.setIcon(_svg_to_icon(_CAM_ICON_SVG, 24))
         self.start_btn.setIconSize(QSize(24, 24))
-        self.start_btn.setFixedHeight(82)
+        self.start_btn.setFixedHeight(touch_height(82))
         self.start_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.start_btn.setCursor(Qt.PointingHandCursor)
         self.start_btn.clicked.connect(self._start_capture)
