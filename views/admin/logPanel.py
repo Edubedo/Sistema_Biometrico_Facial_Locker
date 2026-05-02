@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QPainter, QColor, QBrush, QLinearGradient
 
 from db.models.intentos_acceso import db_get_intentos_recientes
+from utils.i18n import tr, get_language
 
 
 def _dp(value: float) -> int:
@@ -270,7 +271,7 @@ class LogCard(QFrame):
 
         # Badge de resultado (EXITOSO/FALLIDO) con el mismo estilo que "ACTIVA"
         resultado = intento.get("t_resultado_acceso", "")
-        badge_text = "EXITOSO" if resultado == "exitoso" else "FALLIDO"
+        badge_text = tr("admin.log.success") if resultado == "exitoso" else tr("admin.log.fail")
         badge = QLabel(badge_text)
         badge.setObjectName("badge_active")  # Mismo estilo que el badge de sesiones
         badge.setStyleSheet(
@@ -302,23 +303,23 @@ class _AdminLogPanel(QWidget):
 
         title_col = QVBoxLayout()
         title_col.setSpacing(_dp(2))
-        t = QLabel("REGISTRO DE ACCESOS")
-        t.setObjectName("section_title")
-        t.setStyleSheet(f"font-size: {_dp(12)}px;")
-        s = QLabel("ÚLTIMOS 50 INTENTOS")
-        s.setObjectName("section_sub")
-        s.setStyleSheet(f"font-size: {_dp(11)}px;")
-        title_col.addWidget(t)
-        title_col.addWidget(s)
+        self.title_lbl = QLabel(tr("admin.log.title"))
+        self.title_lbl.setObjectName("section_title")
+        self.title_lbl.setStyleSheet(f"font-size: {_dp(12)}px;")
+        self.subtitle_lbl = QLabel(tr("admin.log.subtitle"))
+        self.subtitle_lbl.setObjectName("section_sub")
+        self.subtitle_lbl.setStyleSheet(f"font-size: {_dp(11)}px;")
+        title_col.addWidget(self.title_lbl)
+        title_col.addWidget(self.subtitle_lbl)
         header_row.addLayout(title_col)
         header_row.addStretch()
 
-        btn_ref = QPushButton("↺  ACTUALIZAR")
-        btn_ref.setObjectName("btn_refresh")
-        btn_ref.setStyleSheet(f"font-size: {_dp(10)}px; padding: {_dp(7)}px {_dp(20)}px;")
-        btn_ref.setCursor(Qt.PointingHandCursor)
-        btn_ref.clicked.connect(self.refresh)
-        header_row.addWidget(btn_ref)
+        self.btn_ref = QPushButton(tr("admin.log.refresh"))
+        self.btn_ref.setObjectName("btn_refresh")
+        self.btn_ref.setStyleSheet(f"font-size: {_dp(10)}px; padding: {_dp(7)}px {_dp(20)}px;")
+        self.btn_ref.setCursor(Qt.PointingHandCursor)
+        self.btn_ref.clicked.connect(self.refresh)
+        header_row.addWidget(self.btn_ref)
         root.addLayout(header_row)
 
         # ── Divisor ───────────────────────────────────────────────────────────
@@ -340,28 +341,32 @@ class _AdminLogPanel(QWidget):
         self.counter_lbl.setStyleSheet(f"font-size: {_dp(28)}px;")
         cb_lay.addWidget(self.counter_lbl)
 
-        key_lbl = QLabel("REGISTROS\nEN PANTALLA")
-        key_lbl.setObjectName("counter_key")
-        key_lbl.setStyleSheet(f"font-size: {_dp(10)}px;")
-        cb_lay.addWidget(key_lbl)
+        self.key_lbl = QLabel(tr("admin.log.counter"))
+        self.key_lbl.setObjectName("counter_key")
+        self.key_lbl.setStyleSheet(f"font-size: {_dp(10)}px;")
+        cb_lay.addWidget(self.key_lbl)
         cb_lay.addStretch()
 
         # Dot de estado y texto (igual que en sesiones)
         dot2 = StatusDot()
-        status_lbl = QLabel("MONITOREO ACTIVO")
-        status_lbl.setObjectName("status_text")
-        status_lbl.setStyleSheet(f"font-size: {_dp(11)}px;")
+        self.status_lbl = QLabel(tr("admin.log.status"))
+        self.status_lbl.setObjectName("status_text")
+        self.status_lbl.setStyleSheet(f"font-size: {_dp(11)}px;")
         cb_lay.addWidget(dot2)
-        cb_lay.addWidget(status_lbl)
+        cb_lay.addWidget(self.status_lbl)
         root.addWidget(counter_block)
 
         # ── Tabla ─────────────────────────────────────────────────────────────
         self.table = QTableWidget()
         self.table.setObjectName("admin_log_tbl")
         self.table.setColumnCount(5)
-        self.table.setHorizontalHeaderLabels(
-            ["📋 TIPO", "📦 LOCKER", "✓ RESULTADO", "📅 FECHA/HORA", "📝 DESCRIPCIÓN"]
-        )
+        self.table.setHorizontalHeaderLabels([
+            tr("admin.log.table.type"),
+            tr("admin.log.table.locker"),
+            tr("admin.log.table.result"),
+            tr("admin.log.table.datetime"),
+            tr("admin.log.table.desc"),
+        ])
         self.table.verticalHeader().setVisible(False)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -378,6 +383,22 @@ class _AdminLogPanel(QWidget):
         self.table.horizontalHeader().setStretchLastSection(True)
         root.addWidget(self.table, 1)
 
+        self.set_language(get_language())
+        self.refresh()
+
+    def set_language(self, _lang: str):
+        self.title_lbl.setText(tr("admin.log.title"))
+        self.subtitle_lbl.setText(tr("admin.log.subtitle"))
+        self.btn_ref.setText(tr("admin.log.refresh"))
+        self.key_lbl.setText(tr("admin.log.counter"))
+        self.status_lbl.setText(tr("admin.log.status"))
+        self.table.setHorizontalHeaderLabels([
+            tr("admin.log.table.type"),
+            tr("admin.log.table.locker"),
+            tr("admin.log.table.result"),
+            tr("admin.log.table.datetime"),
+            tr("admin.log.table.desc"),
+        ])
         self.refresh()
 
     def paintEvent(self, event):
@@ -397,7 +418,7 @@ class _AdminLogPanel(QWidget):
 
         if not intentos:
             self.table.setRowCount(1)
-            itm = QTableWidgetItem("SIN REGISTROS DE ACCESO")
+            itm = QTableWidgetItem(tr("admin.log.no_data"))
             itm.setTextAlignment(Qt.AlignCenter)
             itm.setFlags(itm.flags() & ~Qt.ItemIsSelectable)
             self.table.setItem(0, 0, itm)

@@ -5,6 +5,8 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 from PyQt5.QtGui import  QPixmap
 
+from utils.i18n import tr
+
 AUTO_HOME_SEC = 6
 
 def sep_line():
@@ -88,7 +90,7 @@ class CamWidget(QWidget):
         self.prog_bg.setVisible(True)
         pct = min(n / total, 1.0)
         self.prog_fill.setFixedWidth(max(int(self.prog_bg.width() * pct), 0))
-        self.status.setText("Capturando biometria... {}/{}".format(n, total))
+        self.status.setText(tr("ui.capturing", n=n, total=total))
         self.status.setStyleSheet(
             "color:#4d8ec4; font-size:15px; font-weight:700; font-family:'Segoe UI';"
         )
@@ -141,5 +143,5 @@ class AutoTimer(QWidget):
             self.timeout.emit()
 
     def _refresh(self):
-        self._lbl.setText("Regresando al inicio en {}s...".format(self._left))
+        self._lbl.setText(tr("ui.return_home", n=self._left))
 

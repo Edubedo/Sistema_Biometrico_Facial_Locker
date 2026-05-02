@@ -220,6 +220,9 @@ class AdminPage(QWidget):
         self.t_ses.setText("🧾  " + tr("admin.tab.sessions"))
         self.t_log.setText("📝  " + tr("admin.tab.log"))
         self.t_adm.setText("👤  " + tr("admin.tab.admins"))
+        for panel in (self.p_lockers, self.p_sesiones, self.p_log, self.p_admins):
+            if hasattr(panel, "set_language"):
+                panel.set_language(_lang)
 
     def paintEvent(self, event):
         p = QPainter(self)

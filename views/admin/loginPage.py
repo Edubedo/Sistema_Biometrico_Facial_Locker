@@ -295,7 +295,7 @@ class LeftPanel(QWidget):
         lay.addWidget(div)
         lay.addSpacing(_dp(22))
 
-        desc = QLabel("PANEL\nADMINISTRATIVO")
+        desc = QLabel(tr("login.panel_sub").replace(" ", "\n", 1))
         desc.setAlignment(Qt.AlignCenter)
         desc.setStyleSheet(
             f"color: rgba(100,155,255,0.65); font-size: {_dp(11)}px;"
@@ -375,7 +375,7 @@ class AdminLoginPage(QWidget):
         right.setSpacing(0)
         right.setAlignment(Qt.AlignVCenter)
 
-        self.title_lbl = QLabel("LOCKZTAR")
+        self.title_lbl = QLabel(tr("login.title"))
         self.title_lbl.setStyleSheet(
             f"color: #ddeeff; font-size: {_dp(22)}px; font-weight: 900;"
             f"font-family: 'Segoe UI'; letter-spacing: 2px;"
@@ -383,7 +383,7 @@ class AdminLoginPage(QWidget):
         right.addWidget(self.title_lbl)
         right.addSpacing(_dp(4))
 
-        self.sub_lbl = QLabel("PANEL ADMINISTRATIVO")
+        self.sub_lbl = QLabel(tr("login.panel_sub"))
         self.sub_lbl.setStyleSheet(
             f"color: rgba(100,155,255,0.75); font-size: {_dp(9)}px;"
             f"font-family: 'Segoe UI'; letter-spacing: 3px; font-weight: 700;"
@@ -413,7 +413,7 @@ class AdminLoginPage(QWidget):
         btn_row = QHBoxLayout()
         btn_row.setSpacing(_dp(12))
 
-        self.back_btn = QPushButton("‹  Volver")
+        self.back_btn = QPushButton("‹  " + tr("login.back"))
         self.back_btn.setObjectName("btn_ghost")
         self.back_btn.setFixedHeight(_dp(58))
         self.back_btn.setStyleSheet(
@@ -424,7 +424,7 @@ class AdminLoginPage(QWidget):
         self.back_btn.clicked.connect(self._on_back)
         btn_row.addWidget(self.back_btn, 1)
 
-        self.btn_in = QPushButton("INGRESAR  ›")
+        self.btn_in = QPushButton(tr("login.enter") + "  ›")
         self.btn_in.setObjectName("btn_primary")
         self.btn_in.setFixedHeight(_dp(58))
         self.btn_in.setStyleSheet(
@@ -507,6 +507,8 @@ class AdminLoginPage(QWidget):
     # ── Idioma ────────────────────────────────────────────────────────────────
     def set_language(self, lang: str):
         self.back_btn.setText("‹  " + tr("login.back"))
+        self.title_lbl.setText(tr("login.title"))
+        self.sub_lbl.setText(tr("login.panel_sub"))
         self._user_field.line.setPlaceholderText(tr("login.user_ph"))
         self._pass_field.line.setPlaceholderText(tr("login.pass_ph"))
         self.btn_in.setText(tr("login.enter").upper() + "  ›")

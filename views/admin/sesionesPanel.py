@@ -8,6 +8,7 @@ from PyQt5.QtGui import QPainter, QColor, QBrush, QPen, QLinearGradient, QFont
 
 from db.models.sesiones import db_get_all_sesiones_activas
 from views.style.widgets.widgets import lbl
+from utils.i18n import tr, get_language
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -233,7 +234,7 @@ class SessionCard(QFrame):
 
         dot = StatusDot(); lay.addWidget(dot)
 
-        badge = QLabel("ACTIVA"); badge.setObjectName("badge_active")
+        badge = QLabel(tr("admin.sessions.active")); badge.setObjectName("badge_active")
         badge.setStyleSheet(f"font-size: {_dp(8)}px; padding: {_dp(3)}px {_dp(10)}px;")
         lay.addWidget(badge)
 
@@ -256,21 +257,21 @@ class _AdminSesionesPanel(QWidget):
         header_row = QHBoxLayout(); header_row.setSpacing(0)
 
         title_col = QVBoxLayout(); title_col.setSpacing(_dp(2))
-        t = QLabel("SESIONES ACTIVAS"); t.setObjectName("section_title")
-        t.setStyleSheet(f"font-size: {_dp(12)}px;")
-        s = QLabel("LOCKERS ACTUALMENTE EN USO"); s.setObjectName("section_sub")
-        s.setStyleSheet(f"font-size: {_dp(11)}px;")
-        title_col.addWidget(t); title_col.addWidget(s)
+        self.title_lbl = QLabel(tr("admin.sessions.title")); self.title_lbl.setObjectName("section_title")
+        self.title_lbl.setStyleSheet(f"font-size: {_dp(12)}px;")
+        self.subtitle_lbl = QLabel(tr("admin.sessions.subtitle")); self.subtitle_lbl.setObjectName("section_sub")
+        self.subtitle_lbl.setStyleSheet(f"font-size: {_dp(11)}px;")
+        title_col.addWidget(self.title_lbl); title_col.addWidget(self.subtitle_lbl)
         header_row.addLayout(title_col); header_row.addStretch()
 
-        btn_ref = QPushButton("↺  ACTUALIZAR"); btn_ref.setObjectName("btn_refresh")
-        btn_ref.setStyleSheet(
-            btn_ref.styleSheet() +
+        self.btn_ref = QPushButton(tr("admin.sessions.refresh")); self.btn_ref.setObjectName("btn_refresh")
+        self.btn_ref.setStyleSheet(
+            self.btn_ref.styleSheet() +
             f"font-size: {_dp(10)}px; padding: {_dp(7)}px {_dp(20)}px;"
         )
-        btn_ref.setCursor(Qt.PointingHandCursor)
-        btn_ref.clicked.connect(self.refresh)
-        header_row.addWidget(btn_ref)
+        self.btn_ref.setCursor(Qt.PointingHandCursor)
+        self.btn_ref.clicked.connect(self.refresh)
+        header_row.addWidget(self.btn_ref)
         root.addLayout(header_row)
 
         div = QFrame(); div.setObjectName("h_divider"); root.addWidget(div)
@@ -286,21 +287,26 @@ class _AdminSesionesPanel(QWidget):
         self.counter_lbl.setStyleSheet(f"font-size: {_dp(28)}px;")   # ← número más pequeño
         cb_lay.addWidget(self.counter_lbl)
 
-        key_lbl = QLabel("SESIONES\nEN CURSO"); key_lbl.setObjectName("counter_key")
-        key_lbl.setStyleSheet(f"font-size: {_dp(10)}px;")
-        cb_lay.addWidget(key_lbl); cb_lay.addStretch()
+        self.key_lbl = QLabel(tr("admin.sessions.count")); self.key_lbl.setObjectName("counter_key")
+        self.key_lbl.setStyleSheet(f"font-size: {_dp(10)}px;")
+        cb_lay.addWidget(self.key_lbl); cb_lay.addStretch()
 
         dot2 = StatusDot()
-        status_lbl = QLabel("SISTEMA OPERATIVO"); status_lbl.setObjectName("status_text")
-        status_lbl.setStyleSheet(f"font-size: {_dp(11)}px;")
-        cb_lay.addWidget(dot2); cb_lay.addWidget(status_lbl)
+        self.status_lbl = QLabel(tr("admin.sessions.status")); self.status_lbl.setObjectName("status_text")
+        self.status_lbl.setStyleSheet(f"font-size: {_dp(11)}px;")
+        cb_lay.addWidget(dot2); cb_lay.addWidget(self.status_lbl)
         root.addWidget(counter_block)
 
         # ── Tabla ─────────────────────────────────────────────────────────────
         self.table = QTableWidget()
         self.table.setObjectName("admin_sessions_tbl")
         self.table.setColumnCount(4)
-        self.table.setHorizontalHeaderLabels(["🔢 ID", "📦 LOCKER", "📅 FECHA/HORA", "✓ ESTADO"])
+        self.table.setHorizontalHeaderLabels([
+            tr("admin.sessions.table.id"),
+            tr("admin.sessions.table.locker"),
+            tr("admin.sessions.table.datetime"),
+            tr("admin.sessions.table.state"),
+        ])
         self.table.verticalHeader().setVisible(False)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -316,6 +322,21 @@ class _AdminSesionesPanel(QWidget):
         self.table.setColumnWidth(3, _dp(130))
         root.addWidget(self.table, 1)
 
+        self.set_language(get_language())
+        self.refresh()
+
+    def set_language(self, _lang: str):
+        self.title_lbl.setText(tr("admin.sessions.title"))
+        self.subtitle_lbl.setText(tr("admin.sessions.subtitle"))
+        self.btn_ref.setText(tr("admin.sessions.refresh"))
+        self.key_lbl.setText(tr("admin.sessions.count"))
+        self.status_lbl.setText(tr("admin.sessions.status"))
+        self.table.setHorizontalHeaderLabels([
+            tr("admin.sessions.table.id"),
+            tr("admin.sessions.table.locker"),
+            tr("admin.sessions.table.datetime"),
+            tr("admin.sessions.table.state"),
+        ])
         self.refresh()
 
     def paintEvent(self, event):
@@ -335,7 +356,7 @@ class _AdminSesionesPanel(QWidget):
 
         if not sesiones:
             self.table.setRowCount(1)
-            itm = QTableWidgetItem("SIN SESIONES ACTIVAS")
+            itm = QTableWidgetItem(tr("admin.sessions.no_data"))
             itm.setTextAlignment(Qt.AlignCenter)
             itm.setFlags(itm.flags() & ~Qt.ItemIsSelectable)
             self.table.setItem(0, 0, itm)
@@ -365,7 +386,7 @@ class _AdminSesionesPanel(QWidget):
             ts_item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
             self.table.setItem(r, 2, ts_item)
 
-            estado_item = QTableWidgetItem("ACTIVA")
+            estado_item = QTableWidgetItem(tr("admin.sessions.active"))
             estado_item.setTextAlignment(Qt.AlignCenter)
             # Badge-like background
             estado_item.setBackground(QColor("#e3f0ff"))

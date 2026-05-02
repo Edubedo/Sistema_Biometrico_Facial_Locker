@@ -159,6 +159,8 @@ class BigLockerButton(QWidget):
 
         self._hovered = False
         self._pressed = False
+        self._label = label
+        self._sublabel = sublabel
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setCursor(Qt.PointingHandCursor)
 
@@ -287,10 +289,10 @@ class BigLockerButton(QWidget):
         p.setFont(font)
         p.setPen(QPen(TEXT_PRIMARY))
         p.drawText(QRectF(pad, label_top, W - pad * 2, int(H * 0.15)),
-                   Qt.AlignHCenter | Qt.AlignTop, self.label)
+               Qt.AlignHCenter | Qt.AlignTop, self._label)
 
         # ── Subtexto ──────────────────────────────────────────────────────────
-        if self.sublabel:
+        if self._sublabel:
             sub_top = label_top + int(H * 0.13)
             sfs = max(6, int(H * 0.040))
             sfont = QFont("Segoe UI", sfs)
@@ -298,7 +300,7 @@ class BigLockerButton(QWidget):
 
             # Píldora de fondo para el subtexto
             fm = QFontMetrics(sfont)
-            tw = fm.horizontalAdvance(self.sublabel) + _dp(18)
+            tw = fm.horizontalAdvance(self._sublabel) + _dp(18)
             th = fm.height() + _dp(8)
             pill_x = (W - tw) // 2
             pill_rect = QRectF(pill_x, sub_top, tw, th)
@@ -309,7 +311,7 @@ class BigLockerButton(QWidget):
             p.drawRoundedRect(pill_rect, th / 2, th / 2)
 
             p.setPen(QPen(self._accent.lighter(140)))
-            p.drawText(pill_rect, Qt.AlignCenter, self.sublabel)
+            p.drawText(pill_rect, Qt.AlignCenter, self._sublabel)
 
         p.end()
 
@@ -374,7 +376,11 @@ class BigLockerButton(QWidget):
             p.drawLine(int(ax2), int(arrow_y), int(ax2 + ahead), int(arrow_y + ahead))
 
     def set_sublabel(self, text: str):
-        self.sublabel = text
+        self._sublabel = text
+        self.update()
+
+    def set_label(self, text: str):
+        self._label = text
         self.update()
 
 
@@ -602,11 +608,9 @@ class HomePage(QWidget):
     def set_language(self, lang: str):
         self._set_lang(lang, emit=False)
         self.adm.setText(tr("home.admin"))
-        self.btn_guardar.label = tr("home.store")
-        self.btn_recoger.label = tr("home.pickup")
+        self.btn_guardar.set_label(tr("home.store"))
+        self.btn_recoger.set_label(tr("home.pickup"))
         self.status_lbl.setText(tr("home.online"))
-        self.btn_guardar.update()
-        self.btn_recoger.update()
         # actualizar reloj/fecha inmediatamente según nuevo idioma
         try:
             self._tick_clock()

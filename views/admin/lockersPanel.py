@@ -15,6 +15,7 @@ from db.models.sesiones import db_close_sesion, db_get_all_sesiones_activas
 from db.models.intentos_acceso import db_log_intento
 from biometria.biometria import train_model
 from views.style.adminDialogs import DlgError, DlgInfo, DlgInput, DlgLiberar
+from utils.i18n import tr, get_language
 
 
 def _dp(v):
@@ -219,7 +220,7 @@ class LockerConfigDialog(QDialog):
         self.locker = locker
         self.admin_id = admin_id
         self.data = None
-        self.setWindowTitle(f"Configurar Locker #{locker['t_numero_locker']}")
+        self.setWindowTitle(tr("admin.lockers.dialog.config", n=locker['t_numero_locker']))
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         self.setMinimumWidth(_dp(320))
         self.setStyleSheet(STYLE)
@@ -228,7 +229,7 @@ class LockerConfigDialog(QDialog):
         root.setContentsMargins(_dp(20), _dp(16), _dp(20), _dp(16))
         root.setSpacing(_dp(12))
 
-        ttl = QLabel(f"⚙  CONFIGURAR  #{locker['t_numero_locker']}")
+        ttl = QLabel(tr("admin.lockers.dialog.config_head", n=locker['t_numero_locker']))
         ttl.setStyleSheet(
             f"color:#1565c0;font-size:{_dp(11)}px;font-weight:900;"
             "font-family:'Segoe UI';letter-spacing:2px;"
@@ -251,7 +252,7 @@ class LockerConfigDialog(QDialog):
 
         self.e_num  = QLineEdit(locker.get("t_numero_locker", ""))
         self.e_zona = QLineEdit(locker.get("t_zona") or "")
-        self.e_zona.setPlaceholderText("ej. A, Planta Baja")
+        self.e_zona.setPlaceholderText(tr("admin.lockers.dialog.placeholder"))
         self.c_tam  = QComboBox(); self.c_tam.addItems(self.TAMANOS)
         self.c_est  = QComboBox(); self.c_est.addItems(self.ESTADOS)
         if locker.get("t_tamano") in self.TAMANOS:
@@ -259,16 +260,16 @@ class LockerConfigDialog(QDialog):
         if locker.get("t_estado") in self.ESTADOS:
             self.c_est.setCurrentText(locker["t_estado"])
 
-        add_row("NÚMERO", self.e_num,  0)
-        add_row("ZONA",   self.e_zona, 1)
-        add_row("TAMAÑO", self.c_tam,  2)
-        add_row("ESTADO", self.c_est,  3)
+        add_row(tr("admin.lockers.dialog.number"), self.e_num,  0)
+        add_row(tr("admin.lockers.dialog.zone"),   self.e_zona, 1)
+        add_row(tr("admin.lockers.dialog.size"), self.c_tam,  2)
+        add_row(tr("admin.lockers.dialog.state"), self.c_est,  3)
         root.addLayout(grid)
 
         br = QHBoxLayout(); br.addStretch()
-        bn = QPushButton("CANCELAR"); bn.setObjectName("dno"); bn.setStyleSheet(fs)
+        bn = QPushButton(tr("common.cancel")); bn.setObjectName("dno"); bn.setStyleSheet(fs)
         bn.setCursor(Qt.PointingHandCursor); bn.clicked.connect(self.reject)
-        bo = QPushButton("GUARDAR");   bo.setObjectName("dok"); bo.setStyleSheet(fs)
+        bo = QPushButton(tr("common.update"));   bo.setObjectName("dok"); bo.setStyleSheet(fs)
         bo.setCursor(Qt.PointingHandCursor); bo.clicked.connect(self._save)
         br.addWidget(bn); br.addWidget(bo)
         root.addLayout(br)
@@ -276,7 +277,7 @@ class LockerConfigDialog(QDialog):
     def _save(self):
         num = self.e_num.text().strip()
         if not num:
-            DlgError.show("El número de locker no puede estar vacío.", parent=self)
+            DlgError.show(tr("admin.lockers.dialog.error_empty"), parent=self)
             return
         self.data = {
             "numero": num,
@@ -336,8 +337,11 @@ class LockerCard(QFrame):
         icon_row.addWidget(self.icon)
         icon_row.addStretch()
 
-        badge_txt = {"libre": "LIBRE", "ocupado": "OCUPADO",
-                     "mantenimiento": "MANT."}.get(estado, estado.upper())
+        badge_txt = {
+            "libre": tr("admin.lockers.libres"),
+            "ocupado": tr("admin.lockers.ocupados"),
+            "mantenimiento": "MANT.",
+        }.get(estado, estado.upper())
         self.badge = QLabel(badge_txt)
         self.badge.setAlignment(Qt.AlignCenter)
         self.badge.setStyleSheet(
@@ -415,7 +419,7 @@ class LockerCard(QFrame):
             # font-size duplicado: 10 → 20 px
             "font-size:20px; border:none; border-radius:8px;"
         )
-        btn_config.setToolTip("Configurar")
+        btn_config.setToolTip(tr("admin.lockers.configure"))
         btn_config.setCursor(Qt.PointingHandCursor)
         btn_config.clicked.connect(self._config)
         btn_row.addWidget(btn_config)
@@ -423,7 +427,7 @@ class LockerCard(QFrame):
         if estado == "ocupado":
             self.btn_liberar = QPushButton("↩")
             self.btn_liberar.setFixedSize(44, 40)
-            self.btn_liberar.setToolTip("Liberar")
+            self.btn_liberar.setToolTip(tr("admin.lockers.release"))
             self.btn_liberar.setStyleSheet(
                 f"background:{ORANGE}; color:white;"
                 # font-size duplicado: 11 → 22 px
@@ -442,7 +446,7 @@ class LockerCard(QFrame):
             # font-size duplicado: 9 → 18 px
             "font-size:18px; border:none; border-radius:8px;"
         )
-        btn_del.setToolTip("Eliminar locker")
+        btn_del.setToolTip(tr("admin.lockers.delete"))
         btn_del.setCursor(Qt.PointingHandCursor)
         btn_del.clicked.connect(self._eliminar)
         btn_row.addWidget(btn_del)
@@ -508,7 +512,7 @@ class LockerCard(QFrame):
                       "Modificado: " + ("; ".join(changes) or "sin cambios"))
             if d["estado"] == "libre" and self.locker.get("t_estado") != "libre":
                 self._close_active_session()
-            DlgInfo.show(f"Locker #{d['numero']} actualizado.", parent=self)
+            DlgInfo.show(tr("admin.lockers.dialog.updated", n=d['numero']), parent=self)
             if self.on_refresh:
                 self.on_refresh()
         except Exception as ex:
@@ -537,16 +541,15 @@ class LockerCard(QFrame):
         estado = self.locker.get("t_estado", "")
         if estado == "ocupado":
             DlgError.show(
-                f"El locker #{num} está ocupado.\nLibéralo antes de eliminarlo.",
-                title="No se puede eliminar", parent=self,
+                tr("admin.lockers.dialog.too_full", n=num),
+                title=tr("common.error"), parent=self,
             )
             return
         from views.style.adminDialogs import DlgConfirm
         if not DlgConfirm.ask(
-            f"¿Eliminar permanentemente el locker <b>#{num}</b>?\n"
-            "Esta acción no se puede deshacer.",
-            title=f"Eliminar Locker #{num}",
-            confirm_label="ELIMINAR",
+            tr("admin.lockers.dialog.delete_confirm", n=num),
+            title=tr("admin.lockers.dialog.delete_title", n=num),
+            confirm_label=tr("admin.lockers.dialog.delete_confirm_btn"),
             danger=True,
             parent=self,
         ):
@@ -583,20 +586,20 @@ class _AdminLockersPanel(QWidget):
         hdr.setSpacing(_dp(6))
         tc = QVBoxLayout()
         tc.setSpacing(_dp(2))
-        t = QLabel("GESTIÓN DE LOCKERS")
-        t.setObjectName("ttl")
-        t.setStyleSheet(f"font-size:{_dp(12)}px;")
-        s = QLabel("PANEL ADMIN · LOCKERS DE TIENDA")
-        s.setObjectName("sub")
-        s.setStyleSheet(f"font-size:{_dp(8)}px;")
-        tc.addWidget(t)
-        tc.addWidget(s)
+        self.title_lbl = QLabel(tr("admin.lockers.title"))
+        self.title_lbl.setObjectName("ttl")
+        self.title_lbl.setStyleSheet(f"font-size:{_dp(12)}px;")
+        self.subtitle_lbl = QLabel(tr("admin.lockers.subtitle"))
+        self.subtitle_lbl.setObjectName("sub")
+        self.subtitle_lbl.setStyleSheet(f"font-size:{_dp(8)}px;")
+        tc.addWidget(self.title_lbl)
+        tc.addWidget(self.subtitle_lbl)
         hdr.addLayout(tc)
         hdr.addStretch()
 
         for obj, icon, cb in [
-            ("btn_add", "＋  NUEVO",      self._agregar),
-            ("btn_ref", "↺  ACTUALIZAR", self.refresh),
+            ("btn_add", tr("admin.lockers.new"),      self._agregar),
+            ("btn_ref", tr("admin.lockers.refresh"), self.refresh),
         ]:
             b = QPushButton(icon)
             b.setObjectName(obj)
@@ -612,9 +615,9 @@ class _AdminLockersPanel(QWidget):
         cr.setSpacing(_dp(10))
         self._cnt = {}
         for key, label, obj in [
-            ("libre",   "LIBRES",   "cn_b"),
-            ("ocupado", "OCUPADOS", "cn_o"),
-            ("total",   "TOTAL",    "cn_g"),
+            ("libre",   tr("admin.lockers.libres"),   "cn_b"),
+            ("ocupado", tr("admin.lockers.ocupados"), "cn_o"),
+            ("total",   tr("admin.lockers.total"),    "cn_g"),
         ]:
             blk = QFrame()
             blk.setObjectName("cnt")
@@ -652,6 +655,12 @@ class _AdminLockersPanel(QWidget):
 
         # Columnas reducidas a la mitad para compensar el tamaño doble: 4 → 2
         self._cols = 2
+        self.set_language(get_language())
+        self.refresh()
+
+    def set_language(self, _lang: str):
+        self.title_lbl.setText(tr("admin.lockers.title"))
+        self.subtitle_lbl.setText(tr("admin.lockers.subtitle"))
         self.refresh()
 
     def _div(self):
@@ -669,9 +678,9 @@ class _AdminLockersPanel(QWidget):
 
     def _agregar(self):
         num = DlgInput.ask(
-            "Ingresa el número del nuevo locker:",
-            title="Nuevo Locker",
-            placeholder="ej. 42",
+            tr("admin.lockers.dialog.msg"),
+            title=tr("admin.lockers.dialog.title"),
+            placeholder=tr("admin.lockers.dialog.placeholder"),
             parent=self,
         )
         if not num:
@@ -685,7 +694,7 @@ class _AdminLockersPanel(QWidget):
                 descripcion = f"Admin registró locker #{num}.",
                 id_usuario  = self.admin_id,
             )
-            DlgInfo.show(f"Locker #{num} creado correctamente.", parent=self)
+            DlgInfo.show(tr("admin.lockers.dialog.created", n=num), parent=self)
             self.refresh()
         except Exception as ex:
             DlgError.show(str(ex), parent=self)
@@ -704,7 +713,7 @@ class _AdminLockersPanel(QWidget):
         self._cnt["total"].setText(str(len(lockers)))
 
         if not lockers:
-            e = QLabel("·  SIN LOCKERS REGISTRADOS  ·")
+            e = QLabel(tr("admin.lockers.empty"))
             e.setObjectName("empty")
             e.setAlignment(Qt.AlignCenter)
             e.setStyleSheet(f"font-size:{_dp(9)}px;")

@@ -15,6 +15,8 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtGui import QColor, QFont
 
+from utils.i18n import tr
+
 # ── DPI ───────────────────────────────────────────────────────────────────────
 def _dp(v):
     s = QApplication.primaryScreen()
@@ -170,11 +172,13 @@ class DlgError(_BaseDialog):
     def __init__(self, message: str, title: str = "Error", parent=None):
         super().__init__(title, message, kind="error", parent=parent)
         row = self._btn_row()
-        row.addWidget(self._make_btn("ACEPTAR", "btn_danger", self.accept, 110))
+        row.addWidget(self._make_btn(tr("dlg.accept"), "btn_danger", self.accept, 110))
         self._root.addLayout(row)
 
     @staticmethod
-    def show(message, title="Error", parent=None):
+    def show(message, title=None, parent=None):
+        if title is None:
+            title = tr("dlg.error")
         DlgError(message, title, parent).exec_()
 
 
@@ -185,11 +189,13 @@ class DlgInfo(_BaseDialog):
     def __init__(self, message: str, title: str = "Información", parent=None):
         super().__init__(title, message, kind="info", parent=parent)
         row = self._btn_row()
-        row.addWidget(self._make_btn("ACEPTAR", "btn_primary", self.accept, 110))
+        row.addWidget(self._make_btn(tr("dlg.accept"), "btn_primary", self.accept, 110))
         self._root.addLayout(row)
 
     @staticmethod
-    def show(message, title="Información", parent=None):
+    def show(message, title=None, parent=None):
+        if title is None:
+            title = tr("dlg.info")
         DlgInfo(message, title, parent).exec_()
 
 
@@ -202,14 +208,18 @@ class DlgConfirm(_BaseDialog):
                  parent=None):
         super().__init__(title, message, kind="ask", parent=parent)
         row = self._btn_row()
-        row.addWidget(self._make_btn("CANCELAR", "btn_ghost", self.reject, 110))
+        row.addWidget(self._make_btn(tr("dlg.cancel"), "btn_ghost", self.reject, 110))
         obj = "btn_danger" if danger else "btn_primary"
         row.addWidget(self._make_btn(confirm_label, obj, self.accept, 130))
         self._root.addLayout(row)
 
     @staticmethod
-    def ask(message, title="Confirmar", confirm_label="CONFIRMAR",
+    def ask(message, title=None, confirm_label=None,
             danger=False, parent=None) -> bool:
+        if title is None:
+            title = tr("dlg.confirm")
+        if confirm_label is None:
+            confirm_label = tr("dlg.confirm_btn")
         return DlgConfirm(message, title, confirm_label, danger, parent).exec_() == QDialog.Accepted
 
 
@@ -227,8 +237,8 @@ class DlgInput(_BaseDialog):
         self._root.addWidget(self._inp)
 
         row = self._btn_row()
-        row.addWidget(self._make_btn("CANCELAR", "btn_ghost", self.reject, 110))
-        row.addWidget(self._make_btn("ACEPTAR",  "btn_primary", self._ok,   110))
+        row.addWidget(self._make_btn(tr("dlg.cancel"), "btn_ghost", self.reject, 110))
+        row.addWidget(self._make_btn(tr("dlg.accept"),  "btn_primary", self._ok,   110))
         self._root.addLayout(row)
 
     def _ok(self):
@@ -239,9 +249,11 @@ class DlgInput(_BaseDialog):
         return self._inp.text().strip()
 
     @staticmethod
-    def ask(message, title="Ingresar valor", placeholder="",
+    def ask(message, title=None, placeholder="",
             parent=None):
         """Returns the string entered, or None if cancelled."""
+        if title is None:
+            title = tr("dlg.input")
         d = DlgInput(message, title, placeholder, parent)
         return d.value() if d.exec_() == QDialog.Accepted else None
 
@@ -258,9 +270,8 @@ class DlgLiberar(_BaseDialog):
 
     def __init__(self, locker_num: str, parent=None):
         super().__init__(
-            f"Liberar Locker #{locker_num}",
-            f"Se cerrará la sesión activa y se eliminará el acceso biométrico "
-            f"del locker <b>#{locker_num}</b>.\n\nEsta acción quedará registrada en auditoría.",
+            tr("dlg.release_title", n=locker_num),
+            tr("dlg.release_msg", n=locker_num),
             kind="warn",
             parent=parent,
             width=400,
@@ -268,22 +279,20 @@ class DlgLiberar(_BaseDialog):
         self._reason = ""
 
         # Optional reason
-        lbl = QLabel("MOTIVO DE LIBERACIÓN  (opcional)")
+        lbl = QLabel(tr("admin.lockers.dialog.remove_reason"))
         lbl.setObjectName("dlg_opt_label")
         lbl.setStyleSheet(f"font-size:{_dp(8)}px;")
         self._root.addWidget(lbl)
 
         self._ta = QTextEdit(); self._ta.setObjectName("dlg_textarea")
-        self._ta.setPlaceholderText(
-            "ej. Cliente solicitó apertura · Fin de horario · Incidencia técnica …"
-        )
+        self._ta.setPlaceholderText(tr("admin.lockers.dialog.remove_placeholder"))
         self._ta.setFixedHeight(_dp(68))
         self._ta.setStyleSheet(f"font-size:{_dp(9)}px;")
         self._root.addWidget(self._ta)
 
         row = self._btn_row()
-        row.addWidget(self._make_btn("CANCELAR",       "btn_ghost",  self.reject, 110))
-        row.addWidget(self._make_btn("↩  LIBERAR",     "btn_danger", self._ok,   120))
+        row.addWidget(self._make_btn(tr("dlg.cancel"),       "btn_ghost",  self.reject, 110))
+        row.addWidget(self._make_btn(tr("dlg.release_btn"),   "btn_danger", self._ok,   120))
         self._root.addLayout(row)
 
     def _ok(self):
