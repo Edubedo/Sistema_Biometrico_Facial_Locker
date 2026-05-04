@@ -103,84 +103,43 @@ _kbd_process  = None
 _main_window  = None   # referencia a la ventana principal para restaurar foco
 
 
-def _configure_onboard_docked():
-    """
-    Configura onboard para que se ancle en la parte inferior como panel.
-    En modo docked NO roba el foco de la aplicación.
-    """
-    settings = [
-        # Anclar en la parte inferior
-        ("org.onboard.window",         "docking-enabled",        "true"),
-        ("org.onboard.window.docking", "side",                   "'bottom'"),
-        # Que no tome el foco al aparecer
-        ("org.onboard",                "show-tooltips",          "false"),
-        # Layout compacto para pantalla pequeña
-        ("org.onboard",                "layout",
-         "/usr/share/onboard/layouts/Phone.onboard"),
-        ("org.onboard",                "theme",
-         "/usr/share/onboard/themes/Nightshade.theme"),
-    ]
-    for schema, key, value in settings:
-        try:
-            subprocess.run(
-                ["gsettings", "set", schema, key, value],
-                capture_output=True, timeout=2
-            )
-        except Exception:
-            pass
 
+_kbd_process = None
 
-def _open_native_keyboard(restore_widget: QWidget = None):
-    """
-    Abre el teclado nativo.  En Linux configura onboard como panel docked
-    antes de lanzarlo para que no robe el foco.
-    `restore_widget` : widget al que se restaura el foco tras abrir el teclado.
-    """
+def _open_native_keyboard(restore_widget=None):
     global _kbd_process
 
-    # Si ya está abierto no volver a lanzar
+    # evitar múltiples instancias
     if _kbd_process is not None and _kbd_process.poll() is None:
         return
 
     try:
-        os_name = platform.system()
+        if platform.system() == "Linux":
+            if shutil.which("onboard"):
+                # 🔥 IMPORTANTE: modo normal (NO docked)
+                _kbd_process = subprocess.Popen(["onboard"])
 
-        if os_name == "Windows":
+        elif platform.system() == "Windows":
             subprocess.Popen(
                 r"C:\Program Files\Common Files\Microsoft Shared\ink\TabTip.exe",
                 shell=True
             )
 
-        elif os_name == "Linux":
-            if shutil.which("onboard"):
-                _configure_onboard_docked()
-                # --keep-aspect evita que redimensione la ventana principal
-                _kbd_process = subprocess.Popen(["onboard", "--keep-aspect"])
-            else:
-                # Fallback a otros teclados disponibles
-                for kbd in ["matchbox-keyboard", "florence",
-                            "squeekboard", "wvkbd-mobintl"]:
-                    if shutil.which(kbd):
-                        _kbd_process = subprocess.Popen([kbd])
-                        break
-
-        # Restaurar foco al campo después de que el teclado haya abierto su
-        # ventana (onboard tarda ~300 ms en dibujarse).
-        if restore_widget is not None:
-            def _restore():
+        # 🔥 restaurar foco al input
+        if restore_widget:
+            def restore():
                 try:
-                    top = restore_widget.window()
-                    top.activateWindow()
-                    top.raise_()
+                    w = restore_widget.window()
+                    w.activateWindow()
+                    w.raise_()
                     restore_widget.setFocus()
-                except Exception:
+                except:
                     pass
 
-            QTimer.singleShot(350, _restore)
+            QTimer.singleShot(400, restore)
 
-    except Exception:
+    except:
         pass
-
 
 def _close_native_keyboard():
     global _kbd_process
@@ -246,9 +205,9 @@ class InputField(QWidget):
         orig_mouse_press = self.line.mousePressEvent
 
         def _on_mouse_press(e):
-            orig_mouse_press(e)                          # procesar click normal
-            # Abrir teclado y restaurar foco a este campo
-            _open_native_keyboard(restore_widget=self.line)
+            orig_mouse_press(e)
+            _open_native_keyboard(self.line)
+
 
         self.line.mousePressEvent = _on_mouse_press
 
