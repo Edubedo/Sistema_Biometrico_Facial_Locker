@@ -1,14 +1,13 @@
 import time
-import platform
 
-# Solo importar GPIO si estamos en Raspberry Pi
-if platform.system() == "Linux":
+try:
     import RPi.GPIO as GPIO
+except ImportError:
+    GPIO = None
+    print("[GPIO] Modo simulado — RPi.GPIO no está disponible")
+else:
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
-else:
-    GPIO = None
-    print("[GPIO] Modo simulado — no es Raspberry Pi")
 
 BUZZER_PIN = 24
 LOCKER_PINS = {

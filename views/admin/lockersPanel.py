@@ -583,7 +583,7 @@ class _AdminLockersPanel(QWidget):
         root.setSpacing(_dp(8))
 
         hdr = QHBoxLayout()
-        hdr.setSpacing(_dp(6))
+        hdr.setSpacing(_dp(8))
         tc = QVBoxLayout()
         tc.setSpacing(_dp(2))
         self.title_lbl = QLabel(tr("admin.lockers.title"))
@@ -603,7 +603,7 @@ class _AdminLockersPanel(QWidget):
         ]:
             b = QPushButton(icon)
             b.setObjectName(obj)
-            b.setStyleSheet(f"font-size:{_dp(8)}px;padding:{_dp(5)}px {_dp(14)}px;")
+            b.setStyleSheet(f"font-size:{_dp(10)}px;padding:{_dp(8)}px {_dp(18)}px;min-height:{_dp(34)}px;")
             b.setCursor(Qt.PointingHandCursor)
             b.clicked.connect(cb)
             hdr.addWidget(b)
