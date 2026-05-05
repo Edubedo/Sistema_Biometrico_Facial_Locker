@@ -644,6 +644,7 @@ class _AdminUsersPanel(QWidget):
         self.btn_ref = QPushButton(tr("admin.users.refresh"))
         self.btn_ref.setObjectName("btn_ref")
         self.btn_ref.setStyleSheet(f"font-size:{_dp(11)}px;padding:{_dp(7)}px {_dp(16)}px;")
+        self.btn_ref.setFixedSize(_dp(170), _dp(38))
         self.btn_ref.setCursor(Qt.PointingHandCursor)
         self.btn_ref.clicked.connect(self.refresh)
         hdr.addWidget(self.btn_ref)

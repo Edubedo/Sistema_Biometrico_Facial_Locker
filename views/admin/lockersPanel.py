@@ -597,6 +597,9 @@ class _AdminLockersPanel(QWidget):
         hdr.addLayout(tc)
         hdr.addStretch()
 
+        btn_w = _dp(170)
+        btn_h = _dp(38)
+
         for obj, icon, cb in [
             ("btn_add", tr("admin.lockers.new"),      self._agregar),
             ("btn_ref", tr("admin.lockers.refresh"), self.refresh),
@@ -604,6 +607,7 @@ class _AdminLockersPanel(QWidget):
             b = QPushButton(icon)
             b.setObjectName(obj)
             b.setStyleSheet(f"font-size:{_dp(10)}px;padding:{_dp(8)}px {_dp(18)}px;min-height:{_dp(34)}px;")
+            b.setFixedSize(btn_w, btn_h)
             b.setCursor(Qt.PointingHandCursor)
             b.clicked.connect(cb)
             hdr.addWidget(b)

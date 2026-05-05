@@ -322,7 +322,7 @@ class AdminLoginPage(QWidget):
 
         # Panel izquierdo
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        logo_path = os.path.join(project_root, "logo_LockZtar_Negro.png")
+        logo_path = os.path.join(project_root, "lockztar.png")
         self._left = LeftPanel(logo_path)
         card_row.addWidget(self._left)
 

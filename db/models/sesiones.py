@@ -2,24 +2,38 @@ from db.connection import connectionDB
 import datetime
 
 
+def _decode_face_uid(raw_value):
+    if isinstance(raw_value, bytes):
+        return raw_value.decode("utf-8", errors="ignore").strip()
+    if isinstance(raw_value, str):
+        return raw_value.strip()
+    return ""
+
+
+def _delete_face_data(face_uid):
+    if not face_uid:
+        return
+    try:
+        from biometria.biometria import delete_face_data
+        delete_face_data(face_uid)
+    except Exception as ex:
+        print(f"[Sesiones] No se pudo borrar biometria '{face_uid}': {ex}")
+
+
 def _delete_session_face_data(id_sesion):
     with connectionDB() as con:
         row = con.execute(
             "SELECT b_vector_biometrico_temp FROM Sesiones WHERE ID_sesion=?",
             (id_sesion,)
         ).fetchone()
-    if not row:
-        return
-    face_uid = row["b_vector_biometrico_temp"]
-    if isinstance(face_uid, bytes):
-        face_uid = face_uid.decode("utf-8", errors="ignore")
-    if not face_uid:
-        return
-    try:
-        from biometria.biometria import delete_face_data
-        delete_face_data(face_uid)
-    except Exception:
-        pass
+    face_uid = _decode_face_uid(row["b_vector_biometrico_temp"]) if row else ""
+    if face_uid:
+        _delete_face_data(face_uid)
+
+    # Refuerzo por convencion: face_uid principal es "sesion_<ID_sesion>"
+    fallback_uid = f"sesion_{id_sesion}"
+    if face_uid != fallback_uid:
+        _delete_face_data(fallback_uid)
 
 # ──── SESIONES ───────────────────────────────────────────────────────────────
 
@@ -47,7 +61,7 @@ def db_close_sesion(id_sesion):
     _delete_session_face_data(id_sesion)
     with connectionDB() as con:
         con.execute(
-            "UPDATE Sesiones SET t_estado='cerrado', d_fecha_hora_salida=? "
+            "UPDATE Sesiones SET t_estado='cerrado', d_fecha_hora_salida=?, b_vector_biometrico_temp=NULL "
             "WHERE ID_sesion=?",
             (now, id_sesion)
         )

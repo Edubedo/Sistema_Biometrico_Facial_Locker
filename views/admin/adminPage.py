@@ -1,9 +1,11 @@
+import os
+
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
     QStackedWidget, QFrame, QApplication, QGraphicsDropShadowEffect
 )
-from PyQt5.QtGui import QPainter, QColor, QBrush, QLinearGradient
+from PyQt5.QtGui import QPainter, QColor, QBrush, QLinearGradient, QPixmap
 
 from views.admin.lockersPanel import _AdminLockersPanel
 from views.admin.sesionesPanel import _AdminSesionesPanel
@@ -109,7 +111,7 @@ class AdminPage(QWidget):
         # ── Header ────────────────────────────────────────────────────────────
         header = QFrame()
         header.setObjectName("admin_header")
-        header_h = touch_height(_dp(52))
+        header_h = touch_height(_dp(60))
         header.setFixedHeight(header_h)          # adaptive for touch
 
         hl = QHBoxLayout(header)
@@ -120,13 +122,13 @@ class AdminPage(QWidget):
         self.bk = QPushButton("")
         bk = self.bk
         bk.setObjectName("btn_back")
-        bk_h = touch_height(_dp(36))
+        bk_h = touch_height(_dp(48))
         bk.setFixedHeight(bk_h)
         # scale fonts/padding proportionally to header height
-        _base_header = max(1, _dp(52))
+        _base_header = max(1, _dp(60))
         _scale = (header_h / _base_header) if _base_header else 1.0
-        fs = max(10, round(_dp(10) * _scale))
-        pad_h = max(10, round(_dp(14) * _scale))
+        fs = max(12, round(_dp(13) * _scale))
+        pad_h = max(16, round(_dp(22) * _scale))
         bk.setStyleSheet(bk.styleSheet() + f"font-size: {fs}px; padding: 0px {pad_h}px;")
         bk.setCursor(Qt.PointingHandCursor)
         bk.clicked.connect(self.go_back.emit)
@@ -134,16 +136,24 @@ class AdminPage(QWidget):
 
         hl.addSpacing(_dp(6))
 
-        # Branding
-        bicon = lbl("🔒", "brand_icon", Qt.AlignLeft)
-        bname = lbl("SUPERLOCKER", "brand_name", Qt.AlignLeft)
-        # scale brand fonts for touch
-        bicon_fs = max(12, round(_dp(15) * _scale))
-        bname_fs = max(11, round(_dp(12) * _scale))
-        bicon.setStyleSheet(f"font-size: {bicon_fs}px;")
-        bname.setStyleSheet(f"font-size: {bname_fs}px;")
-        hl.addWidget(bicon, 0, Qt.AlignVCenter)
-        hl.addWidget(bname, 0, Qt.AlignVCenter)
+        # Branding (logo real)
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        logo_path = os.path.join(project_root, "lockztar.png")
+        logo_lbl = QLabel()
+        logo_w = max(_dp(180), round(_dp(210) * _scale))
+        logo_h = max(_dp(44), round(_dp(52) * _scale))
+        logo_lbl.setFixedSize(logo_w, logo_h)
+        logo_lbl.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+        logo_px = QPixmap(logo_path)
+        if not logo_px.isNull():
+            logo_lbl.setPixmap(
+                logo_px.scaled(logo_w, logo_h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            )
+        else:
+            logo_lbl.setText("LOCKZTAR")
+            logo_lbl.setObjectName("brand_name")
+            logo_lbl.setStyleSheet(f"font-size: {max(12, round(_dp(14) * _scale))}px;")
+        hl.addWidget(logo_lbl, 0, Qt.AlignVCenter)
 
         hl.addStretch()
 

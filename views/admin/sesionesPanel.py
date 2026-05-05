@@ -269,6 +269,7 @@ class _AdminSesionesPanel(QWidget):
             self.btn_ref.styleSheet() +
             f"font-size: {_dp(10)}px; padding: {_dp(7)}px {_dp(20)}px;"
         )
+        self.btn_ref.setFixedSize(_dp(170), _dp(38))
         self.btn_ref.setCursor(Qt.PointingHandCursor)
         self.btn_ref.clicked.connect(self.refresh)
         header_row.addWidget(self.btn_ref)

@@ -160,7 +160,7 @@ _TRANSLATIONS = {
         # ── Admin lockers ─────────────────────────────────────────────────────
         "admin.lockers.title":   "GESTIÓN DE LOCKERS",
         "admin.lockers.subtitle": "PANEL ADMIN · LOCKERS DE TIENDA",
-        "admin.lockers.new":      "＋  NUEVO",
+        "admin.lockers.new":      "＋  NUEVO LOCKER",
         "admin.lockers.refresh":  "↺  ACTUALIZAR",
         "admin.lockers.libres":   "LIBRES",
         "admin.lockers.ocupados": "OCUPADOS",
