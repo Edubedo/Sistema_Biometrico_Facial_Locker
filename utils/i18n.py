@@ -65,7 +65,7 @@ _TRANSLATIONS = {
         "login.kbd.shift":      "MAYÚS",
 
         # ── Admin general ──────────────────────────────────────────────────────
-        "admin.logout":         "‹  CERRAR SESIÓN",
+        "admin.logout":         "‹  SALIR",
         "admin.panel":          "PANEL DE ADMINISTRACIÓN",
         "admin.tab.lockers":    "LOCKERS",
         "admin.tab.sessions":   "SESIONES",
@@ -243,7 +243,7 @@ _TRANSLATIONS = {
         "login.kbd.shift":  "MAYÚS",
 
         # ── Panel de administración ─────────────────────────────────────────────
-        "admin.logout":        "‹  CERRAR SESIÓN",
+        "admin.logout":        "‹  SALIR",
         "admin.panel":         "PANEL DE ADMINISTRACIÓN",
         "admin.tab.lockers":   "LOCKERS",
         "admin.tab.sessions":  "SESIONES",

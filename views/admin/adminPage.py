@@ -1,11 +1,14 @@
 import os
 
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal, QRectF
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
-    QStackedWidget, QFrame, QApplication, QGraphicsDropShadowEffect
+    QStackedWidget, QFrame, QApplication
 )
-from PyQt5.QtGui import QPainter, QColor, QBrush, QLinearGradient, QPixmap
+from PyQt5.QtGui import (
+    QPainter, QColor, QBrush, QLinearGradient,
+    QRadialGradient, QPixmap, QPainterPath, QPen
+)
 
 from views.admin.lockersPanel import _AdminLockersPanel
 from views.admin.sesionesPanel import _AdminSesionesPanel
@@ -23,78 +26,95 @@ def _dp(value: float) -> int:
     return max(1, round(value * scale))
 
 
-STYLE = """
-QWidget#admin_page { background: transparent; color: #1a2a3a; }
+# ── Paleta — azules más claros y luminosos ────────────────────────────────────
+BG_TOP       = QColor(18,  45,  95)   # azul medio-oscuro (antes muy oscuro)
+BG_BOT       = QColor(24,  60, 120)   # azul más saturado
+HEADER_TOP   = QColor(25,  60, 130)   # header más claro
+HEADER_BOT   = QColor(35,  80, 165)   # bottom del header luminoso
+ACCENT_BLUE  = QColor(70, 160, 255)   # acento más brillante
+CARD_BG      = QColor(30,  65, 130)
+CARD_BORDER  = QColor(70, 130, 210)
+TEXT_PRIMARY = QColor(230, 242, 255)
+TEXT_MUTED   = QColor(150, 185, 230)
 
-QFrame#admin_header {
-    background-color: #1565c0;
+# Color sólido para el botón de cerrar sesión
+LOGOUT_BG    = QColor(220,  55,  55)  # rojo sólido — inconfundible para "salir"
+
+
+STYLE = """
+QWidget#admin_page  { background: transparent; color: #e6f2ff; }
+QFrame#admin_header { background: transparent; border: none; }
+
+/* ── Botón cerrar sesión — color sólido único ─────────────────────────── */
+QPushButton#btn_back {
+    background: #dc3737;
+    color: #ffffff;
     border: none;
-}
-QLabel#brand_icon {
-    color: #ffffff;
-    font-weight: 900;
+    border-radius: 10px;
     font-family: 'Segoe UI', sans-serif;
+    letter-spacing: 1px;
+    font-weight: 700;
 }
-QLabel#brand_name {
+QPushButton#btn_back:hover {
+    background: #e84f4f;
     color: #ffffff;
-    font-weight: 900;
-    font-family: 'Segoe UI', sans-serif;
-    letter-spacing: 2px;
 }
-QLabel#page_title {
-    color: #ffffff;
-    font-weight: 800;
-    font-family: 'Segoe UI', sans-serif;
-    letter-spacing: 2px;
+QPushButton#btn_back:pressed {
+    background: #b82e2e;
 }
-QLabel#badge_blue {
-    background: rgba(255,255,255,0.15);
-    color: #ffffff;
-    border: 1px solid rgba(255,255,255,0.3);
+
+/* ── Badge usuario ───────────────────────────────────────────────────────── */
+QLabel#badge_user {
+    background: rgba(70,160,255,0.22);
+    color: #c8e4ff;
+    border: 1px solid rgba(70,160,255,0.55);
     border-radius: 10px;
     font-family: 'Segoe UI', sans-serif;
     letter-spacing: 2px;
-    font-weight: 600;
+    font-weight: 700;
 }
-QPushButton#btn_back {
-    background: rgba(255,255,255,0.12);
-    color: #ffffff;
-    border: 1px solid rgba(255,255,255,0.25);
-    border-radius: 6px;
-    font-family: 'Segoe UI', sans-serif;
-    letter-spacing: 1px;
-    font-weight: 600;
-}
-QPushButton#btn_back:hover   { background: rgba(255,255,255,0.22); }
-QPushButton#btn_back:pressed { background: rgba(255,255,255,0.08); }
 
+/* ── Barra de tabs ───────────────────────────────────────────────────────── */
 QFrame#tab_bar {
-    background: #ffffff;
-    border: none;
-    border-bottom: 1px solid #cfd8e3;
-}
-QPushButton#tab {
     background: transparent;
-    color: #90a4ae;
     border: none;
-    border-bottom: 3px solid transparent;
+}
+
+/* Tab inactivo */
+QPushButton#tab {
+    background: rgba(255,255,255,0.07);
+    color: rgba(180,210,255,0.80);
+    border: 1px solid rgba(70,160,255,0.22);
+    border-radius: 10px;
     font-family: 'Segoe UI', sans-serif;
     font-weight: 700;
     letter-spacing: 1px;
-    border-radius: 0;
 }
-QPushButton#tab:hover   { color: #1976d2; border-bottom-color: #90c4f0; }
-QPushButton#tab:checked { color: #1565c0; border-bottom-color: #1565c0; }
+QPushButton#tab:hover {
+    background: rgba(70,160,255,0.22);
+    color: #ddeeff;
+    border-color: rgba(70,160,255,0.55);
+}
 
-QFrame#h_divider {
-    background: #cfd8e3;
+/* Tab activo */
+QPushButton#tab:checked {
+    background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+        stop:0 rgba(70,160,255,0.65), stop:1 rgba(35,110,230,0.65));
+    color: #ffffff;
+    border: 1.5px solid rgba(100,180,255,0.90);
+}
+
+/* ── Área de contenido ───────────────────────────────────────────────────── */
+QStackedWidget#content_stack {
+    background: transparent;
     border: none;
-    min-height: 1px;
-    max-height: 1px;
 }
 """
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+#  AdminPage
+# ─────────────────────────────────────────────────────────────────────────────
 class AdminPage(QWidget):
     go_back = pyqtSignal()
 
@@ -111,122 +131,124 @@ class AdminPage(QWidget):
         # ── Header ────────────────────────────────────────────────────────────
         header = QFrame()
         header.setObjectName("admin_header")
-        header_h = touch_height(_dp(60))
-        header.setFixedHeight(header_h)          # adaptive for touch
+        header.setFixedHeight(_dp(90))
 
         hl = QHBoxLayout(header)
-        hl.setContentsMargins(_dp(10), 0, _dp(10), 0)
-        hl.setSpacing(_dp(8))
+        hl.setContentsMargins(_dp(16), _dp(8), _dp(16), _dp(8))
+        hl.setSpacing(_dp(12))
 
-        # Botón cerrar sesión
+        # Botón cerrar sesión — color sólido rojo
         self.bk = QPushButton("")
-        bk = self.bk
-        bk.setObjectName("btn_back")
-        bk_h = touch_height(_dp(48))
-        bk.setFixedHeight(bk_h)
-        # scale fonts/padding proportionally to header height
-        _base_header = max(1, _dp(60))
-        _scale = (header_h / _base_header) if _base_header else 1.0
-        fs = max(12, round(_dp(13) * _scale))
-        pad_h = max(16, round(_dp(22) * _scale))
-        bk.setStyleSheet(bk.styleSheet() + f"font-size: {fs}px; padding: 0px {pad_h}px;")
-        bk.setCursor(Qt.PointingHandCursor)
-        bk.clicked.connect(self.go_back.emit)
-        hl.addWidget(bk, 0, Qt.AlignVCenter)
+        self.bk.setObjectName("btn_back")
+        self.bk.setFixedHeight(_dp(52))
+        self.bk.setFixedWidth(_dp(160))
+        self.bk.setStyleSheet(
+            self.bk.styleSheet() +
+            f"font-size: {_dp(12)}px; padding: 0 {_dp(18)}px;"
+        )
+        self.bk.setCursor(Qt.PointingHandCursor)
+        self.bk.clicked.connect(self.go_back.emit)
+        hl.addWidget(self.bk, 0, Qt.AlignVCenter)
 
-        hl.addSpacing(_dp(6))
+        hl.addSpacing(_dp(4))
 
-        # Branding (logo real)
-        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-        logo_path = os.path.join(project_root, "lockztar.png")
+        # Logo
+        project_root = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "..")
+        )
+        logo_path = os.path.join(project_root, "logo_LockZtar_Negro.png")
         logo_lbl = QLabel()
-        logo_w = max(_dp(180), round(_dp(210) * _scale))
-        logo_h = max(_dp(44), round(_dp(52) * _scale))
-        logo_lbl.setFixedSize(logo_w, logo_h)
+        logo_lbl.setFixedSize(_dp(190), _dp(72))
         logo_lbl.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
         logo_px = QPixmap(logo_path)
         if not logo_px.isNull():
             logo_lbl.setPixmap(
-                logo_px.scaled(logo_w, logo_h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                logo_px.scaled(_dp(180), _dp(66),
+                               Qt.KeepAspectRatio, Qt.SmoothTransformation)
             )
         else:
             logo_lbl.setText("LOCKZTAR")
-            logo_lbl.setObjectName("brand_name")
-            logo_lbl.setStyleSheet(f"font-size: {max(12, round(_dp(14) * _scale))}px;")
+            logo_lbl.setStyleSheet(
+                f"color:#e6f2ff; font-size:{_dp(16)}px;"
+                f"font-weight:900; font-family:'Segoe UI';"
+            )
         hl.addWidget(logo_lbl, 0, Qt.AlignVCenter)
 
         hl.addStretch()
 
         # Título centrado
-        self.tit = lbl("", "page_title")
-        tit_fs = max(12, round(_dp(13) * _scale))
+        self.tit = QLabel("")
         self.tit.setStyleSheet(
-            f"color: #ffffff; font-size: {tit_fs}px; font-weight: 800;"
-            f"font-family: 'Segoe UI'; letter-spacing: 2px;"
+            f"color: #e6f2ff; font-size: {_dp(14)}px; font-weight: 900;"
+            f"font-family: 'Segoe UI'; letter-spacing: 2px; background: transparent;"
         )
         hl.addWidget(self.tit, 0, Qt.AlignVCenter)
 
         hl.addStretch()
 
         # Badge usuario
-        badge_fs = max(9, round(_dp(9) * _scale))
-        badge_pr = max(5, round(_dp(5) * _scale))
-        badge_pl = max(10, round(_dp(14) * _scale))
-        self.badge = lbl("", "badge_blue")
+        self.badge = QLabel("")
+        self.badge.setObjectName("badge_user")
         self.badge.setStyleSheet(
-            f"background: rgba(255,255,255,0.15); color: #ffffff;"
-            f"border: 1px solid rgba(255,255,255,0.3); border-radius: {_dp(10)}px;"
-            f"font-size: {badge_fs}px; padding: {badge_pr}px {badge_pl}px;"
-            f"font-family: 'Segoe UI'; letter-spacing: 2px; font-weight: 600;"
+            self.badge.styleSheet() +
+            f"font-size: {_dp(10)}px; padding: {_dp(6)}px {_dp(14)}px;"
         )
         hl.addWidget(self.badge, 0, Qt.AlignVCenter)
 
         vl.addWidget(header)
 
+        vl.addSpacing(_dp(2))
+
         # ── Tab bar ───────────────────────────────────────────────────────────
-        # En 800px de ancho con 4 tabs, aumentamos tamaño para mejor visibilidad
         tab_bar = QFrame()
         tab_bar.setObjectName("tab_bar")
-        tab_h = touch_height(_dp(64))
-        tab_bar.setFixedHeight(tab_h)         # adaptive for touch
+        tab_bar.setFixedHeight(_dp(56))
 
         tbl = QHBoxLayout(tab_bar)
-        tbl.setContentsMargins(_dp(4), 0, _dp(4), 0)
-        tbl.setSpacing(0)
+        tbl.setContentsMargins(_dp(12), _dp(6), _dp(12), _dp(6))
+        tbl.setSpacing(_dp(8))
 
-        # scale tab fonts/padding with header scale
-        tab_font_size = max(11, round(_dp(13) * _scale))
-        pad_v = max(10, round(_dp(18) * _scale))
-        pad_h = max(14, round(_dp(24) * _scale))
-        tab_padding   = f"padding: {pad_v}px {pad_h}px;"
+        tab_fs  = _dp(12)
+        tab_pad = f"padding: {_dp(8)}px {_dp(14)}px;"
 
         self.t_lock = QPushButton("")
-        self.t_lock.setObjectName("tab"); self.t_lock.setCheckable(True); self.t_lock.setChecked(True)
+        self.t_lock.setObjectName("tab")
+        self.t_lock.setCheckable(True)
+        self.t_lock.setChecked(True)
 
-        self.t_ses  = QPushButton("")
-        self.t_ses.setObjectName("tab");  self.t_ses.setCheckable(True)
+        self.t_ses = QPushButton("")
+        self.t_ses.setObjectName("tab")
+        self.t_ses.setCheckable(True)
 
-        self.t_log  = QPushButton("")
-        self.t_log.setObjectName("tab");  self.t_log.setCheckable(True)
+        self.t_log = QPushButton("")
+        self.t_log.setObjectName("tab")
+        self.t_log.setCheckable(True)
 
-        self.t_adm  = QPushButton("")
-        self.t_adm.setObjectName("tab");  self.t_adm.setCheckable(True)
+        self.t_adm = QPushButton("")
+        self.t_adm.setObjectName("tab")
+        self.t_adm.setCheckable(True)
 
         for i, b in enumerate([self.t_lock, self.t_ses, self.t_log, self.t_adm]):
-            b.setStyleSheet(b.styleSheet() + f"font-size: {tab_font_size}px; {tab_padding}")
+            b.setStyleSheet(
+                b.styleSheet() +
+                f"font-size: {tab_fs}px; {tab_pad}"
+            )
             b.setCursor(Qt.PointingHandCursor)
+            b.setFocusPolicy(Qt.NoFocus)
             b.clicked.connect(lambda _, x=i: self._tab(x))
             tbl.addWidget(b)
 
         tbl.addStretch()
         vl.addWidget(tab_bar)
 
-        # Línea divisora
-        div = QFrame(); div.setObjectName("h_divider")
-        vl.addWidget(div)
+        # Separador fino bajo los tabs
+        sep = _HLinePainted()
+        vl.addWidget(sep)
 
-        # ── Sub-paneles ───────────────────────────────────────────────────────
-        self.stack      = QStackedWidget()
+        # ── Contenido ─────────────────────────────────────────────────────────
+        self.stack = QStackedWidget()
+        self.stack.setObjectName("content_stack")
+
         self.p_lockers  = _AdminLockersPanel()
         self.p_sesiones = _AdminSesionesPanel()
         self.p_log      = _AdminLogPanel()
@@ -238,27 +260,79 @@ class AdminPage(QWidget):
         vl.addWidget(self.stack, 1)
         self.set_language(get_language())
 
-    def set_language(self, _lang: str):
-        self.bk.setText(tr("admin.logout"))
-        self.tit.setText(tr("admin.panel"))
-        self.t_lock.setText("🔒  " + tr("admin.tab.lockers"))
-        self.t_ses.setText("🧾  " + tr("admin.tab.sessions"))
-        self.t_log.setText("📝  " + tr("admin.tab.log"))
-        self.t_adm.setText("👤  " + tr("admin.tab.admins"))
-        for panel in (self.p_lockers, self.p_sesiones, self.p_log, self.p_admins):
-            if hasattr(panel, "set_language"):
-                panel.set_language(_lang)
-
-    def paintEvent(self, event):
+    # ── Fondo global ──────────────────────────────────────────────────────────
+    def paintEvent(self, _):
         p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
         W, H = self.width(), self.height()
-        g = QLinearGradient(0, 0, 0, H)
-        g.setColorAt(0.0, QColor(232, 240, 251))
-        g.setColorAt(1.0, QColor(214, 230, 248))
-        p.fillRect(0, 0, W, H, QBrush(g))
+
+        # Gradiente de fondo — azules más claros
+        bg = QLinearGradient(0, 0, 0, H)
+        bg.setColorAt(0.0, BG_TOP)
+        bg.setColorAt(1.0, BG_BOT)
+        p.fillRect(0, 0, W, H, QBrush(bg))
+
+        # Cuadrícula decorativa más visible
+        p.setPen(QPen(QColor(80, 140, 220, 22), _dp(1)))
+        step = _dp(48)
+        for x in range(0, W + step, step):
+            p.drawLine(x, 0, x, H)
+        for y in range(0, H + step, step):
+            p.drawLine(0, y, W, y)
+
+        # Resplandor esquina superior derecha — más luminoso
+        rg = QRadialGradient(W, 0, _dp(320))
+        rg.setColorAt(0.0, QColor(70, 160, 255, 28))
+        rg.setColorAt(1.0, QColor(0, 0, 0, 0))
+        p.setPen(Qt.NoPen)
+        p.setBrush(QBrush(rg))
+        p.drawRect(0, 0, W, H)
+
+        # Resplandor adicional esquina inferior izquierda
+        rg2 = QRadialGradient(0, H, _dp(200))
+        rg2.setColorAt(0.0, QColor(50, 130, 255, 18))
+        rg2.setColorAt(1.0, QColor(0, 0, 0, 0))
+        p.setBrush(QBrush(rg2))
+        p.drawRect(0, 0, W, H)
+
+        # ── Header con gradiente propio ───────────────────────────────────────
+        hh = _dp(90)
+        hg = QLinearGradient(0, 0, 0, hh)
+        hg.setColorAt(0.0, HEADER_TOP)
+        hg.setColorAt(1.0, HEADER_BOT)
+        p.setBrush(QBrush(hg))
+        p.drawRect(0, 0, W, hh)
+
+        # Línea de acento azul bajo el header — más brillante
+        p.setPen(QPen(ACCENT_BLUE, _dp(2)))
+        p.drawLine(0, hh, W, hh)
+
+        # ── Fondo de la tab bar ───────────────────────────────────────────────
+        tab_y  = hh + _dp(2)
+        tab_h  = _dp(56)
+        tab_bg = QLinearGradient(0, tab_y, 0, tab_y + tab_h)
+        tab_bg.setColorAt(0.0, QColor(22,  50, 105))
+        tab_bg.setColorAt(1.0, QColor(18,  42,  88))
+        p.setPen(Qt.NoPen)
+        p.setBrush(QBrush(tab_bg))
+        p.drawRect(0, tab_y, W, tab_h)
+
         p.end()
 
-    def _tab(self, i):
+    # ── Idioma ────────────────────────────────────────────────────────────────
+    def set_language(self, lang: str):
+        self.bk.setText("‹  " + tr("admin.logout"))
+        self.tit.setText(tr("admin.panel"))
+        self.t_lock.setText("🔒  " + tr("admin.tab.lockers"))
+        self.t_ses.setText("🧾  "  + tr("admin.tab.sessions"))
+        self.t_log.setText("📝  "  + tr("admin.tab.log"))
+        self.t_adm.setText("👤  "  + tr("admin.tab.admins"))
+        for panel in (self.p_lockers, self.p_sesiones, self.p_log, self.p_admins):
+            if hasattr(panel, "set_language"):
+                panel.set_language(lang)
+
+    # ── Tab switch ────────────────────────────────────────────────────────────
+    def _tab(self, i: int):
         self.stack.setCurrentIndex(i)
         for j, b in enumerate([self.t_lock, self.t_ses, self.t_log, self.t_adm]):
             b.setChecked(j == i)
@@ -270,20 +344,43 @@ class AdminPage(QWidget):
         }
         refresh_map[i]()
 
-    def set_admin(self, admin_data):
+    # ── Admin data ────────────────────────────────────────────────────────────
+    def set_admin(self, admin_data: dict):
         self._admin_data = admin_data
-        self.badge.setText("  {}  ".format(admin_data.get("t_usuario", "").upper()))
+        self.badge.setText(
+            "  {}  ".format(admin_data.get("t_usuario", "").upper())
+        )
         self.p_admins.set_current_admin(admin_data)
-
-        # Solo llama set_admin_context si el panel lo implementa
         if hasattr(self.p_lockers, "set_admin_context"):
             self.p_lockers.set_admin_context(admin_data)
-
         role = (admin_data.get("t_rol", "empleado") or "empleado").lower()
         self.t_adm.setEnabled(True)
         self.t_adm.setToolTip(
-            tr("admin.read_only") if role != "administrador" else tr("admin.manage_admins")
+            tr("admin.read_only") if role != "administrador"
+            else tr("admin.manage_admins")
         )
+
     def showEvent(self, e):
         super().showEvent(e)
         self._tab(0)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Separador horizontal pintado (1 px, color del acento)
+# ─────────────────────────────────────────────────────────────────────────────
+class _HLinePainted(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedHeight(_dp(1))
+        self.setAttribute(Qt.WA_TransparentForMouseEvents)
+
+    def paintEvent(self, _):
+        p = QPainter(self)
+        W = self.width()
+        grad = QLinearGradient(0, 0, W, 0)
+        grad.setColorAt(0.0,  QColor(70, 160, 255, 0))
+        grad.setColorAt(0.15, QColor(70, 160, 255, 110))
+        grad.setColorAt(0.85, QColor(70, 160, 255, 110))
+        grad.setColorAt(1.0,  QColor(70, 160, 255, 0))
+        p.fillRect(0, 0, W, 1, QBrush(grad))
+        p.end()
