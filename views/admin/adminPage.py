@@ -47,20 +47,22 @@ QFrame#admin_header { background: transparent; border: none; }
 
 /* ── Botón cerrar sesión — color sólido único ─────────────────────────── */
 QPushButton#btn_back {
-    background: #dc3737;
+    background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+        stop:0 #ef5555, stop:1 #d83b3b);
     color: #ffffff;
-    border: none;
-    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 14px;
     font-family: 'Segoe UI', sans-serif;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     font-weight: 700;
 }
 QPushButton#btn_back:hover {
-    background: #e84f4f;
+    background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+        stop:0 #f26464, stop:1 #e04a4a);
     color: #ffffff;
 }
 QPushButton#btn_back:pressed {
-    background: #b82e2e;
+    background: #bf3131;
 }
 
 /* ── Badge usuario ───────────────────────────────────────────────────────── */
@@ -140,11 +142,11 @@ class AdminPage(QWidget):
         # Botón cerrar sesión — color sólido rojo
         self.bk = QPushButton("")
         self.bk.setObjectName("btn_back")
-        self.bk.setFixedHeight(_dp(52))
-        self.bk.setFixedWidth(_dp(160))
+        self.bk.setFixedHeight(_dp(46))
+        self.bk.setMinimumWidth(_dp(146))
         self.bk.setStyleSheet(
             self.bk.styleSheet() +
-            f"font-size: {_dp(12)}px; padding: 0 {_dp(18)}px;"
+            f"font-size: {_dp(12)}px; padding: 0 {_dp(14)}px;"
         )
         self.bk.setCursor(Qt.PointingHandCursor)
         self.bk.clicked.connect(self.go_back.emit)
@@ -156,7 +158,7 @@ class AdminPage(QWidget):
         project_root = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "..", "..")
         )
-        logo_path = os.path.join(project_root, "logo_LockZtar_Negro.png")
+        logo_path = os.path.join(project_root, "lockztar.png")
         logo_lbl = QLabel()
         logo_lbl.setFixedSize(_dp(190), _dp(72))
         logo_lbl.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
@@ -321,7 +323,7 @@ class AdminPage(QWidget):
 
     # ── Idioma ────────────────────────────────────────────────────────────────
     def set_language(self, lang: str):
-        self.bk.setText("‹  " + tr("admin.logout"))
+        self.bk.setText("←  " + tr("admin.logout"))
         self.tit.setText(tr("admin.panel"))
         self.t_lock.setText("🔒  " + tr("admin.tab.lockers"))
         self.t_ses.setText("🧾  "  + tr("admin.tab.sessions"))
