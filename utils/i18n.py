@@ -205,7 +205,7 @@ _TRANSLATIONS = {
         "dlg.release_msg":  "Se cerrará la sesión activa y se eliminará el acceso biométrico del locker <b>#{n}</b>.\n\nEsta acción quedará registrada en auditoría.",
 
         # ── App ────────────────────────────────────────────────────────────────
-        "app.title": "Sistema de Lockers - Supermercado",
+        "app.title": "LOCKZTAR",
 
         # ── Retirar / continuar ────────────────────────────────────────────────
         "ret.back":             "< Volver",

@@ -349,7 +349,7 @@ class BigLockerButton(QWidget):
 
         if self.mode == "store":
             # ── PUERTA ABIERTA (para guardar) ────────────────────────────────
-            # Marco exterior de la puerta
+            # Marco exterior de la puerta (rectángulo base)
             frame = QPainterPath()
             frame.addRoundedRect(QRectF(dx, dy, dw, dh), _dp(4), _dp(4))
             p.setPen(Qt.NoPen)
@@ -360,33 +360,32 @@ class BigLockerButton(QWidget):
             p.setBrush(Qt.NoBrush)
             p.drawPath(frame)
 
-            # Puerta abierta: línea diagonal desde esquina superior izquierda a inferior derecha
-            door_left = dx + _dp(2)
+            # Línea central vertical (marco)
+            mid_x = cx
             door_top = dy + _dp(2)
-            door_right = dx + dw - _dp(2)
             door_bottom = dy + dh - _dp(2)
+            p.drawLine(int(mid_x), int(door_top), int(mid_x), int(door_bottom))
 
-            # Línea de la puerta abierta (rotada ~45 grados hacia la derecha)
+            # Puerta abierta: línea diagonal que sale de la bisagra (izquierda superior) hacia afuera
+            bisagra_x = dx + _dp(3)
+            bisagra_y = dy + _dp(3)
+            # Diagonal que va hacia la derecha y arriba (puerta abierta)
+            open_end_x = cx + int(r * 0.30)
+            open_end_y = dy - int(r * 0.25)
+            p.setPen(QPen(self._accent, _dp(2.5), Qt.SolidLine, Qt.RoundCap))
+            p.drawLine(int(bisagra_x), int(bisagra_y), int(open_end_x), int(open_end_y))
+
+            # Arco de movimiento (indicando apertura)
+            arc_r = int(r * 0.28)
             p.setPen(pen)
-            p.drawLine(int(door_left), int(door_top), int(door_right), int(door_bottom))
+            p.drawArc(QRectF(bisagra_x - arc_r, bisagra_y - arc_r, arc_r * 2, arc_r * 2), 0, 120 * 16)
 
-            # Arco indicando movimiento hacia adelante (apertura)
-            arc_start_x = cx
-            arc_start_y = dy - _dp(4)
-            arc_w = int(r * 0.35)
-            arc_h = int(r * 0.25)
-            p.drawArc(QRectF(arc_start_x - arc_w, arc_start_y, arc_w * 2, arc_h * 2),
-                      45 * 16, 90 * 16)
-
-            # Punta de flecha indicando entrada
-            arrow_x = cx + int(r * 0.40)
-            arrow_y = dy - int(r * 0.10)
-            arrow_size = _dp(4)
-            arrow_pen = QPen(self._accent.lighter(150), max(2, _dp(2.2)),
-                           Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+            # Pequeña punta de flecha en la punta de la puerta
+            arrow_size = _dp(3)
+            arrow_pen = QPen(self._accent.lighter(120), max(2, _dp(2.2)), Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
             p.setPen(arrow_pen)
-            p.drawLine(int(arrow_x), int(arrow_y), int(arrow_x - arrow_size), int(arrow_y - arrow_size))
-            p.drawLine(int(arrow_x), int(arrow_y), int(arrow_x - arrow_size), int(arrow_y + arrow_size))
+            p.drawLine(int(open_end_x), int(open_end_y), int(open_end_x - arrow_size), int(open_end_y + arrow_size))
+            p.drawLine(int(open_end_x), int(open_end_y), int(open_end_x + arrow_size), int(open_end_y + arrow_size))
 
         else:
             # ── PUERTA CERRADA (para recoger) ────────────────────────────────
@@ -451,23 +450,23 @@ class HomePage(QWidget):
         # ── Header ────────────────────────────────────────────────────────────
         header = QFrame()
         header.setObjectName("header_strip")
-        header.setFixedHeight(_dp(96))
+        header.setFixedHeight(_dp(110))
         header.setStyleSheet("background: transparent;")
 
         hl = QHBoxLayout(header)
-        hl.setContentsMargins(_dp(18), _dp(0), _dp(18), _dp(0))
+        hl.setContentsMargins(_dp(18), _dp(2), _dp(18), _dp(8))
         hl.setSpacing(_dp(12))
 
         # Logo
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
         logo_path = os.path.join(project_root, "lockztar.png")
         logo_lbl = QLabel()
-        logo_lbl.setFixedSize(_dp(560), _dp(150))
+        logo_lbl.setFixedSize(_dp(520), _dp(140))
         logo_lbl.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         logo_px = QPixmap(logo_path)
         if not logo_px.isNull():
             logo_lbl.setPixmap(
-                logo_px.scaled(_dp(500), _dp(136), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                logo_px.scaled(_dp(500), _dp(130), Qt.KeepAspectRatio, Qt.SmoothTransformation)
             )
         hl.addWidget(logo_lbl, 0, Qt.AlignTop)
 
