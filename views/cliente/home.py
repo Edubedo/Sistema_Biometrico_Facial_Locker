@@ -462,12 +462,12 @@ class HomePage(QWidget):
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
         logo_path = os.path.join(project_root, "lockztar.png")
         logo_lbl = QLabel()
-        logo_lbl.setFixedSize(_dp(410), _dp(118))
+        logo_lbl.setFixedSize(_dp(560), _dp(150))
         logo_lbl.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         logo_px = QPixmap(logo_path)
         if not logo_px.isNull():
             logo_lbl.setPixmap(
-                logo_px.scaled(_dp(400), _dp(108), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                logo_px.scaled(_dp(500), _dp(136), Qt.KeepAspectRatio, Qt.SmoothTransformation)
             )
         hl.addWidget(logo_lbl, 0, Qt.AlignTop)
 
