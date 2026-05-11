@@ -451,25 +451,25 @@ class HomePage(QWidget):
         # ── Header ────────────────────────────────────────────────────────────
         header = QFrame()
         header.setObjectName("header_strip")
-        header.setFixedHeight(_dp(108))
+        header.setFixedHeight(_dp(96))
         header.setStyleSheet("background: transparent;")
 
         hl = QHBoxLayout(header)
-        hl.setContentsMargins(_dp(18), _dp(8), _dp(18), _dp(8))
+        hl.setContentsMargins(_dp(18), _dp(0), _dp(18), _dp(0))
         hl.setSpacing(_dp(12))
 
         # Logo
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
         logo_path = os.path.join(project_root, "lockztar.png")
         logo_lbl = QLabel()
-        logo_lbl.setFixedSize(_dp(380), _dp(140))
-        logo_lbl.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+        logo_lbl.setFixedSize(_dp(410), _dp(118))
+        logo_lbl.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         logo_px = QPixmap(logo_path)
         if not logo_px.isNull():
             logo_lbl.setPixmap(
-                logo_px.scaled(_dp(360), _dp(130), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                logo_px.scaled(_dp(400), _dp(108), Qt.KeepAspectRatio, Qt.SmoothTransformation)
             )
-        hl.addWidget(logo_lbl, 0, Qt.AlignVCenter)
+        hl.addWidget(logo_lbl, 0, Qt.AlignTop)
 
         hl.addStretch()
 
