@@ -48,7 +48,7 @@ class ScanLine(QWidget):
         self._x, self._top = fx + m, fy + m
         self._bot = fy + fh - m - self.height()
         self._width = fw - m * 2
-        self.setGeometry(self._x, self. _top, self._width, self.height())
+        self.setGeometry(self._x, self._top, self._width, self.height())
         self.show()
         self._anim_down.stop(); self._anim_up.stop()
         self._go_down()
@@ -65,98 +65,163 @@ class ScanLine(QWidget):
         self._anim_up.setDuration(self._speed_ms)
         self._anim_up.start()
 
-    def paintEvent(self, event):
+    def paintEvent(self, _):
+        from PyQt5.QtGui import QPainter, QLinearGradient, QBrush
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
-        w, h = self.width(), self.height()
-        grad = QLinearGradient(0, 0, w, 0)
-        grad.setColorAt(0.0,  QColor(185, 234, 137, 0))
-        grad.setColorAt(0.15, QColor(185, 234, 137, 220))
-        grad.setColorAt(0.5,  QColor(185, 234, 137, 255))
-        grad.setColorAt(0.85, QColor(185, 234, 137, 220))
-        grad.setColorAt(1.0,  QColor(185, 234, 137, 0))
-        p.setPen(Qt.NoPen)
-        p.setBrush(grad)
-        p.drawRoundedRect(0, 0, w, h, h // 2, h // 2)
+        bg = QLinearGradient(0, 0, 0, self.height())
+        bg.setColorAt(0.0, QColor(10, 20, 45))
+        bg.setColorAt(1.0, QColor(16, 32, 68))
+        p.fillRect(0, 0, self.width(), self.height(), QBrush(bg))
         p.end()
 
 
-STYLE = """
-QWidget#guardar_page { background: #E7E7E7; color: #1f2a44; }
+# ─── Paleta (mismos tokens que home.py) ─────────────────────────────────────
+BG_TOP       = QColor(10,  20,  45)
+BG_BOT       = QColor(16,  32,  68)
+ACCENT_BLUE  = QColor(41, 128, 255)
+ACCENT_GREEN = QColor(185, 234, 137)   # verde del scan — funcional, se conserva
+CARD_BG      = QColor(20,  38,  78)
+CARD_BORDER  = QColor(40,  70, 140)
+TEXT_PRIMARY = QColor(220, 235, 255)
+TEXT_MUTED   = QColor(110, 140, 190)
 
+STYLE = """
+/* ── Base ────────────────────────────────────────────────────────────── */
+QWidget#guardar_page { background: transparent; color: #dceaff; }
+
+/* ── Tipografía ───────────────────────────────────────────────────────── */
 QLabel#h2 {
-    color: #305BAB; font-size: 16px; font-weight: 700;
+    color: #dceaff;
+    font-size: 16px; font-weight: 700;
     font-family: 'Segoe UI', sans-serif;
 }
 QLabel#tag {
-    color: #305BAB; font-size: 12px; font-weight: 700;
+    color: rgba(110,140,190,0.90);
+    font-size: 12px; font-weight: 700;
     font-family: 'Courier New'; letter-spacing: 2px;
 }
-QLabel#body  { color: #2c3e50; font-size: 13px; font-family: 'Segoe UI', sans-serif; }
-QLabel#small { color: #3a5f84; font-size: 10px; font-family: 'Courier New'; }
+QLabel#body  { color: #b0c8f0; font-size: 13px; font-family: 'Segoe UI', sans-serif; }
+QLabel#small { color: #6e8cbe; font-size: 10px; font-family: 'Courier New'; }
 QLabel#err   {
-    color: #BD0A0A; font-size: 12px; font-weight: 700;
+    color: #ff6b6b;
+    font-size: 12px; font-weight: 700;
     font-family: 'Segoe UI', sans-serif;
 }
 
-QFrame#sep      { background: #305BAB; min-height: 1px; max-height: 1px; }
-QFrame#card     { background: #C6DCFF; border: 2px solid #305BAB; border-radius: 10px; }
-QFrame#cam_card { background: #C6DCFF; border: 2px solid #305BAB; border-radius: 10px; }
-
-QLabel#cam {
-    background: #0c1530; border: 3px solid #305bab; border-radius: 8px;
-    color: #1a3a5c; font-family: 'Courier New'; font-size: 1px;
+/* ── Separadores ──────────────────────────────────────────────────────── */
+QFrame#sep {
+    background: rgba(41,128,255,0.25);
+    min-height: 1px; max-height: 1px; border: none;
 }
-QFrame#prog_bg  { background: #0a1628; border-radius: 4px; min-height: 7px; max-height: 7px; }
+
+/* ── Cards ────────────────────────────────────────────────────────────── */
+QFrame#card {
+    background: rgba(20,38,78,0.92);
+    border: 1.5px solid rgba(40,70,140,0.80);
+    border-radius: 16px;
+}
+QFrame#cam_card {
+    background: rgba(14,26,58,0.95);
+    border: 1.5px solid rgba(41,128,255,0.40);
+    border-radius: 16px;
+}
+
+/* ── Cámara ───────────────────────────────────────────────────────────── */
+QLabel#cam {
+    background: #050a1a;
+    border: 3px solid rgba(185, 234, 137, 0.6);
+    border-radius: 12px;
+}
+
+/* ── Barra de progreso ───────────────────────────────────────────────── */
+QFrame#prog_bg {
+    background: rgba(10,20,50,0.80);
+    border-radius: 4px; min-height: 7px; max-height: 7px;
+}
 QFrame#prog_fill {
-    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #305bab, stop:1 #B9EA89);
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
+        stop:0 #2980ff, stop:1 #B9EA89);
     border-radius: 4px; min-height: 7px; max-height: 7px;
 }
 
+/* ── Botones principales ─────────────────────────────────────────────── */
 QPushButton#btn_blue {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
-        stop:0 #1a3a6b, stop:0.5 #305bab, stop:1 #678dd3);
-    color: white; border: none; border-radius: 8px;
-    padding: 16px 20px; font-size: 19px; font-weight: 800;
-    font-family: 'Segoe UI', sans-serif; letter-spacing: 1px;
+        stop:0 rgba(20,50,120,0.95),
+        stop:0.5 rgba(41,128,255,0.90),
+        stop:1 rgba(80,140,240,0.90));
+    color: #ffffff;
+    border: 1.5px solid rgba(41,128,255,0.55);
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-size: 14px; font-weight: 800;
+    font-family: 'Segoe UI', sans-serif;
+    letter-spacing: 0px;
 }
 QPushButton#btn_blue:hover {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
-        stop:0 #2952a3, stop:0.5 #3d6fd1, stop:1 #7aa3e8);
+        stop:0 rgba(30,70,160,0.98),
+        stop:0.5 rgba(60,148,255,0.98),
+        stop:1 rgba(100,160,255,0.98));
+    border-color: rgba(41,128,255,0.95);
 }
 QPushButton#btn_blue:pressed {
-    background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
-        stop:0 #1a3a6b, stop:0.5 #305bab, stop:1 #5681cf);
+    background: rgba(20,38,78,0.95);
 }
 QPushButton#btn_blue:disabled {
-    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #4a90d9, stop:1 #7ec8f5);
-    color: rgba(0,0,0,120);
-}
-QPushButton#btn_sm {
-    background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #96bfe9, stop:1 #b8e1fa);
-    color: #1d3767; border: 2px solid #305bab; border-radius: 8px;
-    padding: 10px 16px; margin-bottom: 6px; font-size: 14px; font-family: 'Segoe UI', sans-serif; font-weight: 700;
-    min-height: 48px; min-width: 120px;
-}
-QPushButton#btn_sm:hover   { color: #305bab; border-color: #838383; }
-QPushButton#btn_sm:pressed {
-    background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
-        stop:0 #95a49f, stop:0.5 #c1cac7, stop:1 #5681cf);
+    background: rgba(20,38,78,0.60);
+    color: rgba(110,140,190,0.55);
+    border-color: rgba(40,70,140,0.30);
 }
 
-QFrame#carousel_inner { background: white; border-radius: 8px; border: none; }
-QLabel#carousel_text  {
-    color: #1a3a6b; font-size: 12px; font-weight: 600;
+/* ── Botones secundarios ─────────────────────────────────────────────── */
+QPushButton#btn_sm {
+    background: rgba(20,38,78,0.80);
+    color: #b0c8f0;
+    border: 1.5px solid rgba(41,128,255,0.40);
+    border-radius: 10px;
+    padding: 10px 16px; margin-bottom: 6px;
+    font-size: 14px; font-family: 'Segoe UI', sans-serif; font-weight: 700;
+    min-height: 48px; min-width: 120px;
+}
+QPushButton#btn_sm:hover {
+    background: rgba(26,48,96,0.95);
+    border-color: rgba(41,128,255,0.80);
+    color: #dceaff;
+}
+QPushButton#btn_sm:pressed {
+    background: rgba(14,26,58,0.95);
+}
+
+/* ── Carousel ────────────────────────────────────────────────────────── */
+QFrame#carousel_inner {
+    background: rgba(12,22,50,0.70);
+    border: 1px solid rgba(40,70,140,0.50);
+    border-radius: 10px;
+}
+QLabel#carousel_text {
+    color: #b0c8f0;
+    font-size: 12px; font-weight: 600;
     font-family: 'Segoe UI', sans-serif;
 }
 QPushButton#dot_inactive {
-    background: transparent; border: 2px solid #7aaad4; border-radius: 3px;
-    min-width: 7px; max-width: 7px; min-height: 7px; max-height: 7px;
+    background: transparent;
+    border: 2px solid rgba(41,128,255,0.35);
+    border-radius: 3px;
+    min-width: 7px; max-width: 7px;
+    min-height: 7px; max-height: 7px;
 }
-QPushButton#dot_inactive:hover { background: #c6dcff; border-color: #305bab; }
+QPushButton#dot_inactive:hover {
+    background: rgba(41,128,255,0.25);
+    border-color: rgba(41,128,255,0.80);
+}
 QPushButton#dot_active {
-    background: #305bab; border: 2px solid #1a3a6b; border-radius: 4px;
-    min-width: 9px; max-width: 9px; min-height: 9px; max-height: 9px;
+    background: #2980ff;
+    border: 2px solid rgba(41,128,255,0.80);
+    border-radius: 4px;
+    min-width: 9px; max-width: 9px;
+    min-height: 9px; max-height: 9px;
 }
 """
 
@@ -321,7 +386,7 @@ class GuardarPage(QWidget):
         root.setSpacing(4)
 
         # Header
-        hdr = QHBoxLayout(); hdr.setSpacing(8)
+        hdr = QHBoxLayout(); hdr.setSpacing(6)
         self.back_btn = QPushButton("")
         back = self.back_btn
         back.setObjectName("btn_sm")
@@ -339,23 +404,24 @@ class GuardarPage(QWidget):
 
         # Body
         body = QHBoxLayout(); body.setSpacing(8)
+        body.setContentsMargins(6, 4, 6, 4)
 
         # Panel izquierdo — ancho fijo para dejar espacio a la camara
         left = QFrame(); left.setObjectName("card")
         left.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
-        left.setFixedWidth(270)
+        left.setFixedWidth(300)
         ll = QVBoxLayout(left)
-        ll.setContentsMargins(10, 8, 10, 8)
-        ll.setSpacing(6)
+        ll.setContentsMargins(12, 10, 12, 10)
+        ll.setSpacing(10)
 
         self._carousel = CarouselWidget()
         ll.addWidget(self._carousel, 1)
 
-        self.start_btn = QPushButton("  INICIAR ESCANEO")
+        self.start_btn = QPushButton("INICIAR ESCANEO")
         self.start_btn.setObjectName("btn_blue")
-        self.start_btn.setIcon(_svg_to_icon(_CAM_ICON_SVG, 24))
-        self.start_btn.setIconSize(QSize(24, 24))
-        self.start_btn.setFixedHeight(touch_height(82))
+        self.start_btn.setIcon(_svg_to_icon(_CAM_ICON_SVG, 20))
+        self.start_btn.setIconSize(QSize(20, 20))
+        self.start_btn.setFixedHeight(touch_height(72))
         self.start_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.start_btn.setCursor(Qt.PointingHandCursor)
         self.start_btn.clicked.connect(self._start_capture)
@@ -411,6 +477,36 @@ class GuardarPage(QWidget):
 
         self.scan_line = ScanLine(self.cam)
         self.set_language(get_language())
+
+    def paintEvent(self, _):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        W, H = self.width(), self.height()
+
+        bg = QLinearGradient(0, 0, 0, H)
+        bg.setColorAt(0.0, BG_TOP)
+        bg.setColorAt(1.0, BG_BOT)
+        p.fillRect(0, 0, W, H, bg)
+
+        hh = 96
+        hg = QLinearGradient(0, 0, 0, hh)
+        hg.setColorAt(0.0, QColor(13, 24, 54))
+        hg.setColorAt(1.0, QColor(10, 20, 45))
+        p.setPen(Qt.NoPen)
+        p.setBrush(hg)
+        p.drawRect(0, 0, W, hh)
+
+        p.setPen(QColor(41, 128, 255, 140))
+        p.drawLine(0, hh - 1, W, hh - 1)
+
+        p.setPen(QColor(40, 70, 140, 28))
+        step = 48
+        for x in range(0, W + step, step):
+            p.drawLine(x, hh, x, H)
+        for y in range(hh, H + step, step):
+            p.drawLine(0, y, W, y)
+
+        p.end()
 
     def set_language(self, lang: str):
         self.back_btn.setText(tr("guard.back"))

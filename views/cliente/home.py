@@ -462,12 +462,12 @@ class HomePage(QWidget):
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
         logo_path = os.path.join(project_root, "lockztar.png")
         logo_lbl = QLabel()
-        logo_lbl.setFixedSize(_dp(300), _dp(120))
+        logo_lbl.setFixedSize(_dp(380), _dp(140))
         logo_lbl.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
         logo_px = QPixmap(logo_path)
         if not logo_px.isNull():
             logo_lbl.setPixmap(
-                logo_px.scaled(_dp(280), _dp(110), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                logo_px.scaled(_dp(360), _dp(130), Qt.KeepAspectRatio, Qt.SmoothTransformation)
             )
         hl.addWidget(logo_lbl, 0, Qt.AlignVCenter)
 
@@ -549,11 +549,11 @@ class HomePage(QWidget):
         self.actions_title = QLabel(tr("home.actions.title"))
         self.actions_title.setObjectName("home_actions_title")
         self.actions_title.setAlignment(Qt.AlignCenter)
-        self.actions_subtitle = QLabel(tr("home.actions.subtitle"))
-        self.actions_subtitle.setObjectName("home_actions_subtitle")
-        self.actions_subtitle.setAlignment(Qt.AlignCenter)
-        actions_hdr.addWidget(self.actions_title)
-        actions_hdr.addWidget(self.actions_subtitle)
+        #self.actions_subtitle = QLabel(tr("home.actions.subtitle"))
+        #self.actions_subtitle.setObjectName("home_actions_subtitle")
+        #self.actions_subtitle.setAlignment(Qt.AlignCenter)
+        #actions_hdr.addWidget(self.actions_title)
+        #actions_hdr.addWidget(self.actions_subtitle)
         bl.addLayout(actions_hdr)
 
         actions_row = QHBoxLayout()
@@ -673,7 +673,7 @@ class HomePage(QWidget):
         self.btn_guardar.set_label(tr("home.store"))
         self.btn_recoger.set_label(tr("home.pickup"))
         self.actions_title.setText(tr("home.actions.title"))
-        self.actions_subtitle.setText(tr("home.actions.subtitle"))
+        #self.actions_subtitle.setText(tr("home.actions.subtitle"))
         self.status_lbl.setText(tr("home.online"))
         # actualizar reloj/fecha inmediatamente según nuevo idioma
         try:
