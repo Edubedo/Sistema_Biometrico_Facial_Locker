@@ -142,7 +142,7 @@ QPushButton#btn_blue:disabled {
 QPushButton#btn_sm {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #96bfe9, stop:1 #b8e1fa);
     color: #1d3767; border: 2px solid #305bab; border-radius: 8px;
-    padding: 10px 16px; font-size: 14px; font-family: 'Segoe UI', sans-serif; font-weight: 700;
+    padding: 10px 16px; margin-bottom: 6px; font-size: 14px; font-family: 'Segoe UI', sans-serif; font-weight: 700;
     min-height: 48px; min-width: 120px;
 }
 QPushButton#btn_sm:hover   { color: #305bab; border-color: #838383; }

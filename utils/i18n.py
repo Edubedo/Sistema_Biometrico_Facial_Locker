@@ -12,6 +12,8 @@ _TRANSLATIONS = {
         "home.pickup":        "Recoger",
         "home.online":        "EN LÍNEA",
         "home.free_lockers":  "  {n} disponibles ",
+        "home.actions.title": "ELIGE UNA ACCIÓN",
+        "home.actions.subtitle": "DOS ACCESOS RÁPIDOS PENSADOS PARA PANTALLA TÁCTIL",
 
         # ── Comunes ───────────────────────────────────────────────────────────
         "common.accept":      "ACEPTAR",
@@ -277,6 +279,8 @@ _TRANSLATIONS = {
         "home.pickup":        "Claim",
         "home.online":        "ONLINE",
         "home.free_lockers":  "  {n} available ",
+        "home.actions.title": "CHOOSE AN ACTION",
+        "home.actions.subtitle": "TWO QUICK SHORTCUTS DESIGNED FOR TOUCH SCREENS",
 
         # ── Common ────────────────────────────────────────────────────────────
         "common.accept":      "ACCEPT",

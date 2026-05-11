@@ -64,6 +64,26 @@ QFrame#h_divider {
     min-height: 1px; max-height: 1px;
 }
 
+QFrame#home_actions_card {
+    background: rgba(16, 30, 62, 0.62);
+    border: 1.5px solid rgba(73, 118, 190, 0.42);
+    border-radius: 18px;
+}
+QLabel#home_actions_title {
+    color: #eef5ff;
+    font-size: 15px;
+    font-weight: 900;
+    font-family: 'Segoe UI', sans-serif;
+    letter-spacing: 1px;
+}
+QLabel#home_actions_subtitle {
+    color: rgba(190, 212, 242, 0.88);
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'Segoe UI', sans-serif;
+    letter-spacing: 1px;
+}
+
 QFrame#lang_switch {
     background: rgba(255,255,255,0.07);
     border: 1px solid rgba(255,255,255,0.16);
@@ -316,64 +336,90 @@ class BigLockerButton(QWidget):
         p.end()
 
     def _draw_lock_icon(self, p: QPainter, cx: int, cy: int, r: int):
-        """Dibuja un candado minimalista en el centro del ícono."""
-        lw = int(r * 0.50)   # ancho del cuerpo
-        lh = int(r * 0.44)   # alto del cuerpo
-        lx = cx - lw // 2
-        ly = cy - int(r * 0.05)
+        """Dibuja una puerta (abierta para guardar, cerrada para recoger)."""
+        dw = int(r * 0.55)   # ancho de la puerta
+        dh = int(r * 0.60)   # alto de la puerta
+        dx = cx - dw // 2
+        dy = cy - dh // 2
 
         pen = QPen(QColor(255, 255, 255, 230), max(2, _dp(2.5)),
                    Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
         p.setPen(pen)
         p.setBrush(Qt.NoBrush)
 
-        # Arco superior (arco de candado)
-        arc_w = int(lw * 0.60)
-        arc_h = int(r * 0.34)
-        arc_x = cx - arc_w // 2
-        arc_y = ly - arc_h + int(lh * 0.12)
-        p.drawArc(QRectF(arc_x, arc_y, arc_w, arc_h * 2),
-                  0 * 16, 180 * 16)
-
-        # Cuerpo del candado
-        body = QPainterPath()
-        body.addRoundedRect(QRectF(lx, ly, lw, lh), _dp(5), _dp(5))
-        p.setPen(Qt.NoPen)
-        body_fill = QColor(255, 255, 255, 55)
-        p.setBrush(QBrush(body_fill))
-        p.drawPath(body)
-        p.setPen(pen)
-        p.setBrush(Qt.NoBrush)
-        p.drawPath(body)
-
-        # Punto central
-        dot_r = _dp(3)
-        p.setPen(Qt.NoPen)
-        p.setBrush(QBrush(QColor(255, 255, 255, 200)))
-        dot_cx = cx
-        dot_cy = ly + lh // 2 - _dp(1)
-        p.drawEllipse(QRectF(dot_cx - dot_r, dot_cy - dot_r, dot_r * 2, dot_r * 2))
-
-        # Flecha de dirección
-        arrow_y = dot_cy + _dp(1)
-        alen = int(r * 0.20)
-        ahead = int(alen * 0.50)
-        arrow_pen = QPen(self._accent.lighter(150), max(2, _dp(2.2)),
-                         Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
-        p.setPen(arrow_pen)
-
-        if self.mode == "store":   # → entra
-            ax1, ax2 = cx + int(r * 0.62), cx + int(r * 0.62) + alen
-        else:                       # ← sale
-            ax1, ax2 = cx + int(r * 0.62) + alen, cx + int(r * 0.62)
-
-        p.drawLine(int(ax1), int(arrow_y), int(ax2), int(arrow_y))
         if self.mode == "store":
-            p.drawLine(int(ax2), int(arrow_y), int(ax2 - ahead), int(arrow_y - ahead))
-            p.drawLine(int(ax2), int(arrow_y), int(ax2 - ahead), int(arrow_y + ahead))
+            # ── PUERTA ABIERTA (para guardar) ────────────────────────────────
+            # Marco exterior de la puerta
+            frame = QPainterPath()
+            frame.addRoundedRect(QRectF(dx, dy, dw, dh), _dp(4), _dp(4))
+            p.setPen(Qt.NoPen)
+            frame_fill = QColor(255, 255, 255, 40)
+            p.setBrush(QBrush(frame_fill))
+            p.drawPath(frame)
+            p.setPen(pen)
+            p.setBrush(Qt.NoBrush)
+            p.drawPath(frame)
+
+            # Puerta abierta: línea diagonal desde esquina superior izquierda a inferior derecha
+            door_left = dx + _dp(2)
+            door_top = dy + _dp(2)
+            door_right = dx + dw - _dp(2)
+            door_bottom = dy + dh - _dp(2)
+
+            # Línea de la puerta abierta (rotada ~45 grados hacia la derecha)
+            p.setPen(pen)
+            p.drawLine(int(door_left), int(door_top), int(door_right), int(door_bottom))
+
+            # Arco indicando movimiento hacia adelante (apertura)
+            arc_start_x = cx
+            arc_start_y = dy - _dp(4)
+            arc_w = int(r * 0.35)
+            arc_h = int(r * 0.25)
+            p.drawArc(QRectF(arc_start_x - arc_w, arc_start_y, arc_w * 2, arc_h * 2),
+                      45 * 16, 90 * 16)
+
+            # Punta de flecha indicando entrada
+            arrow_x = cx + int(r * 0.40)
+            arrow_y = dy - int(r * 0.10)
+            arrow_size = _dp(4)
+            arrow_pen = QPen(self._accent.lighter(150), max(2, _dp(2.2)),
+                           Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+            p.setPen(arrow_pen)
+            p.drawLine(int(arrow_x), int(arrow_y), int(arrow_x - arrow_size), int(arrow_y - arrow_size))
+            p.drawLine(int(arrow_x), int(arrow_y), int(arrow_x - arrow_size), int(arrow_y + arrow_size))
+
         else:
-            p.drawLine(int(ax2), int(arrow_y), int(ax2 + ahead), int(arrow_y - ahead))
-            p.drawLine(int(ax2), int(arrow_y), int(ax2 + ahead), int(arrow_y + ahead))
+            # ── PUERTA CERRADA (para recoger) ────────────────────────────────
+            # Marco exterior de la puerta
+            frame = QPainterPath()
+            frame.addRoundedRect(QRectF(dx, dy, dw, dh), _dp(4), _dp(4))
+            p.setPen(Qt.NoPen)
+            frame_fill = QColor(255, 255, 255, 40)
+            p.setBrush(QBrush(frame_fill))
+            p.drawPath(frame)
+            p.setPen(pen)
+            p.setBrush(Qt.NoBrush)
+            p.drawPath(frame)
+
+            # Línea vertical central (puerta cerrada)
+            mid_x = cx
+            door_top = dy + _dp(2)
+            door_bottom = dy + dh - _dp(2)
+            p.setPen(pen)
+            p.drawLine(int(mid_x), int(door_top), int(mid_x), int(door_bottom))
+
+            # Dos líneas pequeñas formando un tirador (asa de la puerta)
+            handle_y = cy
+            handle_left = mid_x - _dp(6)
+            handle_right = mid_x + _dp(6)
+            p.drawLine(int(handle_left), int(handle_y - _dp(2)), int(handle_left), int(handle_y + _dp(2)))
+            p.drawLine(int(handle_right), int(handle_y - _dp(2)), int(handle_right), int(handle_y + _dp(2)))
+
+            # Punto/círculo en el tirador indicando cerradura
+            dot_r = _dp(2)
+            p.setPen(Qt.NoPen)
+            p.setBrush(QBrush(self._accent))
+            p.drawEllipse(QRectF(mid_x - dot_r, handle_y - dot_r, dot_r * 2, dot_r * 2))
 
     def set_sublabel(self, text: str):
         self._sublabel = text
@@ -490,22 +536,43 @@ class HomePage(QWidget):
         root.addWidget(sep)
 
         # ── Área de botones ────────────────────────────────────────────────────
-        btn_area = QWidget()
-        btn_area.setStyleSheet("background: transparent;")
-        bl = QHBoxLayout(btn_area)
-        bl.setContentsMargins(_dp(20), _dp(14), _dp(20), _dp(14))
-        bl.setSpacing(_dp(16))
+        btn_area = QFrame()
+        btn_area.setObjectName("home_actions_card")
+        btn_area.setMinimumHeight(_dp(270))
+        bl = QVBoxLayout(btn_area)
+        bl.setContentsMargins(_dp(16), _dp(14), _dp(16), _dp(16))
+        bl.setSpacing(_dp(12))
+
+        actions_hdr = QVBoxLayout()
+        actions_hdr.setSpacing(_dp(2))
+        actions_hdr.setAlignment(Qt.AlignCenter)
+        self.actions_title = QLabel(tr("home.actions.title"))
+        self.actions_title.setObjectName("home_actions_title")
+        self.actions_title.setAlignment(Qt.AlignCenter)
+        self.actions_subtitle = QLabel(tr("home.actions.subtitle"))
+        self.actions_subtitle.setObjectName("home_actions_subtitle")
+        self.actions_subtitle.setAlignment(Qt.AlignCenter)
+        actions_hdr.addWidget(self.actions_title)
+        actions_hdr.addWidget(self.actions_subtitle)
+        bl.addLayout(actions_hdr)
+
+        actions_row = QHBoxLayout()
+        actions_row.setSpacing(_dp(14))
+        actions_row.setContentsMargins(0, _dp(2), 0, 0)
 
         self.btn_guardar = BigLockerButton("store", "", "")
         self.btn_recoger = BigLockerButton("retrieve", "")
         self.btn_guardar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.btn_recoger.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.btn_guardar.setMinimumHeight(_dp(190))
+        self.btn_recoger.setMinimumHeight(_dp(190))
 
         self.btn_guardar.clicked.connect(self.go_guardar.emit)
         self.btn_recoger.clicked.connect(self.go_retirar.emit)
 
-        bl.addWidget(self.btn_guardar, 1)
-        bl.addWidget(self.btn_recoger, 1)
+        actions_row.addWidget(self.btn_guardar, 1)
+        actions_row.addWidget(self.btn_recoger, 1)
+        bl.addLayout(actions_row, 1)
         root.addWidget(btn_area, 1)
 
         # ── Footer ─────────────────────────────────────────────────────────────
@@ -532,12 +599,7 @@ class HomePage(QWidget):
         fwl.addStretch()
 
         # Versión / info pequeña
-        ver_lbl = QLabel("LockZtar v2.0")
-        ver_lbl.setStyleSheet(
-            f"color:rgba(80,120,180,0.55); font-size:{_dp(8)}px;"
-            f"font-family:'Segoe UI'; letter-spacing:1px;"
-        )
-        fwl.addWidget(ver_lbl)
+        
         root.addWidget(fw)
 
         # ── Reloj ──────────────────────────────────────────────────────────────
@@ -610,6 +672,8 @@ class HomePage(QWidget):
         self.adm.setText(tr("home.admin"))
         self.btn_guardar.set_label(tr("home.store"))
         self.btn_recoger.set_label(tr("home.pickup"))
+        self.actions_title.setText(tr("home.actions.title"))
+        self.actions_subtitle.setText(tr("home.actions.subtitle"))
         self.status_lbl.setText(tr("home.online"))
         # actualizar reloj/fecha inmediatamente según nuevo idioma
         try:
