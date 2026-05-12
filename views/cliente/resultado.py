@@ -125,15 +125,18 @@ class ResultPage(QWidget):
 
     # ── Background gradient (changes per kind) ────────────────────────────────
     def paintEvent(self, _):
-        cfg = _KIND.get(self._kind, _KIND["ok"])
+        # Use the app's dark blue colorimetry for the background to match the UI
         p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
         W, H = self.width(), self.height()
-        g = QLinearGradient(0, 0, 0, H)
-        g.setColorAt(0.0, cfg["bg_top"])
-        g.setColorAt(1.0, cfg["bg_bot"])
-        p.fillRect(0, 0, W, H, QBrush(g))
 
-        # Subtle radial glow at center-top
+        bg = QLinearGradient(0, 0, 0, H)
+        bg.setColorAt(0.0, QColor(10, 20, 45))
+        bg.setColorAt(1.0, QColor(16, 32, 68))
+        p.fillRect(0, 0, W, H, QBrush(bg))
+
+        # Accent radial glow using the current kind's accent color (subtle)
+        cfg = _KIND.get(self._kind, _KIND["ok"])
         rg = QRadialGradient(W / 2, 0, H * 0.7)
         glow = QColor(cfg["accent"]); glow.setAlpha(18)
         rg.setColorAt(0.0, glow)

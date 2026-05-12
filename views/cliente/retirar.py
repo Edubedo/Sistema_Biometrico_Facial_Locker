@@ -619,7 +619,6 @@ class InlineResultCard(QWidget):
         )
         self._subtitle.setText(subtitle)
         self._detail.setText(detail)
-        self._footer.setText(tr("ret.verified") if detail else tr("ret.detect_text"))
         self._detail.setVisible(bool(detail))
         self._divider.setVisible(bool(detail))
         self.setVisible(True)
@@ -743,9 +742,6 @@ class RetirarPage(QWidget):
         detect_title_row.addWidget(self.detect_title_lbl)
         detect_l.addLayout(detect_title_row)
 
-        self.detect_text_lbl = lbl(tr("ret.detect_text"), "body", Qt.AlignCenter)
-        self.detect_text_lbl.setWordWrap(True)
-        detect_l.addWidget(self.detect_text_lbl)
         rl.addWidget(self.detect_card)
 
         # ── Widget de camara a pantalla completa dentro del panel ───────────
@@ -822,7 +818,6 @@ class RetirarPage(QWidget):
         self.subtitle_lbl.setText(tr("ret.subtitle"))
         self.scan_title_lbl.setText(tr("ret.scan_title"))
         self.detect_title_lbl.setText(tr("ret.detect_title"))
-        self.detect_text_lbl.setText(tr("ret.detect_text"))
         self.scan_btn.setText(tr("ret.start"))
         self._carousel.set_language(lang)
         self._carousel._render(self._carousel._current)
@@ -983,7 +978,6 @@ class RetirarPage(QWidget):
     def _show_detected_dialog(self):
         self.detect_card.setVisible(True)
         self.detect_title_lbl.setText(tr("ret.detect_title"))
-        self.detect_text_lbl.setText(tr("ret.detect_text"))
         self.scan_title_lbl.setText(tr("ret.verified"))
 
     def _tick_detected_dialog(self):
@@ -1040,12 +1034,8 @@ class RetirarPage(QWidget):
         db_log_intento(self._id_locker, "retirar", "exitoso",
                        "Cliente retiro sus cosas. Sesion {} cerrada.".format(self._id_sesion),
                        id_sesion=self._id_sesion)
-        self._show_inline_result(
-            "ok_blue",
-            tr("flow.bye_title"),
-            tr("flow.bye_sub", n=num_locker),
-            "LOCKER  #{}".format(num_locker),
-        )
+        # Emitir señal para que main muestre la página de resultado (flujo existente)
+        self.retirar_done.emit(self._face_uid, num_locker, self._id_sesion)
 
     def _do_seguir(self):
         if not self._id_sesion:
@@ -1056,12 +1046,8 @@ class RetirarPage(QWidget):
         db_log_intento(self._id_locker, "seguir_comprando", "exitoso",
                        "Cliente consulto locker y continuo comprando.",
                        id_sesion=self._id_sesion)
-        self._show_inline_result(
-            "ok_blue",
-            tr("flow.keep_title"),
-            tr("flow.keep_sub"),
-            "LOCKER  #{}".format(num_locker) if num_locker else "",
-        )
+        # Emitir señal para que main muestre la página de resultado (flujo existente)
+        self.seguir_done.emit(self._face_uid, num_locker, self._id_sesion)
 
     def _cancel(self):
         self._close_detected_dialog()
