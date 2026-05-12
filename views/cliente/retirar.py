@@ -116,6 +116,29 @@ QLabel#err   {
 QFrame#sep      { background: rgba(41,128,255,0.25); min-height: 1px; max-height: 1px; }
 QFrame#card     { background: rgba(20,38,78,0.92); border: 1.5px solid rgba(40,70,140,0.80); border-radius: 16px; }
 QFrame#cam_card { background: rgba(20,38,78,0.92); border: 1.5px solid rgba(40,70,140,0.80); border-radius: 16px; }
+QFrame#detect_card {
+    background: rgba(16, 44, 28, 0.90); border: 1.5px solid rgba(185, 234, 137, 0.42); border-radius: 16px;
+}
+QFrame#inline_result_card {
+    background: rgba(245, 249, 255, 0.98); border: 1px solid rgba(135, 178, 235, 0.80);
+    border-top: 4px solid #2f80ed; border-radius: 16px;
+}
+QLabel#inline_result_badge {
+    background: rgba(210, 229, 252, 1.0); color: #1f5fb8; border: 1px solid rgba(135, 178, 235, 0.85);
+    border-radius: 10px; font-size: 8px; font-weight: 800; font-family: 'Segoe UI';
+    letter-spacing: 3px; padding: 4px 16px;
+}
+QLabel#inline_result_title {
+    color: #2f80ed; font-size: 26px; font-weight: 900; font-family: 'Segoe UI';
+    letter-spacing: -0.5px;
+}
+QLabel#inline_result_subtitle {
+    color: #000000; font-size: 11px; font-family: 'Segoe UI';
+}
+QLabel#inline_result_detail {
+    color: #000000; font-size: 30px; font-weight: 900; font-family: 'Segoe UI';
+    letter-spacing: 2px;
+}
 
 QLabel#cam {
     background: #050a1a; border: 3px solid rgba(185, 234, 137, 0.6); border-radius: 12px;
@@ -499,6 +522,116 @@ class ActionTile(QWidget):
         p.end()
 
 
+class InlineResultCard(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setVisible(False)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setAlignment(Qt.AlignCenter)
+
+        self._card = QFrame()
+        self._card.setObjectName("inline_result_card")
+        self._card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self._card.setMaximumWidth(480)
+        self._card.setMinimumHeight(420)
+        cl = QVBoxLayout(self._card)
+        cl.setContentsMargins(48, 40, 48, 40)
+        cl.setSpacing(18)
+        cl.setAlignment(Qt.AlignCenter)
+
+        self._icon = QLabel("✓")
+        self._icon.setAlignment(Qt.AlignCenter)
+        self._icon.setFixedSize(100, 100)
+        self._icon.setStyleSheet(
+            "background: rgba(47, 128, 237, 0.12); color: #2f80ed; border-radius: 50px; "
+            "font-size: 40px; font-weight: 900; font-family: 'Segoe UI';"
+        )
+        cl.addWidget(self._icon, alignment=Qt.AlignCenter)
+
+        self._badge = QLabel("")
+        self._badge.setObjectName("inline_result_badge")
+        self._badge.setAlignment(Qt.AlignCenter)
+        self._badge.setFixedHeight(26)
+        cl.addWidget(self._badge, alignment=Qt.AlignCenter)
+
+        self._title = QLabel("")
+        self._title.setObjectName("inline_result_title")
+        self._title.setAlignment(Qt.AlignCenter)
+        self._title.setWordWrap(True)
+        cl.addWidget(self._title)
+
+        self._subtitle = QLabel("")
+        self._subtitle.setObjectName("inline_result_subtitle")
+        self._subtitle.setAlignment(Qt.AlignCenter)
+        self._subtitle.setWordWrap(True)
+        cl.addWidget(self._subtitle)
+
+        self._divider = QFrame()
+        self._divider.setStyleSheet("background: rgba(135, 178, 235, 0.90); border: none; min-height: 1px; max-height: 1px;")
+        cl.addWidget(self._divider)
+
+        self._detail = QLabel("")
+        self._detail.setObjectName("inline_result_detail")
+        self._detail.setAlignment(Qt.AlignCenter)
+        self._detail.setWordWrap(True)
+        cl.addWidget(self._detail)
+
+        self._footer = QLabel("")
+        self._footer.setAlignment(Qt.AlignCenter)
+        self._footer.setWordWrap(True)
+        self._footer.setStyleSheet(
+            "color: #24405f; font-size: 12px; font-family: 'Segoe UI'; line-height: 1.5;"
+        )
+        cl.addWidget(self._footer)
+
+        root.addWidget(self._card, alignment=Qt.AlignCenter)
+
+    def show_result(self, kind: str, title: str, subtitle: str, detail: str = ""):
+        accent = {
+            "ok_blue": "#2f80ed",
+            "ok": "#2e7d32",
+            "warn": "#e66c00",
+            "err": "#c62828",
+        }.get(kind, "#2f80ed")
+        badge = {
+            "ok_blue": tr("result.ok"),
+            "ok": tr("result.ok"),
+            "warn": tr("result.warn"),
+            "err": tr("result.err"),
+        }.get(kind, tr("result.ok"))
+
+        self._icon.setStyleSheet(
+            "background: rgba(47, 128, 237, 0.12); color: %s; border-radius: 50px; "
+            "font-size: 40px; font-weight: 900; font-family: 'Segoe UI';" % accent
+        )
+        self._badge.setText(badge)
+        self._badge.setStyleSheet(
+            "background: rgba(210, 229, 252, 1.0); color: %s; border: 1px solid rgba(135, 178, 235, 0.85);"
+            " border-radius: 10px; font-size: 8px; font-weight: 800; font-family: 'Segoe UI';"
+            " letter-spacing: 3px; padding: 4px 16px;" % accent
+        )
+        self._title.setText(title)
+        self._title.setStyleSheet(
+            "color: %s; font-size: 26px; font-weight: 900; font-family: 'Segoe UI'; letter-spacing: -0.5px;" % accent
+        )
+        self._subtitle.setText(subtitle)
+        self._detail.setText(detail)
+        self._footer.setText(tr("ret.verified") if detail else tr("ret.detect_text"))
+        self._detail.setVisible(bool(detail))
+        self._divider.setVisible(bool(detail))
+        self.setVisible(True)
+
+    def clear(self):
+        self._title.clear()
+        self._subtitle.clear()
+        self._detail.clear()
+        self._footer.clear()
+        self.setVisible(False)
+
+
 class RetirarPage(QWidget):
 
     go_back      = pyqtSignal()
@@ -587,6 +720,34 @@ class RetirarPage(QWidget):
         self.scan_title_lbl = lbl("", "tag", Qt.AlignCenter)
         rl.addWidget(self.scan_title_lbl)
 
+        self.detect_card = QFrame()
+        self.detect_card.setObjectName("detect_card")
+        self.detect_card.setVisible(False)
+        detect_l = QVBoxLayout(self.detect_card)
+        detect_l.setContentsMargins(16, 14, 16, 14)
+        detect_l.setSpacing(6)
+        detect_l.setAlignment(Qt.AlignCenter)
+
+        detect_title_row = QHBoxLayout()
+        detect_title_row.setSpacing(8)
+        detect_title_row.setAlignment(Qt.AlignCenter)
+        self.detect_icon = QLabel("✓")
+        self.detect_icon.setAlignment(Qt.AlignCenter)
+        self.detect_icon.setFixedSize(28, 28)
+        self.detect_icon.setStyleSheet(
+            "background: rgba(185, 234, 137, 0.18); color: #B9EA89; border-radius: 14px; "
+            "font-size: 16px; font-weight: 900; font-family: 'Segoe UI';"
+        )
+        self.detect_title_lbl = lbl(tr("ret.detect_title"), "h3", Qt.AlignCenter)
+        detect_title_row.addWidget(self.detect_icon)
+        detect_title_row.addWidget(self.detect_title_lbl)
+        detect_l.addLayout(detect_title_row)
+
+        self.detect_text_lbl = lbl(tr("ret.detect_text"), "body", Qt.AlignCenter)
+        self.detect_text_lbl.setWordWrap(True)
+        detect_l.addWidget(self.detect_text_lbl)
+        rl.addWidget(self.detect_card)
+
         # ── Widget de camara a pantalla completa dentro del panel ───────────
         self.cam = CamWidget(self._CAM_W, self._CAM_H)
         self.cam.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -619,6 +780,10 @@ class RetirarPage(QWidget):
         ol.addLayout(btn_row, 1)
         self.opts.setVisible(False)
         rl.addWidget(self.opts, 1)
+
+        self.result_card = InlineResultCard()
+        rl.addWidget(self.result_card, 1)
+        self.result_card.setVisible(False)
 
         body.addWidget(right, 1)
         root.addLayout(body, 1)
@@ -656,17 +821,23 @@ class RetirarPage(QWidget):
         self.title_lbl.setText(tr("ret.title"))
         self.subtitle_lbl.setText(tr("ret.subtitle"))
         self.scan_title_lbl.setText(tr("ret.scan_title"))
+        self.detect_title_lbl.setText(tr("ret.detect_title"))
+        self.detect_text_lbl.setText(tr("ret.detect_text"))
         self.scan_btn.setText(tr("ret.start"))
         self._carousel.set_language(lang)
         self._carousel._render(self._carousel._current)
         self._carousel.set_language(lang)
 
     def _show_camera_mode(self):
+        self.detect_card.setVisible(False)
+        self.result_card.clear()
         self.opts.setVisible(False)
         self.cam.setVisible(True)
+        self.scan_btn.setVisible(True)
         self.scan_frame.setVisible(False)
         self.face_guide.setVisible(False)
         self.scan_line.hide()
+        self.scan_title_lbl.setText(tr("ret.scan_title"))
         self._update_overlay()
 
     def _show_actions_mode(self):
@@ -674,7 +845,20 @@ class RetirarPage(QWidget):
         self.scan_frame.setVisible(False)
         self.face_guide.setVisible(False)
         self.scan_line.hide()
+        self.result_card.clear()
+        self.detect_card.setVisible(True)
         self.opts.setVisible(True)
+        self.scan_title_lbl.setText(tr("ret.verified"))
+
+    def _show_inline_result(self, kind: str, title: str, subtitle: str, detail: str = ""):
+        self.cam.setVisible(False)
+        self.scan_frame.setVisible(False)
+        self.face_guide.setVisible(False)
+        self.scan_line.hide()
+        self.detect_card.setVisible(False)
+        self.opts.setVisible(False)
+        self.result_card.show_result(kind, title, subtitle, detail)
+        self.scan_title_lbl.setText(tr("ret.scan_title"))
 
     def paintEvent(self, _):
         p = QPainter(self)
@@ -797,7 +981,10 @@ class RetirarPage(QWidget):
     # ── Dialogo de deteccion ──────────────────────────────────────────────────
 
     def _show_detected_dialog(self):
-        return
+        self.detect_card.setVisible(True)
+        self.detect_title_lbl.setText(tr("ret.detect_title"))
+        self.detect_text_lbl.setText(tr("ret.detect_text"))
+        self.scan_title_lbl.setText(tr("ret.verified"))
 
     def _tick_detected_dialog(self):
         return
@@ -805,11 +992,15 @@ class RetirarPage(QWidget):
     def _close_detected_dialog(self):
         self._detected_msg = None
         self.cam.idle()
-        self._show_actions_mode()
+        self.detect_card.setVisible(False)
+        self.opts.setVisible(False)
+        self.result_card.clear()
+        self.scan_title_lbl.setText(tr("ret.scan_title"))
 
     def _on_detected_dialog_closed(self, _result):
         self._detected_msg = None
-        self._show_actions_mode()
+        self.detect_card.setVisible(False)
+        self._show_camera_mode()
 
     # ── Acciones ──────────────────────────────────────────────────────────────
 
@@ -829,6 +1020,8 @@ class RetirarPage(QWidget):
         self._face_uid = None
         self._id_sesion = None
         self._id_locker = None
+        self.detect_card.setVisible(False)
+        self.result_card.clear()
         self.cam.idle()
 
     def _do_retirar(self):
@@ -836,8 +1029,6 @@ class RetirarPage(QWidget):
             return
         self._close_detected_dialog()
         self.scan_btn.setVisible(True)
-        self.opts.setVisible(False)
-        self.cam.setVisible(True)
         num_locker = db_get_locker_num_by_id(self._id_locker)
         db_close_sesion(self._id_sesion)
         db_set_locker_estado(self._id_locker, "libre")
@@ -849,20 +1040,28 @@ class RetirarPage(QWidget):
         db_log_intento(self._id_locker, "retirar", "exitoso",
                        "Cliente retiro sus cosas. Sesion {} cerrada.".format(self._id_sesion),
                        id_sesion=self._id_sesion)
-        self.retirar_done.emit(self._face_uid, num_locker, self._id_sesion)
+        self._show_inline_result(
+            "ok_blue",
+            tr("flow.bye_title"),
+            tr("flow.bye_sub", n=num_locker),
+            "LOCKER  #{}".format(num_locker),
+        )
 
     def _do_seguir(self):
         if not self._id_sesion:
             return
         self._close_detected_dialog()
         self.scan_btn.setVisible(True)
-        self.opts.setVisible(False)
-        self.cam.setVisible(True)
         num_locker = db_get_locker_num_by_id(self._id_locker)
         db_log_intento(self._id_locker, "seguir_comprando", "exitoso",
                        "Cliente consulto locker y continuo comprando.",
                        id_sesion=self._id_sesion)
-        self.seguir_done.emit(self._face_uid, num_locker, self._id_sesion)
+        self._show_inline_result(
+            "ok_blue",
+            tr("flow.keep_title"),
+            tr("flow.keep_sub"),
+            "LOCKER  #{}".format(num_locker) if num_locker else "",
+        )
 
     def _cancel(self):
         self._close_detected_dialog()
