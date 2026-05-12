@@ -440,11 +440,10 @@ class GuardarPage(QWidget):
         rl = QVBoxLayout(right)
         rl.setContentsMargins(6, 6, 6, 6); rl.setSpacing(4)
         self.scan_title_lbl = lbl("", "tag", Qt.AlignCenter)
-        rl.addWidget(self.scan_title_lbl)
+        rl.addWidget(self.scan_title_lbl, 0)
 
         self.cam = CamWidget(self._CAM_W, self._CAM_H)
         self.cam.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.cam.setMaximumHeight(self._CAM_H)   # evita que se extienda fuera del video
         rl.addWidget(self.cam, 1)
 
         body.addWidget(right, 1)

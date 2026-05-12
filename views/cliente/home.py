@@ -336,89 +336,32 @@ class BigLockerButton(QWidget):
         p.end()
 
     def _draw_lock_icon(self, p: QPainter, cx: int, cy: int, r: int):
-        """Dibuja una puerta (abierta para guardar, cerrada para recoger)."""
-        dw = int(r * 0.55)   # ancho de la puerta
-        dh = int(r * 0.60)   # alto de la puerta
-        dx = cx - dw // 2
-        dy = cy - dh // 2
-
-        pen = QPen(QColor(255, 255, 255, 230), max(2, _dp(2.5)),
-                   Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
-        p.setPen(pen)
-        p.setBrush(Qt.NoBrush)
-
+        """Dibuja la imagen de puerta (abierta para guardar, cerrada para recoger)."""
+        # Ruta al directorio public
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        public_path = os.path.join(project_root, "public")
+        
+        # Seleccionar imagen según modo
         if self.mode == "store":
-            # ── PUERTA ABIERTA (para guardar) ────────────────────────────────
-            # Marco exterior de la puerta (rectángulo base)
-            frame = QPainterPath()
-            frame.addRoundedRect(QRectF(dx, dy, dw, dh), _dp(4), _dp(4))
-            p.setPen(Qt.NoPen)
-            frame_fill = QColor(255, 255, 255, 40)
-            p.setBrush(QBrush(frame_fill))
-            p.drawPath(frame)
-            p.setPen(pen)
-            p.setBrush(Qt.NoBrush)
-            p.drawPath(frame)
-
-            # Línea central vertical (marco)
-            mid_x = cx
-            door_top = dy + _dp(2)
-            door_bottom = dy + dh - _dp(2)
-            p.drawLine(int(mid_x), int(door_top), int(mid_x), int(door_bottom))
-
-            # Puerta abierta: línea diagonal que sale de la bisagra (izquierda superior) hacia afuera
-            bisagra_x = dx + _dp(3)
-            bisagra_y = dy + _dp(3)
-            # Diagonal que va hacia la derecha y arriba (puerta abierta)
-            open_end_x = cx + int(r * 0.30)
-            open_end_y = dy - int(r * 0.25)
-            p.setPen(QPen(self._accent, _dp(2.5), Qt.SolidLine, Qt.RoundCap))
-            p.drawLine(int(bisagra_x), int(bisagra_y), int(open_end_x), int(open_end_y))
-
-            # Arco de movimiento (indicando apertura)
-            arc_r = int(r * 0.28)
-            p.setPen(pen)
-            p.drawArc(QRectF(bisagra_x - arc_r, bisagra_y - arc_r, arc_r * 2, arc_r * 2), 0, 120 * 16)
-
-            # Pequeña punta de flecha en la punta de la puerta
-            arrow_size = _dp(3)
-            arrow_pen = QPen(self._accent.lighter(120), max(2, _dp(2.2)), Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
-            p.setPen(arrow_pen)
-            p.drawLine(int(open_end_x), int(open_end_y), int(open_end_x - arrow_size), int(open_end_y + arrow_size))
-            p.drawLine(int(open_end_x), int(open_end_y), int(open_end_x + arrow_size), int(open_end_y + arrow_size))
-
+            icon_file = os.path.join(public_path, "abierta.png")
         else:
-            # ── PUERTA CERRADA (para recoger) ────────────────────────────────
-            # Marco exterior de la puerta
-            frame = QPainterPath()
-            frame.addRoundedRect(QRectF(dx, dy, dw, dh), _dp(4), _dp(4))
-            p.setPen(Qt.NoPen)
-            frame_fill = QColor(255, 255, 255, 40)
-            p.setBrush(QBrush(frame_fill))
-            p.drawPath(frame)
-            p.setPen(pen)
-            p.setBrush(Qt.NoBrush)
-            p.drawPath(frame)
-
-            # Línea vertical central (puerta cerrada)
-            mid_x = cx
-            door_top = dy + _dp(2)
-            door_bottom = dy + dh - _dp(2)
-            p.setPen(pen)
-            p.drawLine(int(mid_x), int(door_top), int(mid_x), int(door_bottom))
-
-            # Dos líneas pequeñas formando un tirador (asa de la puerta)
-            handle_y = cy
-            handle_left = mid_x - _dp(6)
-            handle_right = mid_x + _dp(6)
-            p.drawLine(int(handle_left), int(handle_y - _dp(2)), int(handle_left), int(handle_y + _dp(2)))
-            p.drawLine(int(handle_right), int(handle_y - _dp(2)), int(handle_right), int(handle_y + _dp(2)))
-
-            # Punto/círculo en el tirador indicando cerradura
-            dot_r = _dp(2)
-            p.setPen(Qt.NoPen)
-            p.setBrush(QBrush(self._accent))
-            p.drawEllipse(QRectF(mid_x - dot_r, handle_y - dot_r, dot_r * 2, dot_r * 2))
+            icon_file = os.path.join(public_path, "cerrada.png")
+        
+        # Cargar la imagen
+        icon_px = QPixmap(icon_file)
+        if icon_px.isNull():
+            return
+        
+        # Escalar la imagen al tamaño del ícono
+        icon_size = int(r * 1.8)
+        icon_px = icon_px.scaled(icon_size, icon_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        
+        # Calcular posición centrada
+        ix = int(cx - icon_px.width() / 2)
+        iy = int(cy - icon_px.height() / 2)
+        
+        # Dibujar la imagen
+        p.drawPixmap(ix, iy, icon_px)
 
     def set_sublabel(self, text: str):
         self._sublabel = text

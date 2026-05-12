@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (
-    QWidget, QHBoxLayout, QLabel, QFrame, QVBoxLayout
+    QWidget, QHBoxLayout, QLabel, QFrame, QVBoxLayout, QSizePolicy
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer
@@ -48,6 +48,7 @@ class CamWidget(QWidget):
 
     def __init__(self, w=460, h=320):
         super().__init__()
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         vl = QVBoxLayout(self)
         vl.setContentsMargins(0, 0, 0, 0)
         vl.setSpacing(8)
@@ -55,8 +56,9 @@ class CamWidget(QWidget):
         self.view = QLabel("")
         self.view.setObjectName("cam")
         self.view.setAlignment(Qt.AlignCenter)
-        self.view.setMinimumSize(w, h)
-        vl.addWidget(self.view)
+        self.view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.view.setMinimumSize(0, 0)
+        vl.addWidget(self.view, 1)
 
         self.status = QLabel("")
         self.status.setObjectName("body")
