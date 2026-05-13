@@ -5,6 +5,7 @@ import time
 import numpy as np
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtGui import QImage
+import contextlib
 
 try:
     from picamera2 import Picamera2
@@ -20,6 +21,9 @@ except Exception:
 
 # Importamos tus configuraciones locales
 from biometria.biometria import CASCADE, face_dir_for, face_model, IMG_H, IMG_W
+
+# Suppress OpenCV logging at startup to reduce console noise
+os.environ['OPENCV_LOG_LEVEL'] = 'OFF'
 
 # ── Singleton global de Picamera2 ─────────────────────────────────────────────
 # La Raspberry Pi solo permite una instancia activa a la vez.
@@ -93,19 +97,29 @@ class CamThread(QThread):
             self._open_cv_capture()
 
     def _open_cv_capture(self):
+        """Try to open camera on indices 0-5, suppressing OpenCV warnings."""
         self.cap = None
-        for idx in (0, 1, 2, 3, 4, 5):
-            cap = cv2.VideoCapture(idx, cv2.CAP_V4L2)
-            if not cap.isOpened():
-                cap.release()
-                continue
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-            ok, _ = cap.read()
-            if ok:
-                self.cap = cap
-                return
-            cap.release()
+        # Suppress stderr to avoid OpenCV VideoIO warnings about failed device opens
+        with contextlib.suppress(OSError):
+            for idx in (0, 1, 2, 3, 4, 5):
+                # Redirect stderr to /dev/null during VideoCapture attempt
+                with open(os.devnull, 'w') as devnull:
+                    old_stderr = sys.stderr
+                    try:
+                        sys.stderr = devnull
+                        cap = cv2.VideoCapture(idx, cv2.CAP_V4L2)
+                        if not cap.isOpened():
+                            cap.release()
+                            continue
+                        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+                        ok, _ = cap.read()
+                        if ok:
+                            self.cap = cap
+                            return
+                        cap.release()
+                    finally:
+                        sys.stderr = old_stderr
 
     def _switch_to_cv_fallback(self):
         self.use_picamera2 = False
