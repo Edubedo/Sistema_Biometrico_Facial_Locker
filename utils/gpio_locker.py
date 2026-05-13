@@ -30,6 +30,31 @@ def _sonar(frecuencia, duracion):
     time.sleep(duracion)
     pwm.stop()
 
+def beep_start_scan():
+    """Beep to signal scanning has started (short high tone)."""
+    def _worker():
+        _sonar(880, 0.15)
+    t = threading.Thread(target=_worker, daemon=True)
+    t.start()
+
+def beep_success():
+    """Beep to signal successful capture (two ascending tones)."""
+    def _worker():
+        _sonar(880, 0.2)
+        time.sleep(0.1)
+        _sonar(1200, 0.2)
+    t = threading.Thread(target=_worker, daemon=True)
+    t.start()
+
+def beep_error():
+    """Beep to signal error (low descending tone)."""
+    def _worker():
+        _sonar(440, 0.1)
+        time.sleep(0.05)
+        _sonar(220, 0.2)
+    t = threading.Thread(target=_worker, daemon=True)
+    t.start()
+
 def abrir_locker(num_locker):
     """Open the locker without blocking the caller: perform GPIO sequence in a background thread.
 

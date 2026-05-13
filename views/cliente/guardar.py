@@ -13,7 +13,7 @@ from db.models.intentos_acceso import db_log_intento
 from db.models.lockers import db_set_locker_estado, db_next_free_locker
 from db.models.sesiones import db_create_sesion
 from utils.camera import CamThread
-from utils.gpio_locker import abrir_locker
+from utils.gpio_locker import abrir_locker, beep_start_scan, beep_success, beep_error
 from views.style.widgets.widgets import lbl, sep_line, CamWidget
 from utils.i18n import tr, get_language
 from utils.ui_touch import touch_height
@@ -534,7 +534,13 @@ class GuardarPage(QWidget):
     def _start_capture(self):
         if not self._id_locker:
             self.err_lbl.setText(tr("guard.no_lockers"))
+            beep_error()
             return
+        # Stop any previous thread to allow multiple scans
+        if self.cam_thread and self.cam_thread.isRunning():
+            self.cam_thread.stop()
+            self.cam_thread.wait()
+        
         tmp_uid = "tmp_{}".format(datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
         self._face_uid = tmp_uid
         self.start_btn.setEnabled(False)
@@ -542,6 +548,9 @@ class GuardarPage(QWidget):
         self.scan_frame.setVisible(True)
         self.face_guide.setVisible(True)
         self._update_overlay()
+        
+        beep_start_scan()  # Audio signal: scan starting
+        
         self.cam_thread = CamThread(CamThread.CAPTURE, face_uid=tmp_uid)
         self.cam_thread.frame_sig.connect(self.cam.update_frame)
         self.cam_thread.progress.connect(self.cam.set_progress)
@@ -560,6 +569,7 @@ class GuardarPage(QWidget):
         self.scan_line.hide()
         self.face_guide.setVisible(False)
         if tmp_uid == CamThread.CAMERA_ERROR:
+            beep_error()  # Audio signal: camera error
             self.cam.set_status(tr("guard.cam_open_error"), "#bd0a0a")
             self.cam.idle()
             if self._id_locker:
@@ -568,6 +578,7 @@ class GuardarPage(QWidget):
             self.err_lbl.setText(tr("guard.cam_open_error"))
             return
         if not ok:
+            beep_error()  # Audio signal: capture failed
             self.cam.set_status(tr("guard.capture_error"), "#bd0a0a")
             self.cam.idle()
             delete_face_data(tmp_uid)
@@ -576,6 +587,7 @@ class GuardarPage(QWidget):
                                "Error durante la captura de imagenes")
             self.err_lbl.setText(tr("guard.capture_error"))
             return
+        beep_success()  # Audio signal: capture successful
         self.cam.set_status(tr("guard.face_ok"), "#B9EA89")
         QTimer.singleShot(850, self.cam.idle)
         locker = db_next_free_locker()
@@ -607,15 +619,17 @@ class GuardarPage(QWidget):
         self.done.emit(face_uid, num_locker, id_sesion)
 
     def _cancel(self):
-        if self.cam_thread:
+        if self.cam_thread and self.cam_thread.isRunning():
             self.cam_thread.stop()
+            self.cam_thread.wait()
         if self._face_uid:
             delete_face_data(self._face_uid)
         self.go_back.emit()
 
     def reset(self):
-        if self.cam_thread:
+        if self.cam_thread and self.cam_thread.isRunning():
             self.cam_thread.stop()
+            self.cam_thread.wait()
         self._face_uid  = None
         self._id_locker = None
         self.err_lbl.setText("")

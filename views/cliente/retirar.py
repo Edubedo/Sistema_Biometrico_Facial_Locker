@@ -11,7 +11,7 @@ from db.models.intentos_acceso import db_log_intento
 from db.models.lockers import db_set_locker_estado
 from db.models.sesiones import db_close_sesion, db_get_active_sesion_by_face
 from utils.camera import CamThread
-from utils.gpio_locker import abrir_locker
+from utils.gpio_locker import abrir_locker, beep_start_scan, beep_success, beep_error
 from utils.helpers import db_get_locker_num_by_id
 from views.style.widgets.widgets import lbl, sep_line, CamWidget
 from utils.i18n import tr, get_language
@@ -907,11 +907,13 @@ class RetirarPage(QWidget):
     def _start_scan(self):
         labels = train_model()
         if not labels:
+            beep_error()
             self.scan_lbl.setText(tr("ret.no_biometrics"))
             return
-        if self.cam_thread:
+        if self.cam_thread and self.cam_thread.isRunning():
             self.cam_thread.stop()
-            self.cam_thread = None
+            self.cam_thread.wait()
+        self.cam_thread = None
 
         self._show_camera_mode()
         self.scan_frame.setVisible(True)
@@ -921,6 +923,9 @@ class RetirarPage(QWidget):
         self.opts.setVisible(False)
         self.scan_lbl.setText("")
         self.cam.set_status("Escaneando biometria...", "#000000")
+        
+        beep_start_scan()  # Audio signal: scan starting
+        
         self.cam_thread = CamThread(CamThread.RECOGNIZE, labels=labels)
         self.cam_thread.frame_sig.connect(self.cam.update_frame)
         self.cam_thread.rec_done.connect(self._on_recognized)
@@ -935,6 +940,7 @@ class RetirarPage(QWidget):
     def _on_recognized(self, face_uid):
         self.scan_btn.setEnabled(True)
         if face_uid == CamThread.CAMERA_ERROR:
+            beep_error()  # Audio signal: camera error
             self.cam.idle()
             self.scan_frame.setVisible(False)
             self.scan_line.hide()
@@ -944,6 +950,7 @@ class RetirarPage(QWidget):
                            "No se pudo abrir la camara en escaneo de retirar")
             return
         if not face_uid:
+            beep_error()  # Audio signal: face not recognized
             self.cam.idle()
             self.scan_frame.setVisible(False)
             self.scan_line.hide()
@@ -955,6 +962,7 @@ class RetirarPage(QWidget):
 
         sesion = db_get_active_sesion_by_face(face_uid)
         if not sesion:
+            beep_error()  # Audio signal: no active session
             self.cam.idle()
             self.scan_frame.setVisible(False)
             self.scan_line.hide()
@@ -962,6 +970,7 @@ class RetirarPage(QWidget):
             self.scan_lbl.setText(tr("ret.no_active_session"))
             return
 
+        beep_success()  # Audio signal: face recognized successfully
         self._face_uid = face_uid
         if isinstance(sesion, dict):
             self._id_sesion = sesion["ID_sesion"]
@@ -1000,9 +1009,10 @@ class RetirarPage(QWidget):
 
     def reset(self):
         self._close_detected_dialog()
-        if self.cam_thread:
+        if self.cam_thread and self.cam_thread.isRunning():
             self.cam_thread.stop()
-            self.cam_thread = None
+            self.cam_thread.wait()
+        self.cam_thread = None
         self.face_guide.setVisible(False)
         self.scan_frame.setVisible(False)
         self.scan_line.hide()
