@@ -536,10 +536,17 @@ class GuardarPage(QWidget):
             self.err_lbl.setText(tr("guard.no_lockers"))
             beep_error()
             return
-        # Stop any previous thread to allow multiple scans
-        if self.cam_thread and self.cam_thread.isRunning():
-            self.cam_thread.stop()
-            self.cam_thread.wait()
+        
+        # Stop and wait for any previous thread completely
+        if self.cam_thread:
+            if self.cam_thread.isRunning():
+                self.cam_thread.stop()
+                # Force wait with timeout to avoid hanging
+                if not self.cam_thread.wait(2000):
+                    print("[WARN] Camera thread did not stop cleanly, terminating forcefully")
+                    self.cam_thread.terminate()
+                    self.cam_thread.wait(1000)
+            self.cam_thread = None
         
         tmp_uid = "tmp_{}".format(datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
         self._face_uid = tmp_uid
@@ -619,17 +626,25 @@ class GuardarPage(QWidget):
         self.done.emit(face_uid, num_locker, id_sesion)
 
     def _cancel(self):
-        if self.cam_thread and self.cam_thread.isRunning():
-            self.cam_thread.stop()
-            self.cam_thread.wait()
+        if self.cam_thread:
+            if self.cam_thread.isRunning():
+                self.cam_thread.stop()
+                if not self.cam_thread.wait(2000):
+                    self.cam_thread.terminate()
+                    self.cam_thread.wait(1000)
+            self.cam_thread = None
         if self._face_uid:
             delete_face_data(self._face_uid)
         self.go_back.emit()
 
     def reset(self):
-        if self.cam_thread and self.cam_thread.isRunning():
-            self.cam_thread.stop()
-            self.cam_thread.wait()
+        if self.cam_thread:
+            if self.cam_thread.isRunning():
+                self.cam_thread.stop()
+                if not self.cam_thread.wait(2000):
+                    self.cam_thread.terminate()
+                    self.cam_thread.wait(1000)
+            self.cam_thread = None
         self._face_uid  = None
         self._id_locker = None
         self.err_lbl.setText("")

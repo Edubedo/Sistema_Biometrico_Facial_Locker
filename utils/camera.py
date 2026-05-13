@@ -127,8 +127,16 @@ class CamThread(QThread):
         self._open_cv_capture()
 
     def stop(self):
+        """Stop the camera thread and release resources immediately."""
         self._manual_stop = True
         self._active = False
+        # Release camera resource immediately
+        if self.cap and self.cap.isOpened():
+            try:
+                self.cap.release()
+                self.cap = None
+            except Exception:
+                pass
         self.wait(3000)
 
     def run(self):

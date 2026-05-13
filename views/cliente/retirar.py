@@ -910,10 +910,16 @@ class RetirarPage(QWidget):
             beep_error()
             self.scan_lbl.setText(tr("ret.no_biometrics"))
             return
-        if self.cam_thread and self.cam_thread.isRunning():
-            self.cam_thread.stop()
-            self.cam_thread.wait()
-        self.cam_thread = None
+        
+        # Stop and wait for any previous thread completely
+        if self.cam_thread:
+            if self.cam_thread.isRunning():
+                self.cam_thread.stop()
+                if not self.cam_thread.wait(2000):
+                    print("[WARN] Camera thread did not stop cleanly, terminating forcefully")
+                    self.cam_thread.terminate()
+                    self.cam_thread.wait(1000)
+            self.cam_thread = None
 
         self._show_camera_mode()
         self.scan_frame.setVisible(True)
@@ -1009,10 +1015,13 @@ class RetirarPage(QWidget):
 
     def reset(self):
         self._close_detected_dialog()
-        if self.cam_thread and self.cam_thread.isRunning():
-            self.cam_thread.stop()
-            self.cam_thread.wait()
-        self.cam_thread = None
+        if self.cam_thread:
+            if self.cam_thread.isRunning():
+                self.cam_thread.stop()
+                if not self.cam_thread.wait(2000):
+                    self.cam_thread.terminate()
+                    self.cam_thread.wait(1000)
+            self.cam_thread = None
         self.face_guide.setVisible(False)
         self.scan_frame.setVisible(False)
         self.scan_line.hide()
