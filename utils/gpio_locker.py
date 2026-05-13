@@ -16,19 +16,30 @@ LOCKER_PINS = {
     "2": 27,
 }
 
+# Global PWM object to avoid "PWM object already exists" errors
+_pwm = None
+
 if GPIO:
     for pin in LOCKER_PINS.values():
         GPIO.setup(pin, GPIO.OUT, initial=GPIO.LOW)
     GPIO.setup(BUZZER_PIN, GPIO.OUT, initial=GPIO.LOW)
 
 def _sonar(frecuencia, duracion):
+    global _pwm
     if not GPIO:
         print(f"[BUZZER SIMULADO] {frecuencia}Hz por {duracion}s")
         return
-    pwm = GPIO.PWM(BUZZER_PIN, frecuencia)
-    pwm.start(50)
+    
+    # Create PWM object once and reuse it, changing frequency as needed
+    if _pwm is None:
+        _pwm = GPIO.PWM(BUZZER_PIN, frecuencia)
+    else:
+        # Change frequency if PWM already exists
+        _pwm.ChangeFrequency(frecuencia)
+    
+    _pwm.start(50)
     time.sleep(duracion)
-    pwm.stop()
+    _pwm.stop()
 
 def beep_start_scan():
     """Beep to signal scanning has started (short high tone)."""
