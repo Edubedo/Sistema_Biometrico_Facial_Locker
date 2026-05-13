@@ -43,37 +43,36 @@ LOGOUT_BG    = QColor(220,  55,  55)  # rojo sólido — inconfundible para "sal
 
 STYLE = """
 QWidget#admin_page  { background: transparent; color: #e6f2ff; }
-QFrame#admin_header { background: transparent; border: none; }
+QFrame#admin_header {
+    background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 rgba(18,45,95,1), stop:1 rgba(24,60,120,1));
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
 
 /* ── Botón cerrar sesión — color sólido único ─────────────────────────── */
+/* Back button — compact, high-contrast */
 QPushButton#btn_back {
-    background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
-        stop:0 #ef5555, stop:1 #d83b3b);
+    background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #ef6b6b, stop:1 #d83b3b);
     color: #ffffff;
-    border: 1px solid rgba(255,255,255,0.16);
-    border-radius: 14px;
+    border: none;
+    border-radius: 10px;
+    padding: 8px 12px;
     font-family: 'Segoe UI', sans-serif;
     letter-spacing: 0.5px;
     font-weight: 700;
+    min-width: 120px;
 }
-QPushButton#btn_back:hover {
-    background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
-        stop:0 #f26464, stop:1 #e04a4a);
-    color: #ffffff;
-}
-QPushButton#btn_back:pressed {
-    background: #bf3131;
-}
+QPushButton#btn_back:hover { /* transform removed - unsupported by Qt QSS */ }
+QPushButton#btn_back:pressed { opacity: 0.95; }
 
 /* ── Badge usuario ───────────────────────────────────────────────────────── */
 QLabel#badge_user {
-    background: rgba(70,160,255,0.22);
-    color: #c8e4ff;
-    border: 1px solid rgba(70,160,255,0.55);
-    border-radius: 10px;
+    background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 rgba(70,160,255,0.24), stop:1 rgba(70,160,255,0.18));
+    color: #ffffff;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px;
     font-family: 'Segoe UI', sans-serif;
-    letter-spacing: 2px;
-    font-weight: 700;
+    letter-spacing: 1px;
+    font-weight: 800;
 }
 
 /* ── Barra de tabs ───────────────────────────────────────────────────────── */
@@ -84,32 +83,42 @@ QFrame#tab_bar {
 
 /* Tab inactivo */
 QPushButton#tab {
-    background: rgba(255,255,255,0.07);
-    color: rgba(180,210,255,0.80);
-    border: 1px solid rgba(70,160,255,0.22);
-    border-radius: 10px;
+    background: rgba(255,255,255,0.04);
+    color: rgba(200,220,255,0.95);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 14px;
     font-family: 'Segoe UI', sans-serif;
-    font-weight: 700;
+    font-weight: 800;
     letter-spacing: 1px;
+    min-height: 40px;
+    min-width: 140px;
+    padding: 8px 14px;
 }
 QPushButton#tab:hover {
-    background: rgba(70,160,255,0.22);
-    color: #ddeeff;
-    border-color: rgba(70,160,255,0.55);
+    background: rgba(70,160,255,0.18);
+    color: #ffffff;
+    border-color: rgba(70,160,255,0.40);
 }
 
 /* Tab activo */
 QPushButton#tab:checked {
-    background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
-        stop:0 rgba(70,160,255,0.65), stop:1 rgba(35,110,230,0.65));
+    background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 rgba(70,160,255,0.85), stop:1 rgba(35,110,230,0.85));
     color: #ffffff;
-    border: 1.5px solid rgba(100,180,255,0.90);
+    border: 1.5px solid rgba(100,180,255,0.95);
+    /* box-shadow removed - unsupported by Qt QSS; use QGraphicsDropShadowEffect if needed */
 }
 
 /* ── Área de contenido ───────────────────────────────────────────────────── */
 QStackedWidget#content_stack {
+    background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 rgba(255,255,255,0.03), stop:1 rgba(255,255,255,0.01));
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.03);
+    padding: 12px;
+}
+
+/* Make content area feel like a card */
+QFrame#content_stack > QWidget {
     background: transparent;
-    border: none;
 }
 """
 
