@@ -69,7 +69,8 @@ class _IconCircle(QWidget):
         self._glyph  = glyph
         self._accent = accent
         self._light  = light
-        sz = _dp(100)
+        # Make icon circle larger to emphasize result
+        sz = _dp(160)
         self.setFixedSize(sz, sz)
 
     def paintEvent(self, _):
@@ -88,7 +89,7 @@ class _IconCircle(QWidget):
         p.drawEllipse(inner, inner, W - inner*2, W - inner*2)
 
         # Glyph
-        font = QFont("Segoe UI", _dp(32), QFont.Black)
+        font = QFont("Segoe UI", _dp(48), QFont.Black)
         p.setFont(font)
         p.setPen(QColor("#ffffff"))
         p.drawText(self.rect(), Qt.AlignCenter, self._glyph)
@@ -145,7 +146,7 @@ class ResultPage(QWidget):
         p.end()
 
     # ── Public API ────────────────────────────────────────────────────────────
-    def show_result(self, kind: str, title: str, subtitle: str, detail: str = ""):
+    def show_result(self, kind: str, title: str, subtitle: str, detail: str = "", auto: bool = True):
         self._kind = kind
         cfg = _KIND.get(kind, _KIND["ok"])
 
@@ -158,7 +159,8 @@ class ResultPage(QWidget):
         # ── Card ──────────────────────────────────────────────────────────────
         card = QFrame()
         card.setObjectName("result_card")
-        card.setFixedWidth(_dp(480))
+        # Make the card wider for more emphasis on results
+        card.setFixedWidth(_dp(720))
         border_color = cfg["border"].name()
         accent_hex   = cfg["accent"].name()
         card.setStyleSheet(f"""
@@ -171,8 +173,8 @@ class ResultPage(QWidget):
         """)
 
         cl = QVBoxLayout(card)
-        cl.setContentsMargins(_dp(48), _dp(40), _dp(48), _dp(40))
-        cl.setSpacing(_dp(18))
+        cl.setContentsMargins(_dp(56), _dp(48), _dp(56), _dp(48))
+        cl.setSpacing(_dp(20))
         cl.setAlignment(Qt.AlignCenter)
 
         # Icon circle
@@ -200,7 +202,7 @@ class ResultPage(QWidget):
             letter-spacing: 3px;
             padding: {_dp(4)}px {_dp(16)}px;
         """)
-        badge.setFixedHeight(_dp(26))
+        badge.setFixedHeight(_dp(30))
         cl.addWidget(badge, alignment=Qt.AlignCenter)
 
         # Title
@@ -208,7 +210,7 @@ class ResultPage(QWidget):
         t_lbl.setAlignment(Qt.AlignCenter)
         t_lbl.setWordWrap(True)
         t_lbl.setStyleSheet(f"""
-            font-size: {_dp(26)}px;
+            font-size: {_dp(36)}px;
             font-weight: 900;
             color: {accent_hex};
             font-family: 'Segoe UI';
@@ -221,7 +223,7 @@ class ResultPage(QWidget):
         s_lbl.setAlignment(Qt.AlignCenter)
         s_lbl.setWordWrap(True)
         s_lbl.setStyleSheet(f"""
-            font-size: {_dp(11)}px;
+            font-size: {_dp(13)}px;
             color: #000000;
             font-family: 'Segoe UI';
             line-height: 1.6;
@@ -237,7 +239,7 @@ class ResultPage(QWidget):
             d_lbl = QLabel(detail)
             d_lbl.setAlignment(Qt.AlignCenter)
             d_lbl.setStyleSheet(f"""
-                font-size: {_dp(42)}px;
+                font-size: {_dp(72)}px;
                 font-weight: 900;
                 color: #000000;
                 font-family: 'Segoe UI';
@@ -272,22 +274,29 @@ class ResultPage(QWidget):
         self._card = card
         self._root.addWidget(card, alignment=Qt.AlignCenter)
         self._root.addSpacing(_dp(20))
-
-        # Timer label
-        self._timer_w.setFixedWidth(_dp(480))
-        self._timer_w.setStyleSheet(f"""
-            color: #2f80ed;
-            font-size: {_dp(14)}px;
-            font-weight: 700;
-            font-family: 'Segoe UI';
-            letter-spacing: 1px;
-            opacity: 0.6;
-        """)
-        self._root.addWidget(self._timer_w, alignment=Qt.AlignCenter)
-        self._root.addStretch(1)
+        # Timer label (optional)
+        if auto:
+            self._timer_w.setFixedWidth(_dp(720))
+            self._timer_w.setStyleSheet(f"""
+                color: #2f80ed;
+                font-size: {_dp(14)}px;
+                font-weight: 700;
+                font-family: 'Segoe UI';
+                letter-spacing: 1px;
+                opacity: 0.6;
+            """)
+            self._root.addWidget(self._timer_w, alignment=Qt.AlignCenter)
+            self._root.addStretch(1)
+            self._timer_w.start()
+        else:
+            # ensure timer isn't running and remains hidden
+            try:
+                self._timer_w.stop()
+            except Exception:
+                pass
+            self._root.addStretch(1)
 
         self.update()   # repaint background
-        self._timer_w.start()
 
     def _manual_home(self):
         self._timer_w.stop()

@@ -34,7 +34,7 @@ QLabel#section_title {
     font-weight: 900;
     font-family: 'Segoe UI', sans-serif;
     letter-spacing: 3px;
-    font-size: 18px;
+    font-size: 18px;x
 }
 QLabel#section_sub {
     color: #000000;

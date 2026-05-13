@@ -1,4 +1,5 @@
 import time
+import threading
 
 try:
     import RPi.GPIO as GPIO
@@ -30,19 +31,27 @@ def _sonar(frecuencia, duracion):
     pwm.stop()
 
 def abrir_locker(num_locker):
+    """Open the locker without blocking the caller: perform GPIO sequence in a background thread.
+
+    This avoids freezing the UI while the solenoid is energized for a few seconds.
+    """
     pin = LOCKER_PINS.get(str(num_locker))
     if not pin:
         print(f"Locker {num_locker} no tiene pin asignado")
         return
 
-    if not GPIO:
-        print(f"[LOCKER SIMULADO] Abriendo locker {num_locker}...")
-        time.sleep(3)
-        print(f"[LOCKER SIMULADO] Cerrando locker {num_locker}")
-        return
+    def _worker(p):
+        if not GPIO:
+            print(f"[LOCKER SIMULADO] Abriendo locker {num_locker}...")
+            time.sleep(3)
+            print(f"[LOCKER SIMULADO] Cerrando locker {num_locker}")
+            return
 
-    _sonar(440, 0.3)
-    GPIO.output(pin, GPIO.HIGH)
-    time.sleep(3)
-    GPIO.output(pin, GPIO.LOW)
-    _sonar(880, 0.2)
+        _sonar(440, 0.3)
+        GPIO.output(p, GPIO.HIGH)
+        time.sleep(3)
+        GPIO.output(p, GPIO.LOW)
+        _sonar(880, 0.2)
+
+    t = threading.Thread(target=_worker, args=(pin,), daemon=True)
+    t.start()
