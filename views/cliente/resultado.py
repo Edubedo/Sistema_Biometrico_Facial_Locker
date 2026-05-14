@@ -64,13 +64,13 @@ _KIND = {
 #  ICON CIRCLE  — large colored circle with centered glyph
 # ─────────────────────────────────────────────────────────────────────────────
 class _IconCircle(QWidget):
-    def __init__(self, glyph: str, accent: QColor, light: QColor, parent=None):
+    def __init__(self, glyph: str, accent: QColor, light: QColor, size: int = None, parent=None):
         super().__init__(parent)
         self._glyph  = glyph
         self._accent = accent
         self._light  = light
-        # Make icon circle larger to emphasize result
-        sz = _dp(160)
+        # Allow caller to override size for small screens
+        sz = size if size is not None else _dp(160)
         self.setFixedSize(sz, sz)
 
     def paintEvent(self, _):
@@ -154,13 +154,26 @@ class ResultPage(QWidget):
         self._clear_root_layout()
         self._card = None
 
+        # Determine a simple scale factor for small screens (e.g., 7" / 800px wide)
+        screen_w = self.width() or (QApplication.primaryScreen().size().width() if QApplication.primaryScreen() else 1024)
+        sf = 1.0
+        if screen_w <= 800:
+            sf = 0.70
+        elif screen_w <= 1024:
+            sf = 0.86
+
+        def s(v):
+            return max(1, round(_dp(v) * sf))
+
         self._root.addStretch(1)
 
         # ── Card ──────────────────────────────────────────────────────────────
         card = QFrame()
         card.setObjectName("result_card")
-        # Make the card wider for more emphasis on results
-        card.setFixedWidth(_dp(720))
+        # Responsive card width: cap to screen width while keeping min width
+        screen_w_for_card = self.width() or (QApplication.primaryScreen().size().width() if QApplication.primaryScreen() else 1024)
+        card_width = min(s(720), max(s(300), int(screen_w_for_card * 0.92)))
+        card.setFixedWidth(card_width)
         border_color = cfg["border"].name()
         accent_hex   = cfg["accent"].name()
         card.setStyleSheet(f"""
@@ -168,19 +181,19 @@ class ResultPage(QWidget):
                 background: #ffffff;
                 border: 1px solid {border_color};
                 border-top: 4px solid {accent_hex};
-                border-radius: {_dp(16)}px;
+                border-radius: {s(16)}px;
             }}
         """)
 
         cl = QVBoxLayout(card)
-        cl.setContentsMargins(_dp(56), _dp(48), _dp(56), _dp(48))
-        cl.setSpacing(_dp(20))
+        cl.setContentsMargins(s(56), s(48), s(56), s(48))
+        cl.setSpacing(s(20))
         cl.setAlignment(Qt.AlignCenter)
 
         # Icon circle
-        icon_w = _IconCircle(cfg["icon"], cfg["accent"], cfg["accent_light"])
+        icon_w = _IconCircle(cfg["icon"], cfg["accent"], cfg["accent_light"], size=s(120))
         cl.addWidget(icon_w, alignment=Qt.AlignCenter)
-        cl.addSpacing(_dp(4))
+        cl.addSpacing(s(4))
 
         # Status badge
         badge_key = {
@@ -195,14 +208,14 @@ class ResultPage(QWidget):
             background: {cfg['badge_bg'].name()};
             color: {cfg['badge_fg']};
             border: 1px solid {border_color};
-            border-radius: {_dp(10)}px;
-            font-size: {_dp(8)}px;
+            border-radius: {s(10)}px;
+            font-size: {s(8)}px;
             font-weight: 800;
             font-family: 'Segoe UI';
             letter-spacing: 3px;
-            padding: {_dp(4)}px {_dp(16)}px;
+            padding: {s(4)}px {s(16)}px;
         """)
-        badge.setFixedHeight(_dp(30))
+        badge.setFixedHeight(s(30))
         cl.addWidget(badge, alignment=Qt.AlignCenter)
 
         # Title
@@ -210,7 +223,7 @@ class ResultPage(QWidget):
         t_lbl.setAlignment(Qt.AlignCenter)
         t_lbl.setWordWrap(True)
         t_lbl.setStyleSheet(f"""
-            font-size: {_dp(36)}px;
+            font-size: {s(36)}px;
             font-weight: 900;
             color: {accent_hex};
             font-family: 'Segoe UI';
@@ -223,7 +236,7 @@ class ResultPage(QWidget):
         s_lbl.setAlignment(Qt.AlignCenter)
         s_lbl.setWordWrap(True)
         s_lbl.setStyleSheet(f"""
-            font-size: {_dp(13)}px;
+            font-size: {s(13)}px;
             color: #000000;
             font-family: 'Segoe UI';
             line-height: 1.6;
@@ -239,7 +252,7 @@ class ResultPage(QWidget):
             d_lbl = QLabel(detail)
             d_lbl.setAlignment(Qt.AlignCenter)
             d_lbl.setStyleSheet(f"""
-                font-size: {_dp(72)}px;
+                font-size: {s(72)}px;
                 font-weight: 900;
                 color: #000000;
                 font-family: 'Segoe UI';
@@ -247,20 +260,20 @@ class ResultPage(QWidget):
             """)
             cl.addWidget(d_lbl)
 
-        cl.addSpacing(_dp(8))
+        cl.addSpacing(s(8))
 
         # Button
         btn = QPushButton(tr("result.home"))
         btn.setCursor(Qt.PointingHandCursor)
-        btn.setFixedWidth(_dp(260))
-        btn.setFixedHeight(_dp(46))
+        btn.setFixedWidth(s(260))
+        btn.setFixedHeight(s(46))
         btn.setStyleSheet(f"""
             QPushButton {{
                 background: #2f80ed;
                 color: #ffffff;
                 border: none;
-                border-radius: {_dp(10)}px;
-                font-size: {_dp(14)}px;
+                border-radius: {s(10)}px;
+                font-size: {s(14)}px;
                 font-weight: 800;
                 font-family: 'Segoe UI';
                 letter-spacing: 2px;
