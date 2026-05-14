@@ -617,6 +617,7 @@ class HomePage(QWidget):
         self.actions_title.setText(tr("home.actions.title"))
         #self.actions_subtitle.setText(tr("home.actions.subtitle"))
         self.status_lbl.setText(tr("home.online"))
+        self.refresh()
         # actualizar reloj/fecha inmediatamente según nuevo idioma
         try:
             self._tick_clock()

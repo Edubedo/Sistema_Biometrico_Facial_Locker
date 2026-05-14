@@ -1,7 +1,8 @@
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QLabel, QFrame, QSizePolicy, QApplication, QGraphicsDropShadowEffect, QTableWidget, QTableWidgetItem
+    QLabel, QFrame, QSizePolicy, QApplication, QGraphicsDropShadowEffect,
+    QTableWidget, QTableWidgetItem, QScroller, QAbstractItemView,
 )
 from PyQt5.QtGui import QPainter, QColor, QBrush, QLinearGradient
 
@@ -34,7 +35,7 @@ QLabel#section_title {
     font-weight: 900;
     font-family: 'Segoe UI', sans-serif;
     letter-spacing: 3px;
-    font-size: 18px;x
+    font-size: 18px;
 }
 QLabel#section_sub {
     color: #000000;
@@ -372,6 +373,13 @@ class _AdminLogPanel(QWidget):
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setSelectionMode(QTableWidget.SingleSelection)
+        self.table.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.table.verticalScrollBar().setSingleStep(_dp(32))
+        self.table.viewport().setAttribute(Qt.WA_AcceptTouchEvents, True)
+        QScroller.grabGesture(self.table.viewport(), QScroller.LeftMouseButtonGesture)
         self.table.horizontalHeader().setStretchLastSection(False)
         self.table.horizontalHeader().setMinimumSectionSize(_dp(110))
         self.table.verticalHeader().setDefaultSectionSize(_dp(46))

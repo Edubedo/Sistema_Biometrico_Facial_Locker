@@ -14,6 +14,8 @@ from PyQt5.QtWidgets import (
     QComboBox,
     QTableWidget,
     QTableWidgetItem,
+    QScroller,
+    QAbstractItemView,
 )
 from PyQt5.QtGui import QPainter, QColor, QBrush, QLinearGradient
 
@@ -661,6 +663,13 @@ class _AdminUsersPanel(QWidget):
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setSelectionMode(QTableWidget.SingleSelection)
+        self.table.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.table.verticalScrollBar().setSingleStep(_dp(32))
+        self.table.viewport().setAttribute(Qt.WA_AcceptTouchEvents, True)
+        QScroller.grabGesture(self.table.viewport(), QScroller.LeftMouseButtonGesture)
         self.table.horizontalHeader().setStretchLastSection(False)
         self.table.horizontalHeader().setMinimumSectionSize(_dp(110))
         self.table.verticalHeader().setDefaultSectionSize(_dp(44))
