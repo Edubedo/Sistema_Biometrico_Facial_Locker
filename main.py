@@ -31,6 +31,7 @@ from PyQt5.QtWidgets import (
 )
 from db.models.usuarios import db_count_active_admins, db_register_admin
 from db.models.lockers import db_next_free_locker
+from db.models.sesiones import db_get_all_sesiones_activas
 
 # Views
 from views.cliente.home import HomePage
@@ -93,7 +94,7 @@ class MainWindow(QMainWindow):
 
         # ── Conexiones de navegacion ─────────────────────────────────────────
         self.p_home.go_guardar.connect(self._try_go_guardar)
-        self.p_home.go_retirar.connect(lambda: self._nav(self.RETIR))
+        self.p_home.go_retirar.connect(self._try_go_retirar)
         self.p_home.go_admin.connect(lambda: self._nav(self.ALOGIN))
         self.p_home.language_changed.connect(self._on_language_changed)
 
@@ -150,6 +151,25 @@ class MainWindow(QMainWindow):
                 pass
             return
         self._nav(self.GUARD)
+
+    def _try_go_retirar(self):
+        """Navigate to RetirarPage only if there is at least one active session."""
+        try:
+            if not db_get_all_sesiones_activas():
+                self._show_result(
+                    "err",
+                    tr("admin.sessions.no_data"),
+                    tr("ret.no_active_session"),
+                )
+                return
+        except Exception:
+            self._show_result(
+                "err",
+                tr("admin.sessions.no_data"),
+                tr("ret.no_active_session"),
+            )
+            return
+        self._nav(self.RETIR)
 
     # ── Navegacion ────────────────────────────────────────────────────────────
 
