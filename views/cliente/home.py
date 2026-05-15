@@ -673,7 +673,12 @@ class HomePage(QWidget):
     def refresh(self):
         lockers = db_get_all_lockers()
         free = sum(1 for l in lockers if l["t_estado"] == "libre")
-        self.btn_guardar.set_sublabel(tr("home.free_lockers", n=free))
+        if free <= 0:
+            self.btn_guardar.set_sublabel(tr("flow.no_space_sub"))
+            self.btn_guardar.set_locked(True)
+        else:
+            self.btn_guardar.set_locked(False)
+            self.btn_guardar.set_sublabel(tr("home.free_lockers", n=free))
 
     def show_notification(self, text: str, timeout_ms: int = 3000, lock: bool = False):
         """Show a brief notification in the footer status label.

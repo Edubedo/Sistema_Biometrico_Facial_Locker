@@ -268,7 +268,7 @@ _TRANSLATIONS = {
         "flow.keep_title":     "¡Que siga comprando!",
         "flow.keep_sub":       "Sus pertenencias permanecen seguras. Su locker sigue activo.",
         "flow.no_space_title": "Sin Lockers Disponibles",
-        "flow.no_space_sub":   "No hay lockers libres.",
+        "flow.no_space_sub":   "No hay lockers disponibles.",
     },
 
     "en": {

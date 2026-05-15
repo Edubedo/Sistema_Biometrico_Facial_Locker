@@ -136,16 +136,16 @@ class MainWindow(QMainWindow):
         """Navigate to GuardarPage only if there is at least one free locker."""
         try:
             if db_next_free_locker() is None:
-                # No free lockers: show a brief notification on Home and stay there
+                # No free lockers: keep the user on Home and leave the fixed no-space state visible
                 try:
-                    self.p_home.show_notification(tr("flow.no_space_sub"), lock=True)
+                    self.p_home.refresh()
                 except Exception:
                     pass
                 return
         except Exception as e:
-            # If checking fails, silently notify the user and prevent entry
+            # If checking fails, stay on Home without interrupting the flow
             try:
-                self.p_home.show_notification(tr("flow.no_space_sub"), lock=True)
+                self.p_home.refresh()
             except Exception:
                 pass
             return
