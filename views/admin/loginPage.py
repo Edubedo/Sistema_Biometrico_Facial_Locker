@@ -465,7 +465,7 @@ class AdminLoginPage(QWidget):
 
     # ── Idioma ────────────────────────────────────────────────────────────────
     def set_language(self, lang: str):
-        self.back_btn.setText("‹  " + tr("login.back"))
+        self.back_btn.setText(" " + tr("login.back"))
         self.title_lbl.setText(tr("login.title"))
         self.sub_lbl.setText(tr("login.panel_sub"))
         self._user_field.line.setPlaceholderText(tr("login.user_ph"))
