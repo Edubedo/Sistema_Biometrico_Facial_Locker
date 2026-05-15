@@ -811,7 +811,6 @@ class RetirarPage(QWidget):
 
         self.scan_line = ScanLine(self.cam)
         self.set_language(get_language())
-        self.refresh()
 
     def set_language(self, lang: str):
         self.back_btn.setText(tr("ret.back"))
@@ -823,19 +822,6 @@ class RetirarPage(QWidget):
         self._carousel.set_language(lang)
         self._carousel._render(self._carousel._current)
         self._carousel.set_language(lang)
-
-    def refresh(self):
-        labels = train_model()
-        if labels:
-            self.scan_lbl.setText("")
-            self.scan_btn.setEnabled(True)
-        else:
-            self.scan_lbl.setText(tr("ret.no_biometrics"))
-            self.scan_btn.setEnabled(False)
-
-    def showEvent(self, event):
-        super().showEvent(event)
-        self.refresh()
 
     def _show_camera_mode(self):
         self.detect_card.setVisible(False)
