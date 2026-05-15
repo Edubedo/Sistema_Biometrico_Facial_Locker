@@ -338,26 +338,6 @@ class BigLockerButton(QWidget):
                 p.setPen(QPen(QColor(220, 80, 80), _dp(1)))
             p.drawText(pill_rect, Qt.AlignCenter, self._sublabel)
 
-            # If locked, draw padlock icon centered below the sublabel pill
-            if getattr(self, "_locked", False):
-                try:
-                    if self._lock_pixmap is None:
-                        # try load default padlock from public
-                        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-                        public_path = os.path.join(project_root, "public")
-                        icon_file = os.path.join(public_path, "cerrada.png")
-                        pix = QPixmap(icon_file)
-                        if not pix.isNull():
-                            self._lock_pixmap = pix
-                    if self._lock_pixmap:
-                        icon_w = min(int(icon_r * 0.9), pill_rect.width() // 3)
-                        icon_h = icon_w
-                        ix = int((W - icon_w) / 2)
-                        iy = int(pill_rect.bottom() + _dp(8))
-                        p.drawPixmap(ix, iy, icon_w, icon_h, self._lock_pixmap)
-                except Exception:
-                    pass
-
         p.end()
 
     def _draw_lock_icon(self, p: QPainter, cx: int, cy: int, r: int):
