@@ -30,6 +30,7 @@ from PyQt5.QtWidgets import (
     QStackedWidget,
 )
 from db.models.usuarios import db_count_active_admins, db_register_admin
+from db.models.lockers import db_next_free_locker
 
 # Views
 from views.cliente.home import HomePage
@@ -91,7 +92,7 @@ class MainWindow(QMainWindow):
         ml.addWidget(self.stack)
 
         # ── Conexiones de navegacion ─────────────────────────────────────────
-        self.p_home.go_guardar.connect(lambda: self._nav(self.GUARD))
+        self.p_home.go_guardar.connect(self._try_go_guardar)
         self.p_home.go_retirar.connect(lambda: self._nav(self.RETIR))
         self.p_home.go_admin.connect(lambda: self._nav(self.ALOGIN))
         self.p_home.language_changed.connect(self._on_language_changed)
@@ -130,6 +131,25 @@ class MainWindow(QMainWindow):
         for p in (self.p_home, self.p_guard, self.p_retir, self.p_alogin, self.p_admin):
             if hasattr(p, "set_language"):
                 p.set_language(lang)
+
+    def _try_go_guardar(self):
+        """Navigate to GuardarPage only if there is at least one free locker."""
+        try:
+            if db_next_free_locker() is None:
+                # No free lockers: show a brief notification on Home and stay there
+                try:
+                    self.p_home.show_notification(tr("flow.no_space_sub"), lock=True)
+                except Exception:
+                    pass
+                return
+        except Exception as e:
+            # If checking fails, silently notify the user and prevent entry
+            try:
+                self.p_home.show_notification(tr("flow.no_space_sub"), lock=True)
+            except Exception:
+                pass
+            return
+        self._nav(self.GUARD)
 
     # ── Navegacion ────────────────────────────────────────────────────────────
 

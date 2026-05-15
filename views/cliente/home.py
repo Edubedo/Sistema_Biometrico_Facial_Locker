@@ -181,6 +181,8 @@ class BigLockerButton(QWidget):
         self._pressed = False
         self._label = label
         self._sublabel = sublabel
+        self._locked = False
+        self._lock_pixmap = None
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setCursor(Qt.PointingHandCursor)
 
@@ -331,7 +333,30 @@ class BigLockerButton(QWidget):
             p.drawRoundedRect(pill_rect, th / 2, th / 2)
 
             p.setPen(QPen(self._accent.lighter(140)))
+            # If locked, draw sublabel in red
+            if getattr(self, "_locked", False):
+                p.setPen(QPen(QColor(220, 80, 80), _dp(1)))
             p.drawText(pill_rect, Qt.AlignCenter, self._sublabel)
+
+            # If locked, draw padlock icon centered below the sublabel pill
+            if getattr(self, "_locked", False):
+                try:
+                    if self._lock_pixmap is None:
+                        # try load default padlock from public
+                        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+                        public_path = os.path.join(project_root, "public")
+                        icon_file = os.path.join(public_path, "cerrada.png")
+                        pix = QPixmap(icon_file)
+                        if not pix.isNull():
+                            self._lock_pixmap = pix
+                    if self._lock_pixmap:
+                        icon_w = min(int(icon_r * 0.9), pill_rect.width() // 3)
+                        icon_h = icon_w
+                        ix = int((W - icon_w) / 2)
+                        iy = int(pill_rect.bottom() + _dp(8))
+                        p.drawPixmap(ix, iy, icon_w, icon_h, self._lock_pixmap)
+                except Exception:
+                    pass
 
         p.end()
 
@@ -365,6 +390,13 @@ class BigLockerButton(QWidget):
 
     def set_sublabel(self, text: str):
         self._sublabel = text
+        self.update()
+
+    def set_locked(self, locked: bool, lock_pixmap: QPixmap = None):
+        """Mark the button as locked/unlocked. When locked a padlock icon is shown."""
+        self._locked = bool(locked)
+        if lock_pixmap is not None:
+            self._lock_pixmap = lock_pixmap
         self.update()
 
     def set_label(self, text: str):
@@ -530,14 +562,28 @@ class HomePage(QWidget):
         sr = QHBoxLayout()
         sr.setSpacing(_dp(6))
         sr.addWidget(StatusDot())
+
+        # Status + optional notification icon (stacked vertically)
+        vstatus = QVBoxLayout()
+        vstatus.setSpacing(2)
+        vstatus.setContentsMargins(0, 0, 0, 0)
+
         stl = QLabel("")
         stl.setStyleSheet(
             f"color:rgba(110,180,120,0.90); font-size:{_dp(9)}px;"
             f"font-family:'Segoe UI'; font-weight:700; letter-spacing:2px;"
         )
-        sr.addWidget(stl)
+        vstatus.addWidget(stl)
+
+        icon_lbl = QLabel("")
+        icon_lbl.setFixedSize(_dp(18), _dp(18))
+        icon_lbl.setVisible(False)
+        vstatus.addWidget(icon_lbl)
+
         self.status_lbl = stl
+        self.notification_icon = icon_lbl
         fwl.addLayout(sr)
+        sr.addLayout(vstatus)
         fwl.addStretch()
 
         # Versión / info pequeña
@@ -628,3 +674,40 @@ class HomePage(QWidget):
         lockers = db_get_all_lockers()
         free = sum(1 for l in lockers if l["t_estado"] == "libre")
         self.btn_guardar.set_sublabel(tr("home.free_lockers", n=free))
+
+    def show_notification(self, text: str, timeout_ms: int = 3000, lock: bool = False):
+        """Show a brief notification in the footer status label.
+
+        If `lock` is True the text will be shown in red and a padlock icon
+        will appear below the text for the duration.
+        """
+        try:
+            prev_text = self.status_lbl.text()
+            prev_style = self.status_lbl.styleSheet()
+
+            if lock:
+                # show message on the Guardar card and display a padlock inside it
+                try:
+                    prev = self.btn_guardar._sublabel
+                    self.btn_guardar.set_sublabel(text)
+                    self.btn_guardar.set_locked(True)
+
+                    def _unlock():
+                        try:
+                            self.btn_guardar.set_locked(False)
+                            self.btn_guardar.set_sublabel(prev)
+                        except Exception:
+                            pass
+
+                    QTimer.singleShot(timeout_ms, _unlock)
+                except Exception:
+                    pass
+            else:
+                # fallback: show in footer status (temporary)
+                try:
+                    self.status_lbl.setText(text)
+                    QTimer.singleShot(timeout_ms, lambda: self.status_lbl.setText(prev_text))
+                except Exception:
+                    pass
+        except Exception:
+            pass
