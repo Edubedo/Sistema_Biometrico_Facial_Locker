@@ -10,84 +10,118 @@ else:
     GPIO.setmode(GPIO.BCM)
     GPIO.setwarnings(False)
 
-BUZZER_PIN = 24
+# ── Pines ─────────────────────────────────────────────────────────────────────
+BUZZER_PIN = 24        # Pin físico 18 — buzzer pasivo
+
 LOCKER_PINS = {
-    "1": 17,
-    "2": 27,
+    "1": 17,           # Pin físico 11 — relay cerradura 1
+    "2": 27,           # Pin físico 13 — relay cerradura 2
 }
 
-# Global PWM object to avoid "PWM object already exists" errors
-_pwm = None
+LED_PIN = 22           # Pin físico 15 — LED indicador (paralelo al solenoide, opcional por código)
 
+PULSE_DURATION = 0.5   # Segundos que el solenoide permanece abierto
+
+# ── Setup inicial ─────────────────────────────────────────────────────────────
 if GPIO:
     for pin in LOCKER_PINS.values():
-        GPIO.setup(pin, GPIO.OUT, initial=GPIO.LOW)
+        GPIO.setup(pin, GPIO.OUT, initial=GPIO.HIGH)
+    GPIO.setup(LED_PIN,    GPIO.OUT, initial=GPIO.LOW)
     GPIO.setup(BUZZER_PIN, GPIO.OUT, initial=GPIO.LOW)
 
-def _sonar(frecuencia, duracion):
-    global _pwm
+
+# ── Buzzer pasivo — funciones internas síncronas ──────────────────────────────
+# Todas crean su propio objeto PWM y lo destruyen al terminar.
+# NUNCA se llaman desde hilos distintos al mismo tiempo.
+
+def _sonar_sync(frecuencia, duracion):
+    """Tono síncrono: bloquea el hilo actual durante 'duracion' segundos."""
     if not GPIO:
         print(f"[BUZZER SIMULADO] {frecuencia}Hz por {duracion}s")
+        time.sleep(duracion)
         return
-    
-    # Create PWM object once and reuse it, changing frequency as needed
-    if _pwm is None:
-        _pwm = GPIO.PWM(BUZZER_PIN, frecuencia)
-    else:
-        # Change frequency if PWM already exists
-        _pwm.ChangeFrequency(frecuencia)
-    
-    _pwm.start(50)
+    pwm = GPIO.PWM(BUZZER_PIN, frecuencia)
+    pwm.start(50)
     time.sleep(duracion)
-    _pwm.stop()
+    pwm.stop()
+
+
+# ── Beeps para el reconocimiento facial (hilos propios, no colisionan) ────────
 
 def beep_start_scan():
-    """Beep to signal scanning has started (short high tone)."""
-    def _worker():
-        _sonar(880, 0.15)
-    t = threading.Thread(target=_worker, daemon=True)
-    t.start()
+    """Un tono corto al iniciar el escaneo facial."""
+    def _w():
+        _sonar_sync(880, 0.15)
+    threading.Thread(target=_w, daemon=True).start()
+
 
 def beep_success():
-    """Beep to signal successful capture (two ascending tones)."""
-    def _worker():
-        _sonar(880, 0.2)
-        time.sleep(0.1)
-        _sonar(1200, 0.2)
-    t = threading.Thread(target=_worker, daemon=True)
-    t.start()
+    """Dos tonos ascendentes al reconocer cara exitosamente."""
+    def _w():
+        _sonar_sync(880, 0.2)
+        time.sleep(0.08)
+        _sonar_sync(1200, 0.25)
+    threading.Thread(target=_w, daemon=True).start()
+
 
 def beep_error():
-    """Beep to signal error (low descending tone)."""
-    def _worker():
-        _sonar(440, 0.1)
-        time.sleep(0.05)
-        _sonar(220, 0.2)
-    t = threading.Thread(target=_worker, daemon=True)
-    t.start()
+    """Tono descendente al fallar el reconocimiento."""
+    def _w():
+        _sonar_sync(440, 0.12)
+        time.sleep(0.06)
+        _sonar_sync(220, 0.25)
+    threading.Thread(target=_w, daemon=True).start()
+
+
+# ── Cerraduras ────────────────────────────────────────────────────────────────
 
 def abrir_locker(num_locker):
-    """Open the locker without blocking the caller: perform GPIO sequence in a background thread.
+    """
+    Abre la cerradura, suena el buzzer y enciende el LED (si está conectado
+    por GPIO). Todo en un único hilo para evitar conflictos de PWM.
 
-    This avoids freezing the UI while the solenoid is energized for a few seconds.
+    Lógica invertida: LOW activa el relay, HIGH lo desactiva.
     """
     pin = LOCKER_PINS.get(str(num_locker))
-    if not pin:
-        print(f"Locker {num_locker} no tiene pin asignado")
+    if pin is None:
+        print(f"[GPIO] Locker '{num_locker}' no tiene pin asignado.")
         return
 
-    def _worker(p):
+    def _worker():
         if not GPIO:
-            print(f"[LOCKER SIMULADO] Abriendo locker {num_locker}...")
-            time.sleep(3)
-            print(f"[LOCKER SIMULADO] Cerrando locker {num_locker}")
+            print(f"[SIMULADO] Locker {num_locker}: buzzer → abriendo → cerrando")
+            time.sleep(PULSE_DURATION)
             return
 
-        _sonar(440, 0.3)
-        GPIO.output(p, GPIO.HIGH)
-        time.sleep(3)
-        GPIO.output(p, GPIO.LOW)
-        _sonar(880, 0.2)
+        # 1. LED encendido (si está controlado por GPIO)
+        GPIO.output(LED_PIN, GPIO.HIGH)
 
-    t = threading.Thread(target=_worker, args=(pin,), daemon=True)
-    t.start()
+        # 2. Buzzer — dos pitidos DENTRO del mismo hilo, sin lanzar otro
+        _sonar_sync(1000, 0.1)
+        time.sleep(0.05)
+        _sonar_sync(1000, 0.1)
+
+        # 3. Relay activo → cerradura abierta
+        GPIO.output(pin, GPIO.LOW)
+        print(f"[GPIO] Locker {num_locker} ABIERTO (pin {pin})")
+
+        time.sleep(PULSE_DURATION)
+
+        # 4. Relay desactivado → cerradura cerrada
+        GPIO.output(pin, GPIO.HIGH)
+        print(f"[GPIO] Locker {num_locker} CERRADO (pin {pin})")
+
+        # 5. LED apagado
+        GPIO.output(LED_PIN, GPIO.LOW)
+
+    threading.Thread(target=_worker, daemon=True).start()
+
+
+def cleanup():
+    """Libera todos los pines GPIO. Llamar al cerrar la aplicación."""
+    if GPIO:
+        try:
+            GPIO.cleanup()
+            print("[GPIO] Pines liberados correctamente.")
+        except Exception as e:
+            print(f"[GPIO] Error en cleanup: {e}")

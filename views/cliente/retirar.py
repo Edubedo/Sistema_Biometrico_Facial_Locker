@@ -1062,10 +1062,10 @@ class RetirarPage(QWidget):
         self._close_detected_dialog()
         self.scan_btn.setVisible(True)
         num_locker = db_get_locker_num_by_id(self._id_locker)
+        abrir_locker(num_locker)
         db_log_intento(self._id_locker, "seguir_comprando", "exitoso",
-                       "Cliente consulto locker y continuo comprando.",
+                       "Cliente consulto locker, cerradura abierta para guardar de nuevo.",
                        id_sesion=self._id_sesion)
-        # Emitir señal para que main muestre la página de resultado (flujo existente)
         self.seguir_done.emit(self._face_uid, num_locker, self._id_sesion)
 
     def _cancel(self):
