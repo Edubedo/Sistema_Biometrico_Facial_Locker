@@ -96,26 +96,27 @@ def abrir_locker(num_locker):
             time.sleep(PULSE_DURATION)
             return
 
-        # 1. LED encendido (si está controlado por GPIO)
-        GPIO.output(LED_PIN, GPIO.HIGH)
-
-        # 2. Buzzer — dos pitidos DENTRO del mismo hilo, sin lanzar otro
+        # 1. Buzzer — dos pitidos
         _sonar_sync(1000, 0.1)
         time.sleep(0.05)
         _sonar_sync(1000, 0.1)
 
-        # 3. Relay activo → cerradura abierta
+        # 2. Relay activo → cerradura abierta
         GPIO.output(pin, GPIO.LOW)
         print(f"[GPIO] Locker {num_locker} ABIERTO (pin {pin})")
 
         time.sleep(PULSE_DURATION)
 
-        # 4. Relay desactivado → cerradura cerrada
+        # 3. Relay desactivado → cerradura cerrada
         GPIO.output(pin, GPIO.HIGH)
         print(f"[GPIO] Locker {num_locker} CERRADO (pin {pin})")
 
-        # 5. LED apagado
+        # 4. LED encendido 15 segundos, independiente del relay
+        GPIO.output(LED_PIN, GPIO.HIGH)
+        print(f"[GPIO] LED encendido por 15 segundos")
+        time.sleep(15)
         GPIO.output(LED_PIN, GPIO.LOW)
+        print(f"[GPIO] LED apagado")
 
     threading.Thread(target=_worker, daemon=True).start()
 
