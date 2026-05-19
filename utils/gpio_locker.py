@@ -26,8 +26,11 @@ PULSE_DURATION = 0.5   # Segundos que el solenoide permanece abierto
 if GPIO:
     for pin in LOCKER_PINS.values():
         GPIO.setup(pin, GPIO.OUT, initial=GPIO.HIGH)
+        GPIO.output(pin, GPIO.HIGH)   # Forzar relay desactivado (cerradura cerrada)
     GPIO.setup(LED_PIN,    GPIO.OUT, initial=GPIO.LOW)
+    GPIO.output(LED_PIN, GPIO.LOW)    # Forzar LED apagado al inicio
     GPIO.setup(BUZZER_PIN, GPIO.OUT, initial=GPIO.LOW)
+    GPIO.output(BUZZER_PIN, GPIO.LOW) # Forzar buzzer apagado al inicio
 
 
 # ── Buzzer pasivo — funciones internas síncronas ──────────────────────────────
