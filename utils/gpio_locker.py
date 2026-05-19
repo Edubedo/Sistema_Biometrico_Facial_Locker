@@ -20,7 +20,7 @@ LOCKER_PINS = {
 
 LED_PIN = 22           # Pin físico 15 — LED indicador (paralelo al solenoide, opcional por código)
 
-PULSE_DURATION = 0.5   # Segundos que el solenoide permanece abierto
+PULSE_DURATION = 2.0   # Segundos que el solenoide permanece abierto
 
 # ── Setup inicial ─────────────────────────────────────────────────────────────
 if GPIO:
