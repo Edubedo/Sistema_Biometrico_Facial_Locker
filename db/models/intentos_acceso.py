@@ -25,12 +25,16 @@ def db_log_intento(id_locker, tipo, resultado, descripcion="",
 
 def db_get_intentos_recientes(limit=50):
     with connectionDB() as con:
-        rows = con.execute(
+        query = (
             "SELECT ia.*, l.t_numero_locker, u.t_usuario "
             "FROM Intentos_acceso ia "
             "LEFT JOIN Lockers l ON ia.ID_locker=l.ID_locker "
             "LEFT JOIN Usuarios u ON ia.ID_usuario=u.ID_admin "
-            "ORDER BY ia.d_fecha_hora_acceso DESC LIMIT ?",
-            (limit,)
-        ).fetchall()
+            "ORDER BY ia.d_fecha_hora_acceso DESC"
+        )
+        params = ()
+        if limit is not None:
+            query += " LIMIT ?"
+            params = (limit,)
+        rows = con.execute(query, params).fetchall()
     return [dict(r) for r in rows]
