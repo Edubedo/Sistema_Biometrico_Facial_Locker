@@ -1,829 +1,870 @@
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QAbstractTableModel, QModelIndex, QVariant, QTimer
 from PyQt5.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-    QPushButton,
-    QLabel,
-    QLineEdit,
-    QFrame,
-    QSizePolicy,
-    QApplication,
-    QDialog,
-    QGridLayout,
-    QComboBox,
-    QTableWidget,
-    QTableWidgetItem,
-    QScroller,
-    QAbstractItemView,
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
+    QLabel, QLineEdit, QFrame, QSizePolicy, QApplication,
+    QGraphicsDropShadowEffect, QDialog, QComboBox,
+    QTableView, QAbstractItemView, QHeaderView, QScroller,
+    QScrollArea,
 )
-from PyQt5.QtGui import QPainter, QColor, QBrush, QLinearGradient
+from PyQt5.QtGui import QPainter, QColor, QBrush, QLinearGradient, QFont
 
 from db.models.usuarios import (
-    db_admin_exists,
-    db_count_active_admins,
-    db_delete_admin,
-    db_get_all_admins,
-    db_register_admin,
-    db_set_admin_estado,
-    db_update_admin,
+    db_admin_exists, db_count_active_admins, db_delete_admin,
+    db_get_all_admins, db_register_admin, db_set_admin_estado, db_update_admin,
 )
 from views.style.adminDialogs import DlgError, DlgInfo, DlgConfirm
 from utils.i18n import tr, get_language
 
 
-def _dp(v):
+# ─────────────────────────────────────────────────────────────────────────────
+#  Helpers
+# ─────────────────────────────────────────────────────────────────────────────
+def _dp(v: float) -> int:
     s = QApplication.primaryScreen()
-    return max(1, round(v * (s.logicalDotsPerInch() if s else 96) / 96))
+    scale = min((s.logicalDotsPerInch() if s else 96) / 96, 1.25)
+    return max(1, round(v * scale))
+
+_TOUCH_H = 52   # altura mínima táctil en px
+
+def _shadow(w, blur=12, alpha=18, dy=2):
+    s = QGraphicsDropShadowEffect()
+    s.setBlurRadius(blur); s.setColor(QColor(21, 101, 192, alpha)); s.setOffset(0, dy)
+    w.setGraphicsEffect(s)
+
+def _divider():
+    d = QFrame(); d.setObjectName("h_div"); return d
 
 
-_C = {
-    "activo":   ("#e8f5e9", "#2e7d32", "#c8e6c9", "#1b5e20", "#a5d6a7"),
-    "inactivo": ("#fafafa", "#78909c", "#eceff1", "#000000", "#b0bec5"),
-}
+# ─────────────────────────────────────────────────────────────────────────────
+#  Modelo de tabla
+# ─────────────────────────────────────────────────────────────────────────────
+_COLS_HDR = ["#", "Nombre", "Usuario", "Rol", "Estado", "Acciones"]
 
-STYLE = """
-QWidget#panel,QWidget#inner{
-    background:transparent;
-}
-QLabel#ttl{
-    color:#1565c0;
-    font-weight:900;
-    font-family:'Segoe UI';
-    letter-spacing:3px;
-    font-size:18px;
-}
-QLabel#sub{
-    color:#000000;
-    font-family:'Segoe UI';
-    letter-spacing:2px;
-    font-size:15px;
-}
-QFrame#h_div{
-    background:#cfd8e3;
-    border:none;
-    min-height:1px;
-    max-height:1px;
-}
-QFrame#cnt{
-    background:#fff;
-    border:none;
-    border-left:4px solid #1565c0;
-    border-radius:8px;
-}
-QLabel#cn_b{
-    color:#1565c0;
-    font-weight:800;
-    font-family:'Segoe UI';
-}
-QLabel#cn_o{
-    color:#2e7d32;
-    font-weight:800;
-    font-family:'Segoe UI';
-}
-QLabel#cn_g{
-    color:#000000;
-    font-weight:800;
-    font-family:'Segoe UI';
-}
-QLabel#ck  {
-    color:#000000;
-    font-family:'Segoe UI';
-    letter-spacing:2px;
-}
-QFrame#card_activo   {
-    background:#fff;
-    border:none;
-    border-left:4px solid #2e7d32;
-    border-radius:8px;
-}
-QFrame#card_inactivo {
-    background:#fafafa;
-    border:none;
-    border-left:4px solid #78909c;
-    border-radius:8px;
-}
-QLabel#meta{
-    color:#000000;
-    font-family:'Segoe UI';
-    letter-spacing:1px;
-}
-QPushButton#btn_add{
-    background:#1976d2;
-    color:#fff;border:none;
-    border-radius:7px;
-    font-family:'Segoe UI';
-    font-weight:700;
-    letter-spacing:2px;
-}
-QPushButton#btn_add:hover{
-    background:#1565c0;
-}
-QPushButton#btn_ref{
-    background:transparent;
-    color:#000000;
-    border:1px solid #cfd8e3;
-    border-radius:6px;
-    font-family:'Segoe UI';
-    letter-spacing:2px;
-}
-QPushButton#btn_ref:hover{
-    color:#1565c0;
-    border-color:#1976d2;
-    background:#e3f0ff;
-}
-QPushButton#btn_cfg{
-    background:transparent;
-    color:#000000;
-    border:1px solid #e0e8f4;
-    border-radius:5px;
-    font-family:'Segoe UI';
-}
-QPushButton#btn_cfg:hover{
-    color:#1565c0;
-    border-color:#1976d2;
-    background:#e3f0ff;
-}
-QPushButton#btn_del{
-    background:transparent;
-    color:#c62828;
-    border:1px solid #ef9a9a;
-    border-radius:5px;
-    font-family:'Segoe UI';
-    font-weight:700;
-    }
-QPushButton#btn_del:hover{
-    background:#ffebee;
-    border-color:#c62828;
-}
-QScrollArea{
-    border:none;
-    background:transparent;
-}
-QScrollBar:vertical{
-    background:#e8f0fb;
-    width:4px;margin:0;
-}
-QScrollBar::handle:vertical{
-    background:#90c4f0;
-    border-radius:2px;
-    min-height:20px;
-}
-QScrollBar::add-line:vertical,QScrollBar::sub-line:vertical{
-    height:0;
-}
-QDialog{
-    background:#f0f6ff;
-}
-QLineEdit,QComboBox{
-    background:#fff;
-    border:1px solid #cfd8e3;
-    border-radius:5px;
-    padding:5px 8px;color:#1565c0;
-    font-family:'Segoe UI';
-}
-QLineEdit:focus,QComboBox:focus{
-    border-color:#1976d2;
-}
-QLabel#flbl{
-    color:#000000;
-    font-family:'Segoe UI';
-    font-weight:700;
-    letter-spacing:1px;
-}
-QPushButton#dok{
-    background:#1976d2;
-    color:#fff;border:none;
-    border-radius:6px;
-    padding:7px 20px;
-    font-family:'Segoe UI';
-    font-weight:700;
-}
-QPushButton#dok:hover{
-    background:#1565c0;
-}
-QPushButton#dno{
-    background:transparent;
-    color:#000000;
-    border:1px solid #cfd8e3;
-    border-radius:6px;
-    padding:7px 16px;
-    font-family:'Segoe UI';
-}
-QLabel#empty{
-    color:#000000;font-family:'Segoe UI';
-    letter-spacing:3px;
-}
+class AdminTableModel(QAbstractTableModel):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._data: list[dict] = []
 
-/* ── Real table ───────────────────────────────────────────────────────── */
-QTableWidget#admin_users_tbl {
-    background: #ffffff;
-    border: 1px solid #cfd8e3;
-    border-radius: 10px;
-    gridline-color: #e3f0ff;
-}
-QHeaderView::section {
-    background: #e3f0ff;
-    color: #1565c0;
-    font-weight: 900;
-    font-family: 'Segoe UI', sans-serif;
-    letter-spacing: 1px;
-    padding: 8px 10px;
-    border: none;
-}
-QTableWidget::item {
-    padding: 8px 10px;
-    font-family: 'Segoe UI', sans-serif;
-    font-size: 15px;
-    color: #000000;
-}
-QTableWidget::item:selected { background: #bbdefb; }
-QPushButton#btn_toggle_on{
-    background:#e8f5e9;
-    color:#1b5e20;
-    border:1px solid #a5d6a7;
-    border-radius:5px;
-    font-family:'Segoe UI';
-    font-weight:700;
-}
-QPushButton#btn_toggle_on:hover{ background:#d6f0d8; }
-QPushButton#btn_toggle_off{
-    background:#ffebee;
-    color:#c62828;
-    border:1px solid #ef9a9a;
-    border-radius:5px;
-    font-family:'Segoe UI';
-    font-weight:700;
-}
-QPushButton#btn_toggle_off:hover{ background:#ffe1e6; }
+    def load(self, rows: list[dict]):
+        self.beginResetModel(); self._data = rows; self.endResetModel()
+
+    def row_data(self, row: int) -> dict:
+        return self._data[row] if 0 <= row < len(self._data) else {}
+
+    def rowCount(self,    p=QModelIndex()): return len(self._data)
+    def columnCount(self, p=QModelIndex()): return len(_COLS_HDR)
+
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+            return _COLS_HDR[section]
+        return QVariant()
+
+    def data(self, index, role=Qt.DisplayRole):
+        if not index.isValid(): return QVariant()
+        row = self._data[index.row()]
+        col = index.column()
+        estado = (row.get("t_estado", "activo") or "activo").lower()
+
+        if role == Qt.DisplayRole:
+            if col == 0: return str(index.row() + 1)
+            if col == 1:
+                return "{} {} {}".format(
+                    row.get("t_nombre", ""),
+                    row.get("t_apellido_paterno", ""),
+                    row.get("t_apellido_materno", "") or "",
+                ).strip()
+            if col == 2: return f"@{row.get('t_usuario', '')}"
+            if col == 3: return (row.get("t_rol", "") or "").upper()
+            if col == 4: return estado.upper()
+            if col == 5: return ""   # widgets embebidos
+
+        if role == Qt.ForegroundRole:
+            if col == 4:
+                return QBrush(QColor("#1b5e20" if estado == "activo" else "#78909c"))
+
+        if role == Qt.BackgroundRole:
+            if col == 4:
+                return QBrush(QColor("#e8f5e9" if estado == "activo" else "#f5f5f5"))
+            if index.row() % 2 == 1:
+                return QBrush(QColor("#f4f8ff"))
+
+        if role == Qt.TextAlignmentRole:
+            if col in (0, 2, 3, 4): return Qt.AlignCenter
+            return int(Qt.AlignLeft | Qt.AlignVCenter)
+
+        if role == Qt.FontRole:
+            f = QFont("Segoe UI", _dp(11))
+            if col == 4: f.setBold(True)
+            return f
+
+        return QVariant()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  ToggleBtn  (idéntico a los otros paneles)
+# ─────────────────────────────────────────────────────────────────────────────
+class ToggleBtn(QPushButton):
+    _ON  = "QPushButton{{background:{bg};color:{fg};border:2px solid {bg};border-radius:{r}px;font-family:'Segoe UI';font-weight:800;font-size:{fs}px;letter-spacing:1px;padding:0 {p}px;}}"
+    _OFF = "QPushButton{{background:#f4f8ff;color:{bd};border:2px solid {bd};border-radius:{r}px;font-family:'Segoe UI';font-weight:700;font-size:{fs}px;letter-spacing:1px;padding:0 {p}px;}}QPushButton:pressed{{background:#e3f0ff;}}"
+
+    def __init__(self, text, bg="#1565c0", fg="#ffffff", border="#1565c0", parent=None):
+        super().__init__(text, parent)
+        self._bg=bg; self._fg=fg; self._bd=border; self._active=False
+        self.setFixedHeight(_dp(_TOUCH_H)); self.setMinimumWidth(_dp(80))
+        self.setCursor(Qt.PointingHandCursor); self.setFocusPolicy(Qt.NoFocus)
+        self._apply()
+
+    def set_active(self, v: bool): self._active = v; self._apply()
+
+    def _apply(self):
+        kw = dict(r=_dp(10), fs=_dp(11), p=_dp(18))
+        if self._active:
+            self.setStyleSheet(self._ON.format(bg=self._bg, fg=self._fg, **kw))
+        else:
+            self.setStyleSheet(self._OFF.format(bd=self._bd, **kw))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Estilos globales
+# ─────────────────────────────────────────────────────────────────────────────
+def _build_style():
+    TH  = _dp(_TOUCH_H)
+    r10 = _dp(10); r6 = _dp(6)
+    INP_H = _dp(52)   # altura de inputs en diálogos (misma que botones)
+
+    return f"""
+QWidget#admin_users_panel {{ background: transparent; }}
+
+QLabel#section_title {{
+    color: #1565c0; font-weight: 900;
+    font-family: 'Segoe UI'; letter-spacing: 3px; font-size: {_dp(13)}px;
+}}
+QLabel#section_sub {{
+    color: #37474f; font-family: 'Segoe UI';
+    letter-spacing: 1px; font-size: {_dp(11)}px;
+}}
+QFrame#h_div {{
+    background: #cfd8e3; border: none; min-height: 1px; max-height: 1px;
+}}
+
+/* ── Botones principales ── */
+QPushButton#btn_add {{
+    background: #1565c0; color: #ffffff; border: none;
+    border-radius: {r10}px; font-family: 'Segoe UI';
+    font-weight: 800; letter-spacing: 2px; font-size: {_dp(11)}px;
+    min-height: {TH}px; min-width: {_dp(140)}px; padding: 0 {_dp(20)}px;
+}}
+QPushButton#btn_add:hover   {{ background: #1976d2; }}
+QPushButton#btn_add:pressed {{ background: #0d47a1; }}
+QPushButton#btn_add:disabled{{ background: #90a4ae; }}
+
+QPushButton#btn_refresh {{
+    background: #ffffff; color: #1565c0;
+    border: 2px solid #90c4f0; border-radius: {r10}px;
+    font-family: 'Segoe UI'; font-weight: 800;
+    letter-spacing: 2px; font-size: {_dp(11)}px;
+    min-height: {TH}px; min-width: {_dp(140)}px; padding: 0 {_dp(20)}px;
+}}
+QPushButton#btn_refresh:hover   {{ background: #e3f0ff; border-color: #1565c0; }}
+QPushButton#btn_refresh:pressed {{ background: #bbdefb; }}
+
+/* ── Barra de filtros ── */
+QFrame#filter_bar {{
+    background: #ffffff; border: 1px solid #cfd8e3; border-radius: {r10}px;
+}}
+QLabel#filter_lbl {{
+    color: #546e7a; font-family: 'Segoe UI';
+    font-size: {_dp(10)}px; letter-spacing: 1px;
+}}
+
+/* ── Tabla ── */
+QTableView#admin_users_tbl {{
+    background: #ffffff; alternate-background-color: #f4f8ff;
+    border: 1px solid #cfd8e3; border-radius: {r10}px;
+    gridline-color: #e8f0fb; selection-background-color: #bbdefb;
+    font-family: 'Segoe UI'; font-size: {_dp(11)}px; color: #000000;
+}}
+QTableView#admin_users_tbl::item {{
+    padding: {_dp(10)}px {_dp(12)}px; border-bottom: 1px solid #f0f4fa;
+}}
+QTableView#admin_users_tbl::item:selected {{ background: #bbdefb; color: #0d47a1; }}
+QHeaderView::section {{
+    background: #1565c0; color: #ffffff;
+    font-weight: 900; font-family: 'Segoe UI';
+    letter-spacing: 1px; font-size: {_dp(10)}px;
+    padding: {_dp(10)}px {_dp(12)}px; border: none;
+    border-right: 1px solid rgba(255,255,255,0.18);
+    min-height: {_dp(40)}px;
+}}
+QHeaderView::section:last  {{ border-right: none; }}
+QHeaderView::section:hover {{ background: #1976d2; }}
+
+/* ── Scrollbars ── */
+QScrollBar:vertical   {{ background: #e8f0fb; width: {_dp(6)}px; margin: 0; }}
+QScrollBar::handle:vertical   {{ background: #90c4f0; border-radius: {_dp(3)}px; min-height: {_dp(28)}px; }}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
+QScrollBar:horizontal {{ background: #e8f0fb; height: {_dp(6)}px; margin: 0; }}
+QScrollBar::handle:horizontal {{ background: #90c4f0; border-radius: {_dp(3)}px; min-width: {_dp(28)}px; }}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{ width: 0; }}
+
+/* ── Paginación ── */
+QFrame#page_bar {{
+    background: #ffffff; border: 1px solid #cfd8e3; border-radius: {r10}px;
+}}
+QPushButton#btn_page {{
+    background: #e3f0ff; color: #1565c0;
+    border: 2px solid #90c4f0; border-radius: {r6}px;
+    font-family: 'Segoe UI'; font-size: {_dp(16)}px; font-weight: 900;
+    min-width: {_dp(56)}px; min-height: {TH}px; padding: 0 {_dp(6)}px;
+}}
+QPushButton#btn_page:hover   {{ background: #bbdefb; border-color: #1565c0; }}
+QPushButton#btn_page:pressed {{ background: #90c4f0; }}
+QPushButton#btn_page:disabled {{ background: #f4f8ff; color: #b0bec5; border-color: #e0e8f0; }}
+QLabel#page_lbl {{
+    color: #1565c0; font-family: 'Segoe UI';
+    font-size: {_dp(12)}px; font-weight: 800; min-width: {_dp(100)}px;
+}}
+QLabel#count_lbl {{
+    color: #546e7a; font-family: 'Segoe UI'; font-size: {_dp(10)}px;
+}}
+
+/* ── Botones de acción dentro de la tabla ── */
+QPushButton#btn_edit {{
+    background: #e3f0ff; color: #1565c0;
+    border: 1.5px solid #90c4f0; border-radius: {_dp(7)}px;
+    font-family: 'Segoe UI'; font-weight: 700; font-size: {_dp(10)}px;
+    min-height: {_dp(40)}px; min-width: {_dp(64)}px; padding: 0 {_dp(8)}px;
+}}
+QPushButton#btn_edit:hover   {{ background: #bbdefb; border-color: #1565c0; }}
+QPushButton#btn_edit:pressed {{ background: #90c4f0; }}
+
+QPushButton#btn_activate {{
+    background: #e8f5e9; color: #1b5e20;
+    border: 1.5px solid #a5d6a7; border-radius: {_dp(7)}px;
+    font-family: 'Segoe UI'; font-weight: 700; font-size: {_dp(10)}px;
+    min-height: {_dp(40)}px; min-width: {_dp(74)}px; padding: 0 {_dp(8)}px;
+}}
+QPushButton#btn_activate:hover   {{ background: #c8e6c9; }}
+QPushButton#btn_activate:pressed {{ background: #a5d6a7; }}
+QPushButton#btn_activate:disabled {{ background: #f5f5f5; color: #b0bec5; border-color: #e0e0e0; }}
+
+QPushButton#btn_deactivate {{
+    background: #ffebee; color: #c62828;
+    border: 1.5px solid #ef9a9a; border-radius: {_dp(7)}px;
+    font-family: 'Segoe UI'; font-weight: 700; font-size: {_dp(10)}px;
+    min-height: {_dp(40)}px; min-width: {_dp(74)}px; padding: 0 {_dp(8)}px;
+}}
+QPushButton#btn_deactivate:hover   {{ background: #ffcdd2; }}
+QPushButton#btn_deactivate:pressed {{ background: #ef9a9a; }}
+QPushButton#btn_deactivate:disabled {{ background: #f5f5f5; color: #b0bec5; border-color: #e0e0e0; }}
+
+/* ── Diálogos ── */
+QDialog#admin_dlg {{
+    background: #f0f6ff;
+}}
+QLabel#dlg_title {{
+    color: #1565c0; font-weight: 900; font-family: 'Segoe UI';
+    letter-spacing: 2px; font-size: {_dp(13)}px;
+}}
+QLabel#dlg_sub {{
+    color: #546e7a; font-family: 'Segoe UI'; font-size: {_dp(10)}px;
+}}
+QLabel#field_lbl {{
+    color: #37474f; font-family: 'Segoe UI';
+    font-weight: 700; font-size: {_dp(11)}px; letter-spacing: 1px;
+}}
+QLineEdit#dlg_inp {{
+    background: #ffffff; border: 2px solid #cfd8e3;
+    border-radius: {_dp(8)}px; color: #1a237e;
+    font-family: 'Segoe UI'; font-size: {_dp(12)}px;
+    padding: 0 {_dp(14)}px; min-height: {INP_H}px;
+    selection-background-color: #bbdefb;
+}}
+QLineEdit#dlg_inp:focus  {{ border-color: #1976d2; background: #f4f8ff; }}
+QLineEdit#dlg_inp:hover  {{ border-color: #90c4f0; }}
+QComboBox#dlg_combo {{
+    background: #ffffff; border: 2px solid #cfd8e3;
+    border-radius: {_dp(8)}px; color: #1a237e;
+    font-family: 'Segoe UI'; font-size: {_dp(12)}px;
+    padding: 0 {_dp(14)}px; min-height: {INP_H}px;
+}}
+QComboBox#dlg_combo:focus {{ border-color: #1976d2; }}
+QComboBox#dlg_combo::drop-down {{ border: none; width: {_dp(28)}px; }}
+QComboBox QAbstractItemView {{
+    background: #ffffff; border: 1px solid #cfd8e3;
+    selection-background-color: #e3f0ff; color: #1a237e;
+    font-family: 'Segoe UI'; font-size: {_dp(12)}px;
+    min-height: {_dp(40)}px;
+}}
+QLabel#dlg_err {{
+    color: #c62828; font-family: 'Segoe UI';
+    font-size: {_dp(11)}px; font-weight: 700;
+}}
+QPushButton#dlg_ok {{
+    background: #1565c0; color: #ffffff; border: none;
+    border-radius: {_dp(10)}px; font-family: 'Segoe UI';
+    font-weight: 800; font-size: {_dp(12)}px;
+    min-height: {_dp(54)}px; min-width: {_dp(140)}px; padding: 0 {_dp(24)}px;
+}}
+QPushButton#dlg_ok:hover   {{ background: #1976d2; }}
+QPushButton#dlg_ok:pressed {{ background: #0d47a1; }}
+QPushButton#dlg_cancel {{
+    background: #ffffff; color: #546e7a;
+    border: 2px solid #cfd8e3; border-radius: {_dp(10)}px;
+    font-family: 'Segoe UI'; font-weight: 700; font-size: {_dp(12)}px;
+    min-height: {_dp(54)}px; min-width: {_dp(120)}px; padding: 0 {_dp(20)}px;
+}}
+QPushButton#dlg_cancel:hover   {{ background: #e3f0ff; border-color: #90c4f0; }}
+QPushButton#dlg_cancel:pressed {{ background: #bbdefb; }}
 """
 
 
-class AdminRegisterDialog(QDialog):
+# ─────────────────────────────────────────────────────────────────────────────
+#  Formulario base compartido (registro y edición)
+# ─────────────────────────────────────────────────────────────────────────────
+class _BaseAdminDialog(QDialog):
+    """
+    Diálogo completamente redesignado para 7 pulgadas táctil:
+    — campos altos (52 px) con fuente legible
+    — layout vertical de una sola columna (cabe en pantalla pequeña)
+    — scroll por si la pantalla no alcanza en verticales muy cortas
+    — botones de acción grandes al pie
+    """
     ROLES = ["empleado", "supervisor", "administrador"]
 
-    def __init__(self, admin_id=None, parent=None):
+    def __init__(self, title: str, subtitle: str, parent=None):
         super().__init__(parent)
-        self.admin_id = admin_id
+        self.setObjectName("admin_dlg")
+        self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
+        self.setMinimumWidth(_dp(420))
+        self.setMaximumWidth(_dp(560))
+        self.setStyleSheet(_build_style())
         self.data = None
-        self.setWindowTitle(tr("admin.users.register_title"))
-        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
-        self.setMinimumWidth(_dp(380))
-        self.setStyleSheet(STYLE)
 
+        # Fondo azul claro
         root = QVBoxLayout(self)
-        root.setContentsMargins(_dp(20), _dp(16), _dp(20), _dp(16))
-        root.setSpacing(_dp(12))
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
 
-        ttl = QLabel(tr("admin.users.register_head"))
-        ttl.setStyleSheet(
-            f"color:#1565c0;font-size:{_dp(11)}px;font-weight:900;"
-            "font-family:'Segoe UI';letter-spacing:2px;"
+        # ── Cabecera coloreada ────────────────────────────────────────────────
+        hdr = QFrame()
+        hdr.setStyleSheet(f"""
+            QFrame {{
+                background: #1565c0;
+                border-top-left-radius: {_dp(12)}px;
+                border-top-right-radius: {_dp(12)}px;
+            }}
+        """)
+        hdr_lay = QVBoxLayout(hdr)
+        hdr_lay.setContentsMargins(_dp(20), _dp(16), _dp(20), _dp(16))
+        hdr_lay.setSpacing(_dp(3))
+        ttl_lbl = QLabel(title)
+        ttl_lbl.setStyleSheet(
+            f"color:#ffffff;font-weight:900;font-family:'Segoe UI';"
+            f"font-size:{_dp(14)}px;letter-spacing:2px;background:transparent;"
         )
-        root.addWidget(ttl)
-        d = QFrame()
-        d.setObjectName("h_div")
-        root.addWidget(d)
+        sub_lbl = QLabel(subtitle)
+        sub_lbl.setStyleSheet(
+            f"color:rgba(255,255,255,0.75);font-family:'Segoe UI';"
+            f"font-size:{_dp(10)}px;background:transparent;"
+        )
+        hdr_lay.addWidget(ttl_lbl)
+        hdr_lay.addWidget(sub_lbl)
+        root.addWidget(hdr)
 
-        grid = QGridLayout()
-        grid.setSpacing(_dp(8))
-        grid.setColumnStretch(1, 1)
-        fs = f"font-size:{_dp(9)}px;"
+        # ── Cuerpo scrollable ─────────────────────────────────────────────────
+        body_bg = QFrame()
+        body_bg.setStyleSheet(
+            f"QFrame{{background:#f0f6ff;"
+            f"border-bottom-left-radius:{_dp(12)}px;"
+            f"border-bottom-right-radius:{_dp(12)}px;}}"
+        )
+        body_outer = QVBoxLayout(body_bg)
+        body_outer.setContentsMargins(_dp(20), _dp(16), _dp(20), _dp(20))
+        body_outer.setSpacing(_dp(14))
 
-        def add_row(lbl_text, widget, r):
-            lb = QLabel(lbl_text)
-            lb.setObjectName("flbl")
-            lb.setStyleSheet(fs)
-            grid.addWidget(lb, r, 0, Qt.AlignRight | Qt.AlignVCenter)
-            widget.setStyleSheet(fs)
-            grid.addWidget(widget, r, 1)
+        # Área de campos (scroll interno por si el formulario es largo)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll.setStyleSheet(
+            "QScrollArea{border:none;background:transparent;}"
+            f"QScrollBar:vertical{{background:#e8f0fb;width:{_dp(6)}px;margin:0;}}"
+            f"QScrollBar::handle:vertical{{background:#90c4f0;border-radius:{_dp(3)}px;min-height:{_dp(28)}px;}}"
+            "QScrollBar::add-line:vertical,QScrollBar::sub-line:vertical{height:0;}"
+        )
+        QScroller.grabGesture(scroll.viewport(), QScroller.LeftMouseButtonGesture)
 
-        # Campos del formulario
-        self.e_nombre = QLineEdit()
-        self.e_nombre.setPlaceholderText(tr("admin.users.placeholder.first"))
-        self.e_ap = QLineEdit()
-        self.e_ap.setPlaceholderText(tr("admin.users.placeholder.last"))
-        self.e_am = QLineEdit()
-        self.e_am.setPlaceholderText(tr("admin.users.placeholder.mother"))
-        self.e_usuario = QLineEdit()
-        self.e_usuario.setPlaceholderText(tr("admin.users.placeholder.user"))
-        self.e_pass = QLineEdit()
-        self.e_pass.setEchoMode(QLineEdit.Password)
-        self.e_pass.setPlaceholderText(tr("admin.users.placeholder.pass"))
-        self.e_pass2 = QLineEdit()
-        self.e_pass2.setEchoMode(QLineEdit.Password)
-        self.e_pass2.setPlaceholderText(tr("admin.users.placeholder.pass"))
-        self.c_rol = QComboBox()
-        self.c_rol.addItems(self.ROLES)
+        fields_w = QWidget()
+        fields_w.setStyleSheet("background:transparent;")
+        self.fields_lay = QVBoxLayout(fields_w)
+        self.fields_lay.setContentsMargins(0, 0, _dp(6), 0)
+        self.fields_lay.setSpacing(_dp(12))
+        scroll.setWidget(fields_w)
+        body_outer.addWidget(scroll, 1)
 
-        add_row(tr("admin.users.field.name"), self.e_nombre, 0)
-        add_row(tr("admin.users.field.ap"), self.e_ap, 1)
-        add_row(tr("admin.users.field.am"), self.e_am, 2)
-        add_row(tr("admin.users.field.user"), self.e_usuario, 3)
-        add_row(tr("admin.users.field.role"), self.c_rol, 4)
-        add_row(tr("admin.users.field.pass"), self.e_pass, 5)
-        add_row(tr("admin.users.field.confirm"), self.e_pass2, 6)
+        # Mensaje de error
+        self.err_lbl = QLabel("")
+        self.err_lbl.setObjectName("dlg_err")
+        self.err_lbl.setAlignment(Qt.AlignCenter)
+        self.err_lbl.setWordWrap(True)
+        self.err_lbl.setMinimumHeight(_dp(20))
+        body_outer.addWidget(self.err_lbl)
 
-        root.addLayout(grid)
+        # Botones de acción
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(_dp(10))
+        self.btn_cancel = QPushButton(tr("common.cancel"))
+        self.btn_cancel.setObjectName("dlg_cancel")
+        self.btn_cancel.setCursor(Qt.PointingHandCursor)
+        self.btn_cancel.setFocusPolicy(Qt.NoFocus)
+        self.btn_cancel.clicked.connect(self.reject)
+        self.btn_ok = QPushButton(tr("common.confirm"))
+        self.btn_ok.setObjectName("dlg_ok")
+        self.btn_ok.setCursor(Qt.PointingHandCursor)
+        self.btn_ok.setFocusPolicy(Qt.NoFocus)
+        self.btn_ok.clicked.connect(self._save)
+        btn_row.addWidget(self.btn_cancel, 1)
+        btn_row.addWidget(self.btn_ok, 2)
+        body_outer.addLayout(btn_row)
 
-        # Mensajes de error
-        self.msg_error = QLabel("")
-        self.msg_error.setObjectName("err")
-        self.msg_error.setStyleSheet(f"color:#c62828;font-size:{_dp(10)}px;")
-        self.msg_error.setAlignment(Qt.AlignCenter)
-        root.addWidget(self.msg_error)
+        root.addWidget(body_bg, 1)
 
-        br = QHBoxLayout()
-        br.addStretch()
-        bn = QPushButton(tr("common.cancel"))
-        bn.setObjectName("dno")
-        bn.setStyleSheet(fs)
-        bn.setCursor(Qt.PointingHandCursor)
-        bn.clicked.connect(self.reject)
-        bo = QPushButton(tr("common.confirm"))
-        bo.setObjectName("dok")
-        bo.setStyleSheet(fs)
-        bo.setCursor(Qt.PointingHandCursor)
-        bo.clicked.connect(self._save)
-        br.addWidget(bn)
-        br.addWidget(bo)
-        root.addLayout(br)
+    # ── Helpers para construir campos táctiles ────────────────────────────────
+    def _add_input(self, label: str, placeholder: str = "",
+                   password: bool = False) -> QLineEdit:
+        lbl = QLabel(label); lbl.setObjectName("field_lbl")
+        inp = QLineEdit()
+        inp.setObjectName("dlg_inp")
+        inp.setPlaceholderText(placeholder)
+        inp.setFixedHeight(_dp(52))
+        if password:
+            inp.setEchoMode(QLineEdit.Password)
+        self.fields_lay.addWidget(lbl)
+        self.fields_lay.addWidget(inp)
+        return inp
+
+    def _add_combo(self, label: str, items: list[str]) -> QComboBox:
+        lbl = QLabel(label); lbl.setObjectName("field_lbl")
+        combo = QComboBox()
+        combo.setObjectName("dlg_combo")
+        combo.setFixedHeight(_dp(52))
+        combo.addItems(items)
+        self.fields_lay.addWidget(lbl)
+        self.fields_lay.addWidget(combo)
+        return combo
+
+    def _set_error(self, msg: str):
+        self.err_lbl.setText(msg)
 
     def _save(self):
-        nombre = self.e_nombre.text().strip()
-        ap = self.e_ap.text().strip()
-        am = self.e_am.text().strip()
-        usuario = self.e_usuario.text().strip()
-        rol = self.c_rol.currentText()
-        pw = self.e_pass.text()
-        pw2 = self.e_pass2.text()
+        raise NotImplementedError
 
-        self.msg_error.setText("")
+    def paintEvent(self, _):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        from PyQt5.QtGui import QPainterPath, QColor
+        from PyQt5.QtCore import QRectF
+        path = __import__('PyQt5.QtGui', fromlist=['QPainterPath']).QPainterPath()
+        path.addRoundedRect(QRectF(self.rect()), _dp(12), _dp(12))
+        p.fillPath(path, QBrush(QColor("#f0f6ff")))
+        p.end()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Diálogo: Registrar admin
+# ─────────────────────────────────────────────────────────────────────────────
+class AdminRegisterDialog(_BaseAdminDialog):
+    def __init__(self, admin_id=None, parent=None):
+        super().__init__(
+            title=tr("admin.users.register_title"),
+            subtitle=tr("admin.users.register_head"),
+            parent=parent,
+        )
+        self.admin_id = admin_id
+        self.btn_ok.setText(tr("common.confirm"))
+
+        self.e_nombre  = self._add_input(tr("admin.users.field.name"),    tr("admin.users.placeholder.first"))
+        self.e_ap      = self._add_input(tr("admin.users.field.ap"),       tr("admin.users.placeholder.last"))
+        self.e_am      = self._add_input(tr("admin.users.field.am"),       tr("admin.users.placeholder.mother"))
+        self.e_usuario = self._add_input(tr("admin.users.field.user"),     tr("admin.users.placeholder.user"))
+        self.c_rol     = self._add_combo(tr("admin.users.field.role"),     self.ROLES)
+        self.fields_lay.addWidget(_divider())
+        self.e_pass    = self._add_input(tr("admin.users.field.pass"),     tr("admin.users.placeholder.pass"),    password=True)
+        self.e_pass2   = self._add_input(tr("admin.users.field.confirm"),  tr("admin.users.placeholder.pass"),    password=True)
+
+    def _save(self):
+        nombre  = self.e_nombre.text().strip()
+        ap      = self.e_ap.text().strip()
+        am      = self.e_am.text().strip()
+        usuario = self.e_usuario.text().strip()
+        rol     = self.c_rol.currentText()
+        pw      = self.e_pass.text()
+        pw2     = self.e_pass2.text()
+        self._set_error("")
 
         if not all([nombre, ap, usuario, pw]):
-            self.msg_error.setText(tr("admin.users.err.required"))
-            return
+            self._set_error(tr("admin.users.err.required")); return
         if len(pw) < 4:
-            self.msg_error.setText(tr("admin.users.err.pass_min"))
-            return
+            self._set_error(tr("admin.users.err.pass_min")); return
         if pw != pw2:
-            self.msg_error.setText(tr("admin.users.err.pass_mismatch"))
-            return
+            self._set_error(tr("admin.users.err.pass_mismatch")); return
         if db_admin_exists(usuario):
-            self.msg_error.setText(tr("admin.users.err.exists"))
-            return
+            self._set_error(tr("admin.users.err.exists")); return
 
-        self.data = {
-            "nombre": nombre,
-            "apellido_paterno": ap,
-            "apellido_materno": am or None,
-            "usuario": usuario,
-            "rol": rol,
-            "contrasena": pw,
-        }
+        self.data = dict(nombre=nombre, apellido_paterno=ap,
+                         apellido_materno=am or None, usuario=usuario,
+                         rol=rol, contrasena=pw)
         self.accept()
 
 
-class AdminEditDialog(QDialog):
-    ROLES = ["empleado", "supervisor", "administrador"]
-
+# ─────────────────────────────────────────────────────────────────────────────
+#  Diálogo: Editar admin
+# ─────────────────────────────────────────────────────────────────────────────
+class AdminEditDialog(_BaseAdminDialog):
     def __init__(self, admin: dict, parent=None):
-        super().__init__(parent)
-        self.admin = admin
-        self.data = None
-        self.setWindowTitle(tr("admin.users.edit_title"))
-        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
-        self.setMinimumWidth(_dp(400))
-        self.setStyleSheet(STYLE)
-
-        root = QVBoxLayout(self)
-        root.setContentsMargins(_dp(20), _dp(16), _dp(20), _dp(16))
-        root.setSpacing(_dp(12))
-
-        ttl = QLabel(tr("admin.users.edit_head"))
-        ttl.setStyleSheet(
-            f"color:#1565c0;font-size:{_dp(11)}px;font-weight:900;"
-            "font-family:'Segoe UI';letter-spacing:2px;"
+        super().__init__(
+            title=tr("admin.users.edit_title"),
+            subtitle=tr("admin.users.edit_head"),
+            parent=parent,
         )
-        root.addWidget(ttl)
-        d = QFrame()
-        d.setObjectName("h_div")
-        root.addWidget(d)
+        self.admin = admin
+        self.btn_ok.setText(tr("common.update"))
 
-        grid = QGridLayout()
-        grid.setSpacing(_dp(8))
-        grid.setColumnStretch(1, 1)
-        fs = f"font-size:{_dp(9)}px;"
+        self.e_nombre  = self._add_input(tr("admin.users.field.name"),      tr("admin.users.placeholder.first"))
+        self.e_ap      = self._add_input(tr("admin.users.field.ap"),         tr("admin.users.placeholder.last"))
+        self.e_am      = self._add_input(tr("admin.users.field.am"),         tr("admin.users.placeholder.mother"))
+        self.e_usuario = self._add_input(tr("admin.users.field.user"),       tr("admin.users.placeholder.user"))
+        self.c_rol     = self._add_combo(tr("admin.users.field.role"),       self.ROLES)
+        self.fields_lay.addWidget(_divider())
+        self.e_pass    = self._add_input(tr("admin.users.field.new_pass"),   tr("admin.users.placeholder.new_pass"),    password=True)
+        self.e_pass2   = self._add_input(tr("admin.users.field.confirm"),    tr("admin.users.placeholder.confirm_pass"), password=True)
 
-        def add_row(lbl_text, widget, r):
-            lb = QLabel(lbl_text)
-            lb.setObjectName("flbl")
-            lb.setStyleSheet(fs)
-            grid.addWidget(lb, r, 0, Qt.AlignRight | Qt.AlignVCenter)
-            widget.setStyleSheet(fs)
-            grid.addWidget(widget, r, 1)
-
-        self.e_nombre = QLineEdit(admin.get("t_nombre", ""))
-        self.e_ap = QLineEdit(admin.get("t_apellido_paterno", ""))
-        self.e_am = QLineEdit(admin.get("t_apellido_materno", "") or "")
-        self.e_usuario = QLineEdit(admin.get("t_usuario", ""))
-        self.c_rol = QComboBox()
-        self.c_rol.addItems(self.ROLES)
+        # Pre-rellenar con datos actuales
+        self.e_nombre.setText(admin.get("t_nombre", ""))
+        self.e_ap.setText(admin.get("t_apellido_paterno", ""))
+        self.e_am.setText(admin.get("t_apellido_materno", "") or "")
+        self.e_usuario.setText(admin.get("t_usuario", ""))
         self.c_rol.setCurrentText((admin.get("t_rol", "empleado") or "empleado").lower())
-        self.e_pass = QLineEdit()
-        self.e_pass.setEchoMode(QLineEdit.Password)
-        self.e_pass.setPlaceholderText(tr("admin.users.placeholder.new_pass"))
-        self.e_pass2 = QLineEdit()
-        self.e_pass2.setEchoMode(QLineEdit.Password)
-        self.e_pass2.setPlaceholderText(tr("admin.users.placeholder.confirm_pass"))
-
-        add_row(tr("admin.users.field.name"), self.e_nombre, 0)
-        add_row(tr("admin.users.field.ap"), self.e_ap, 1)
-        add_row(tr("admin.users.field.am"), self.e_am, 2)
-        add_row(tr("admin.users.field.user"), self.e_usuario, 3)
-        add_row(tr("admin.users.field.role"), self.c_rol, 4)
-        add_row(tr("admin.users.field.new_pass"), self.e_pass, 5)
-        add_row(tr("admin.users.field.confirm"), self.e_pass2, 6)
-        root.addLayout(grid)
-
-        self.msg_error = QLabel("")
-        self.msg_error.setObjectName("err")
-        self.msg_error.setStyleSheet(f"color:#c62828;font-size:{_dp(10)}px;")
-        self.msg_error.setAlignment(Qt.AlignCenter)
-        root.addWidget(self.msg_error)
-
-        br = QHBoxLayout()
-        br.addStretch()
-        bn = QPushButton(tr("common.cancel"))
-        bn.setObjectName("dno")
-        bn.setStyleSheet(fs)
-        bn.setCursor(Qt.PointingHandCursor)
-        bn.clicked.connect(self.reject)
-        bo = QPushButton(tr("common.update"))
-        bo.setObjectName("dok")
-        bo.setStyleSheet(fs)
-        bo.setCursor(Qt.PointingHandCursor)
-        bo.clicked.connect(self._save)
-        br.addWidget(bn)
-        br.addWidget(bo)
-        root.addLayout(br)
 
     def _save(self):
-        nombre = self.e_nombre.text().strip()
-        ap = self.e_ap.text().strip()
-        am = self.e_am.text().strip()
+        nombre  = self.e_nombre.text().strip()
+        ap      = self.e_ap.text().strip()
+        am      = self.e_am.text().strip()
         usuario = self.e_usuario.text().strip()
-        rol = self.c_rol.currentText().strip().lower()
-        pw = self.e_pass.text()
-        pw2 = self.e_pass2.text()
+        rol     = self.c_rol.currentText().strip().lower()
+        pw      = self.e_pass.text()
+        pw2     = self.e_pass2.text()
+        self._set_error("")
 
-        self.msg_error.setText("")
         if not all([nombre, ap, usuario, rol]):
-            self.msg_error.setText(tr("admin.users.err.required_role"))
-            return
+            self._set_error(tr("admin.users.err.required_role")); return
         if pw or pw2:
             if len(pw) < 4:
-                self.msg_error.setText(tr("admin.users.err.pass_min"))
-                return
+                self._set_error(tr("admin.users.err.pass_min")); return
             if pw != pw2:
-                self.msg_error.setText(tr("admin.users.err.pass_mismatch"))
-                return
+                self._set_error(tr("admin.users.err.pass_mismatch")); return
 
-        self.data = {
-            "id_admin": self.admin.get("ID_admin"),
-            "nombre": nombre,
-            "apellido_paterno": ap,
-            "apellido_materno": am or None,
-            "usuario": usuario,
-            "rol": rol,
-            "contrasena": pw or None,
-        }
+        self.data = dict(id_admin=self.admin.get("ID_admin"),
+                         nombre=nombre, apellido_paterno=ap,
+                         apellido_materno=am or None, usuario=usuario,
+                         rol=rol, contrasena=pw or None)
         self.accept()
 
 
-class AdminCard(QFrame):
-    def __init__(self, admin, index, admin_id=None, on_refresh=None, parent=None):
-        super().__init__(parent)
-        self.admin = admin
-        self.admin_id = admin_id
-        self.on_refresh = on_refresh
-
-        estado = admin.get("t_estado", "activo").lower()
-        if estado not in _C:
-            estado = "activo"
-        _, _, badge_bg, badge_fg, badge_border = _C[estado]
-
-        self.setObjectName(f"card_{estado}")
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-
-        lay = QHBoxLayout(self)
-        lay.setContentsMargins(_dp(12), _dp(8), _dp(12), _dp(8))
-        lay.setSpacing(_dp(10))
-
-        idx = QLabel(f"{index:02d}")
-        idx.setStyleSheet(
-            f"color:#bbdefb;font-size:{_dp(13)}px;font-weight:900;"
-            f"font-family:'Segoe UI';min-width:{_dp(22)}px;"
-        )
-        idx.setAlignment(Qt.AlignCenter)
-        lay.addWidget(idx)
-
-        sep = QFrame()
-        sep.setFrameShape(QFrame.VLine)
-        sep.setStyleSheet(
-            f"background:#e3f0ff;border:none;"
-            f"min-width:{_dp(1)}px;max-width:{_dp(1)}px;"
-        )
-        lay.addWidget(sep)
-
-        col = QVBoxLayout()
-        col.setSpacing(_dp(2))
-
-        # Nombre completo
-        nombre_completo = "{} {} {}".format(
-            admin.get("t_nombre", ""),
-            admin.get("t_apellido_paterno", ""),
-            admin.get("t_apellido_materno", "")
-        ).strip()
-        name_lbl = QLabel(nombre_completo)
-        name_lbl.setStyleSheet(
-            f"color:#000000;font-size:{_dp(13)}px;font-weight:900;font-family:'Segoe UI';"
-        )
-        col.addWidget(name_lbl)
-
-        # Usuario y rol
-        meta = QLabel(f"@{admin.get('t_usuario', '')}   ·   {admin.get('t_rol', '').upper()}")
-        meta.setObjectName("meta")
-        meta.setStyleSheet(f"font-size:{_dp(10)}px;")
-        col.addWidget(meta)
-        lay.addLayout(col)
-        lay.addStretch()
-
-        # Badge de estado
-        badge_txt = tr("admin.users.active") if estado == "activo" else tr("admin.users.inactive")
-        badge = QLabel(badge_txt)
-        badge.setStyleSheet(
-            f"background:{badge_bg};color:{badge_fg};border:1px solid {badge_border};"
-            f"border-radius:8px;font-size:{_dp(7)}px;font-weight:700;"
-            f"font-family:'Segoe UI';letter-spacing:2px;padding:{_dp(2)}px {_dp(8)}px;"
-        )
-        lay.addWidget(badge)
-
-        # Botón eliminar (solo para admins activos y no el último)
-        if estado == "activo" and db_count_active_admins() > 1:
-            bd = QPushButton("✕")
-            bd.setObjectName("btn_del")
-            bd.setToolTip(tr("admin.users.confirm.deactivate_btn"))
-            bd.setFixedSize(_dp(26), _dp(26))
-            bd.setCursor(Qt.PointingHandCursor)
-            bd.clicked.connect(self._eliminar)
-            lay.addWidget(bd)
-
-    def _eliminar(self):
-        usuario = self.admin["t_usuario"]
-        nombre = self.admin["t_nombre"]
-
-        if db_count_active_admins() <= 1:
-            DlgError.show(tr("admin.users.err.need_one"), title=tr("common.error"), parent=self)
-            return
-
-        if not DlgConfirm.ask(
-            tr("admin.users.confirm.deactivate", name=nombre, user=usuario),
-            title=tr("admin.users.confirm.deactivate_title"),
-            confirm_label=tr("admin.users.confirm.deactivate_btn"),
-            danger=True,
-            parent=self,
-        ):
-            return
-
-        try:
-            db_delete_admin(usuario, self.admin_id)
-            DlgInfo.show(tr("admin.users.msg.deleted", user=usuario), parent=self)
-            if self.on_refresh:
-                self.on_refresh()
-        except Exception as ex:
-            DlgError.show(str(ex), parent=self)
-
-
+# ─────────────────────────────────────────────────────────────────────────────
+#  Panel principal
+# ─────────────────────────────────────────────────────────────────────────────
 class _AdminUsersPanel(QWidget):
+
+    _PAGE_STEPS = [25, 50, 100]
+    _PAGE_SIZE  = 25
+
     def __init__(self, admin_id=None):
         super().__init__()
-        self.admin_id = admin_id
-        self.role = "administrador"
-        self._current_admin = {}  # Inicializar _current_admin
-        self.setObjectName("panel")
-        self.setStyleSheet(STYLE)
+        self.admin_id        = admin_id
+        self.role            = "empleado"
+        self._current_admin  = {}
+        self._all_rows:  list[dict] = []
+        self._estado_filter  = ""    # "" | "activo" | "inactivo"
+        self._page           = 0
+        self._page_size      = self._PAGE_SIZE
+
+        self.setObjectName("admin_users_panel")
+        self.setStyleSheet(_build_style())
 
         root = QVBoxLayout(self)
-        m = _dp(14)
-        root.setContentsMargins(m, _dp(10), m, _dp(10))
-        root.setSpacing(_dp(8))
+        m = _dp(12)
+        root.setContentsMargins(m, _dp(8), m, _dp(8))
+        root.setSpacing(_dp(7))
 
-        # Header
-        hdr = QHBoxLayout()
-        hdr.setSpacing(_dp(6))
-        tc = QVBoxLayout()
-        tc.setSpacing(_dp(2))
+        # ── Header ────────────────────────────────────────────────────────────
+        hdr = QHBoxLayout(); hdr.setSpacing(_dp(10))
+        col = QVBoxLayout(); col.setSpacing(_dp(2))
         self.title_lbl = QLabel(tr("admin.users.title"))
-        self.title_lbl.setObjectName("ttl")
-        self.title_lbl.setStyleSheet(f"font-size:{_dp(12)}px;")
-        self.subtitle_lbl = QLabel(tr("admin.users.subtitle"))
-        self.subtitle_lbl.setObjectName("sub")
-        self.subtitle_lbl.setStyleSheet(f"font-size:{_dp(11)}px;")
-        tc.addWidget(self.title_lbl)
-        tc.addWidget(self.subtitle_lbl)
-        hdr.addLayout(tc)
-        hdr.addStretch()
+        self.title_lbl.setObjectName("section_title")
+        self.sub_lbl = QLabel(tr("admin.users.subtitle"))
+        self.sub_lbl.setObjectName("section_sub")
+        col.addWidget(self.title_lbl); col.addWidget(self.sub_lbl)
+        hdr.addLayout(col); hdr.addStretch()
 
-        # Botones
-        self.btn_add = QPushButton(tr("admin.users.add"))
+        self.btn_add = QPushButton("＋  " + tr("admin.users.add"))
         self.btn_add.setObjectName("btn_add")
-        self.btn_add.setStyleSheet(f"font-size:{_dp(11)}px;padding:{_dp(7)}px {_dp(16)}px;")
         self.btn_add.setCursor(Qt.PointingHandCursor)
+        self.btn_add.setFocusPolicy(Qt.NoFocus)
         self.btn_add.clicked.connect(self._agregar)
         hdr.addWidget(self.btn_add)
 
-        self.btn_ref = QPushButton(tr("admin.users.refresh"))
-        self.btn_ref.setObjectName("btn_ref")
-        self.btn_ref.setStyleSheet(f"font-size:{_dp(11)}px;padding:{_dp(7)}px {_dp(16)}px;")
-        self.btn_ref.setFixedSize(_dp(170), _dp(38))
+        self.btn_ref = QPushButton("↻  " + tr("admin.users.refresh"))
+        self.btn_ref.setObjectName("btn_refresh")
         self.btn_ref.setCursor(Qt.PointingHandCursor)
+        self.btn_ref.setFocusPolicy(Qt.NoFocus)
         self.btn_ref.clicked.connect(self.refresh)
         hdr.addWidget(self.btn_ref)
-
         root.addLayout(hdr)
-        root.addWidget(self._div())
+        root.addWidget(_divider())
 
-        # Tabla (estilo "real" con campos)
-        self.table = QTableWidget()
+        # ── Barra de filtros táctil ───────────────────────────────────────────
+        fb = QFrame(); fb.setObjectName("filter_bar")
+        _shadow(fb, _dp(8), 10, _dp(1))
+        fb_lay = QHBoxLayout(fb)
+        fb_lay.setContentsMargins(_dp(12), _dp(8), _dp(12), _dp(8))
+        fb_lay.setSpacing(_dp(8))
+
+        lbl_f = QLabel("Estado:"); lbl_f.setObjectName("filter_lbl")
+        fb_lay.addWidget(lbl_f)
+
+        self._tbtn_all      = ToggleBtn("Todos",           bg="#1565c0")
+        self._tbtn_active   = ToggleBtn("✔  Activos",      bg="#2e7d32", border="#2e7d32")
+        self._tbtn_inactive = ToggleBtn("✖  Inactivos",    bg="#546e7a", border="#546e7a")
+        self._tbtn_all.set_active(True)
+
+        self._tbtn_all.clicked.connect(lambda:      self._apply_estado_filter(""))
+        self._tbtn_active.clicked.connect(lambda:   self._apply_estado_filter("activo"))
+        self._tbtn_inactive.clicked.connect(lambda: self._apply_estado_filter("inactivo"))
+
+        fb_lay.addWidget(self._tbtn_all)
+        fb_lay.addWidget(self._tbtn_active)
+        fb_lay.addWidget(self._tbtn_inactive)
+        fb_lay.addStretch()
+
+        root.addWidget(fb)
+
+        # ── Tabla ─────────────────────────────────────────────────────────────
+        self._model = AdminTableModel()
+        self.table = QTableView()
         self.table.setObjectName("admin_users_tbl")
-        self.table.setColumnCount(6)
-        self.table.setHorizontalHeaderLabels(["🔢", tr("admin.users.name"), tr("admin.users.user"), tr("admin.users.role"), tr("admin.users.state"), tr("admin.users.actions")])
-        self.table.verticalHeader().setVisible(False)
-        self.table.setEditTriggers(QTableWidget.NoEditTriggers)
-        self.table.setSelectionBehavior(QTableWidget.SelectRows)
-        self.table.setSelectionMode(QTableWidget.SingleSelection)
+        self.table.setModel(self._model)
+        self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.table.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
-        self.table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.table.verticalScrollBar().setSingleStep(_dp(32))
-        self.table.viewport().setAttribute(Qt.WA_AcceptTouchEvents, True)
-        QScroller.grabGesture(self.table.viewport(), QScroller.LeftMouseButtonGesture)
-        self.table.horizontalHeader().setStretchLastSection(False)
-        self.table.horizontalHeader().setMinimumSectionSize(_dp(110))
-        self.table.verticalHeader().setDefaultSectionSize(_dp(44))
         self.table.setAlternatingRowColors(True)
-        self.table.setWordWrap(True)
+        self.table.setShowGrid(False)
+        self.table.verticalHeader().setVisible(False)
+        self.table.verticalScrollBar().setSingleStep(_dp(48))
+        QScroller.grabGesture(self.table.viewport(), QScroller.LeftMouseButtonGesture)
+        self.table.viewport().setAttribute(Qt.WA_AcceptTouchEvents, True)
+        hh = self.table.horizontalHeader()
+        hh.setHighlightSections(False)
+        hh.setMinimumSectionSize(_dp(50))
+        hh.setSectionResizeMode(0, QHeaderView.ResizeToContents)  # #
+        hh.setSectionResizeMode(1, QHeaderView.Stretch)           # Nombre
+        hh.setSectionResizeMode(2, QHeaderView.ResizeToContents)  # Usuario
+        hh.setSectionResizeMode(3, QHeaderView.ResizeToContents)  # Rol
+        hh.setSectionResizeMode(4, QHeaderView.ResizeToContents)  # Estado
+        hh.setSectionResizeMode(5, QHeaderView.ResizeToContents)  # Acciones
+        hh.setStretchLastSection(False)
+        self.table.verticalHeader().setDefaultSectionSize(_dp(56))
+        self.table.setSortingEnabled(False)
         root.addWidget(self.table, 1)
+
+        # ── Barra de paginación ───────────────────────────────────────────────
+        pg_bar = QFrame(); pg_bar.setObjectName("page_bar")
+        _shadow(pg_bar, _dp(8), 10, _dp(1))
+        pg_lay = QHBoxLayout(pg_bar)
+        pg_lay.setContentsMargins(_dp(12), _dp(6), _dp(12), _dp(6))
+        pg_lay.setSpacing(_dp(8))
+
+        self.count_lbl = QLabel(""); self.count_lbl.setObjectName("count_lbl")
+        pg_lay.addWidget(self.count_lbl, 1)
+
+        self.btn_first = QPushButton("«")
+        self.btn_prev  = QPushButton("‹  Ant")
+        self.page_lbl  = QLabel("1 / 1")
+        self.btn_next  = QPushButton("Sig  ›")
+        self.btn_last  = QPushButton("»")
+
+        for b, w in ((self.btn_first,_dp(52)),(self.btn_prev,_dp(110)),
+                     (self.btn_next,_dp(110)),(self.btn_last,_dp(52))):
+            b.setObjectName("btn_page")
+            b.setFixedSize(w, _dp(_TOUCH_H))
+            b.setCursor(Qt.PointingHandCursor)
+            b.setFocusPolicy(Qt.NoFocus)
+            pg_lay.addWidget(b)
+            if b is self.btn_prev:
+                self.page_lbl.setObjectName("page_lbl")
+                self.page_lbl.setAlignment(Qt.AlignCenter)
+                pg_lay.addWidget(self.page_lbl)
+
+        self.btn_first.clicked.connect(lambda: self._go_page(0))
+        self.btn_prev.clicked.connect(lambda:  self._go_page(self._page - 1))
+        self.btn_next.clicked.connect(lambda:  self._go_page(self._page + 1))
+        self.btn_last.clicked.connect(lambda:  self._go_page(self._total_pages() - 1))
+        root.addWidget(pg_bar)
 
         self.set_language(get_language())
         self.refresh()
 
+    # ── Fondo ─────────────────────────────────────────────────────────────────
+    def paintEvent(self, _):
+        p = QPainter(self)
+        W, H = self.width(), self.height()
+        g = QLinearGradient(0, 0, 0, H)
+        g.setColorAt(0.0, QColor(232, 240, 251))
+        g.setColorAt(1.0, QColor(214, 230, 248))
+        p.fillRect(0, 0, W, H, QBrush(g))
+        p.end()
+
+    # ── Filtro estado ─────────────────────────────────────────────────────────
+    def _apply_estado_filter(self, val: str):
+        self._estado_filter = val
+        self._tbtn_all.set_active(val == "")
+        self._tbtn_active.set_active(val == "activo")
+        self._tbtn_inactive.set_active(val == "inactivo")
+        self._page = 0
+        self._render_page()
+
+    # ── Tamaño de página ──────────────────────────────────────────────────────
+    def _inc_page_size(self):
+        nxt = next((s for s in self._PAGE_STEPS if s > self._page_size), self._PAGE_STEPS[-1])
+        self._page_size = nxt; self._pg_size_lbl.setText(str(nxt))
+        self._page = 0; self._render_page()
+
+    def _dec_page_size(self):
+        prv = next((s for s in reversed(self._PAGE_STEPS) if s < self._page_size), self._PAGE_STEPS[0])
+        self._page_size = prv; self._pg_size_lbl.setText(str(prv))
+        self._page = 0; self._render_page()
+
+    # ── Paginación ────────────────────────────────────────────────────────────
+    def _filtered_rows(self) -> list[dict]:
+        if not self._estado_filter:
+            return self._all_rows
+        return [r for r in self._all_rows
+                if (r.get("t_estado", "activo") or "activo").lower() == self._estado_filter]
+
+    def _total_pages(self) -> int:
+        return max(1, (len(self._filtered_rows()) + self._page_size - 1) // self._page_size)
+
+    def _go_page(self, page: int):
+        self._page = max(0, min(page, self._total_pages() - 1))
+        self._render_page()
+
+    def _render_page(self):
+        rows  = self._filtered_rows()
+        start = self._page * self._page_size
+        end   = start + self._page_size
+        chunk = rows[start:end]
+        self._model.load(chunk)
+
+        # Inyectar widgets de acción en la columna 5
+        active_count = db_count_active_admins()
+        for r, admin in enumerate(chunk):
+            if self.role != "administrador":
+                continue
+            estado = (admin.get("t_estado", "activo") or "activo").lower()
+            cell = QWidget()
+            cell.setStyleSheet("background: transparent;")
+            cl = QHBoxLayout(cell)
+            cl.setContentsMargins(_dp(4), _dp(6), _dp(4), _dp(6))
+            cl.setSpacing(_dp(6))
+
+            btn_edit = QPushButton(tr("common.edit"))
+            btn_edit.setObjectName("btn_edit")
+            btn_edit.setCursor(Qt.PointingHandCursor)
+            btn_edit.setFocusPolicy(Qt.NoFocus)
+            btn_edit.clicked.connect(lambda _, a=admin: self._editar(a))
+            cl.addWidget(btn_edit)
+
+            if estado == "inactivo":
+                btn_tog = QPushButton(tr("admin.users.confirm.activate_btn"))
+                btn_tog.setObjectName("btn_activate")
+            else:
+                btn_tog = QPushButton(tr("admin.users.confirm.deactivate_btn"))
+                btn_tog.setObjectName("btn_deactivate")
+
+            can_toggle = not (estado == "activo" and active_count <= 1) \
+                         and admin.get("ID_admin") != self.admin_id
+            btn_tog.setEnabled(can_toggle)
+            btn_tog.setCursor(Qt.PointingHandCursor)
+            btn_tog.setFocusPolicy(Qt.NoFocus)
+            target = "activo" if estado == "inactivo" else "inactivo"
+            btn_tog.clicked.connect(lambda _, a=admin, t=target: self._set_admin_status(a, t))
+            cl.addWidget(btn_tog)
+
+            self.table.setIndexWidget(self._model.index(r, 5), cell)
+
+        pages = self._total_pages()
+        total = len(rows)
+        s0 = start + 1 if total else 0
+        s1 = min(end, total)
+        self.count_lbl.setText(f"{s0}–{s1}  de  {total}")
+        self.page_lbl.setText(f"{self._page + 1} / {pages}")
+        self.btn_first.setEnabled(self._page > 0)
+        self.btn_prev.setEnabled(self._page > 0)
+        self.btn_next.setEnabled(self._page < pages - 1)
+        self.btn_last.setEnabled(self._page < pages - 1)
+
+    # ── Datos ─────────────────────────────────────────────────────────────────
+    def refresh(self):
+        admins = db_get_all_admins()
+        _ord = {"activo": 0, "inactivo": 1}
+        self._all_rows = sorted(
+            admins,
+            key=lambda a: (
+                _ord.get((a.get("t_estado", "") or "").lower(), 9),
+                (a.get("t_apellido_paterno", "") or "").lower(),
+                (a.get("t_apellido_materno", "") or "").lower(),
+                (a.get("t_nombre", "") or "").lower(),
+            ),
+        )
+        self._page = 0
+        self._render_page()
+
+    # ── Idioma ────────────────────────────────────────────────────────────────
     def set_language(self, _lang: str):
         self.title_lbl.setText(tr("admin.users.title"))
-        self.subtitle_lbl.setText(tr("admin.users.subtitle"))
-        self.btn_add.setText(tr("admin.users.add"))
-        self.btn_ref.setText(tr("admin.users.refresh"))
-        self.table.setHorizontalHeaderLabels([
-            "🔢",
-            tr("admin.users.name"),
-            tr("admin.users.user"),
-            tr("admin.users.role"),
-            tr("admin.users.state"),
-            tr("admin.users.actions"),
-        ])
-        self.refresh()
+        self.sub_lbl.setText(tr("admin.users.subtitle"))
+        self.btn_add.setText("＋  " + tr("admin.users.add"))
+        self.btn_ref.setText("↻  " + tr("admin.users.refresh"))
 
-    def set_current_admin(self, admin_data):
-        """Método requerido para establecer el administrador actual"""
-        self._current_admin = admin_data
-        self.admin_id = admin_data.get("ID_admin") if admin_data else None
-        self.role = (admin_data.get("t_rol", "empleado") if admin_data else "empleado").lower()
-        can_manage_admins = self.role == "administrador"
-        self.btn_add.setEnabled(can_manage_admins)
+    def set_current_admin(self, admin_data: dict):
+        self._current_admin = admin_data or {}
+        self.admin_id = self._current_admin.get("ID_admin")
+        self.role = (self._current_admin.get("t_rol", "empleado") or "empleado").lower()
+        can = self.role == "administrador"
+        self.btn_add.setEnabled(can)
         self.btn_add.setToolTip(
-            tr("admin.users.role_hint")
-            if not can_manage_admins else tr("admin.users.role_register")
+            tr("admin.users.role_hint") if not can else tr("admin.users.role_register")
         )
         self.refresh()
 
-    def _div(self):
-        d = QFrame()
-        d.setObjectName("h_div")
-        return d
-
-    def _delete_admin(self, admin: dict):
-        if self.role != "administrador":
-            DlgError.show(tr("admin.users.err.no_perm_mod"), parent=self)
-            return
-        usuario = admin.get("t_usuario", "")
-        nombre = "{} {} {}".format(
-            admin.get("t_nombre", ""),
-            admin.get("t_apellido_paterno", ""),
-            admin.get("t_apellido_materno", ""),
-        ).strip()
-
-        if admin.get("ID_admin") == self.admin_id:
-            DlgError.show(
-                "Esta cuenta ya está activa y no se puede eliminar.",
-                title="Operación no permitida",
-                parent=self,
-            )
-            return
-
-        if db_count_active_admins() <= 1:
-            DlgError.show(
-                "Debe existir al menos un administrador activo.",
-                title="No se puede desactivar",
-                parent=self,
-            )
-            return
-
-        if not DlgConfirm.ask(
-            f"¿Desactivar permanentemente al administrador <b>{nombre}</b> (@{usuario})?\n"
-            "Esta acción no se puede deshacer.",
-            title="Desactivar Admin",
-            confirm_label="DESACTIVAR",
-            danger=True,
-            parent=self,
-        ):
-            return
-
-        try:
-            db_delete_admin(usuario, self.admin_id)
-            DlgInfo.show(f"Admin '{usuario}' desactivado correctamente.", parent=self)
-        except Exception as ex:
-            DlgError.show(str(ex), parent=self)
-        finally:
-            self.refresh()
-
-    def _set_admin_status(self, admin: dict, target_status: str):
-        if self.role != "administrador":
-            DlgError.show("No tienes permisos para modificar administradores.", parent=self)
-            return
-        usuario = admin.get("t_usuario", "")
-        nombre = "{} {} {}".format(
-            admin.get("t_nombre", ""),
-            admin.get("t_apellido_paterno", ""),
-            admin.get("t_apellido_materno", ""),
-        ).strip()
-
-        if target_status == "inactivo":
-            if admin.get("ID_admin") == self.admin_id:
-                DlgError.show(tr("admin.users.err.self_delete"), title=tr("common.error"), parent=self)
-                return
-            if db_count_active_admins() <= 1:
-                DlgError.show(tr("admin.users.err.need_one"), title=tr("common.error"), parent=self)
-                return
-
-        accion = tr("admin.users.confirm.activate_btn") if target_status == "activo" else tr("admin.users.confirm.deactivate_btn")
-        if not DlgConfirm.ask(
-            tr("admin.users.confirm.deactivate", name=nombre, user=usuario),
-            title=tr("admin.users.confirm.activate_title") if target_status == "activo" else tr("admin.users.confirm.deactivate_title"),
-            confirm_label=accion,
-            danger=(target_status == "inactivo"),
-            parent=self,
-        ):
-            return
-
-        try:
-            db_set_admin_estado(usuario, target_status, self.admin_id)
-            DlgInfo.show(tr("admin.users.msg.activated", user=usuario) if target_status == "activo" else tr("admin.users.msg.deactivated", user=usuario), parent=self)
-        except Exception as ex:
-            DlgError.show(str(ex), parent=self)
-        finally:
-            self.refresh()
-
-    def paintEvent(self, e):
-        p = QPainter(self)
-        g = QLinearGradient(0, 0, 0, self.height())
-        g.setColorAt(0.0, QColor(232, 240, 251))
-        g.setColorAt(1.0, QColor(214, 230, 248))
-        p.fillRect(0, 0, self.width(), self.height(), QBrush(g))
-        p.end()
-
+    # ── Acciones ──────────────────────────────────────────────────────────────
     def _agregar(self):
         if self.role != "administrador":
-            DlgError.show(tr("admin.users.err.no_perm"), parent=self)
-            return
+            DlgError.show(tr("admin.users.err.no_perm"), parent=self); return
         dlg = AdminRegisterDialog(self.admin_id, parent=self)
-        if dlg.exec_() != QDialog.Accepted or not dlg.data:
-            return
-
+        if dlg.exec_() != QDialog.Accepted or not dlg.data: return
         d = dlg.data
         try:
             new_id = db_register_admin(
-                d["nombre"],
-                d["apellido_paterno"],
-                d["apellido_materno"],
-                d["usuario"],
-                d["contrasena"],
-                d["rol"],
-                self.admin_id,
+                d["nombre"], d["apellido_paterno"], d["apellido_materno"],
+                d["usuario"], d["contrasena"], d["rol"], self.admin_id,
             )
             if new_id:
-                DlgInfo.show(tr("admin.users.msg.registered", user=d['usuario']), parent=self)
+                DlgInfo.show(tr("admin.users.msg.registered", user=d["usuario"]), parent=self)
                 self.refresh()
             else:
                 DlgError.show(tr("admin.users.msg.fail_register"), parent=self)
@@ -832,125 +873,55 @@ class _AdminUsersPanel(QWidget):
 
     def _editar(self, admin: dict):
         if self.role != "administrador":
-            DlgError.show(tr("admin.users.err.no_perm_edit"), parent=self)
-            return
-
+            DlgError.show(tr("admin.users.err.no_perm_edit"), parent=self); return
         dlg = AdminEditDialog(admin, parent=self)
-        if dlg.exec_() != QDialog.Accepted or not dlg.data:
-            return
-
+        if dlg.exec_() != QDialog.Accepted or not dlg.data: return
         d = dlg.data
         try:
             db_update_admin(
-                id_admin=d["id_admin"],
-                nombre=d["nombre"],
-                ap_paterno=d["apellido_paterno"],
-                ap_materno=d["apellido_materno"],
-                username=d["usuario"],
-                rol=d["rol"],
-                password=d["contrasena"],
-                id_admin_actual=self.admin_id,
+                id_admin=d["id_admin"], nombre=d["nombre"],
+                ap_paterno=d["apellido_paterno"], ap_materno=d["apellido_materno"],
+                username=d["usuario"], rol=d["rol"],
+                password=d["contrasena"], id_admin_actual=self.admin_id,
             )
-            DlgInfo.show(tr("admin.users.msg.updated", user=d['usuario']), parent=self)
+            DlgInfo.show(tr("admin.users.msg.updated", user=d["usuario"]), parent=self)
         except Exception as ex:
             DlgError.show(str(ex), parent=self)
         finally:
             self.refresh()
 
-    def refresh(self):
-        admins = db_get_all_admins()
+    def _set_admin_status(self, admin: dict, target: str):
+        if self.role != "administrador":
+            DlgError.show(tr("admin.users.err.no_perm_mod"), parent=self); return
+        usuario = admin.get("t_usuario", "")
+        nombre = "{} {} {}".format(
+            admin.get("t_nombre", ""), admin.get("t_apellido_paterno", ""),
+            admin.get("t_apellido_materno", ""),
+        ).strip()
 
-        self.table.setRowCount(0)
+        if target == "inactivo":
+            if admin.get("ID_admin") == self.admin_id:
+                DlgError.show(tr("admin.users.err.self_delete"), parent=self); return
+            if db_count_active_admins() <= 1:
+                DlgError.show(tr("admin.users.err.need_one"), parent=self); return
 
-        if not admins:
-            self.table.setRowCount(1)
-            itm = QTableWidgetItem(tr("admin.users.no_admins"))
-            itm.setTextAlignment(Qt.AlignCenter)
-            itm.setFlags(itm.flags() & ~Qt.ItemIsSelectable)
-            self.table.setItem(0, 0, itm)
-            self.table.setSpan(0, 0, 1, 6)
+        accion = tr("admin.users.confirm.activate_btn") if target == "activo" \
+                 else tr("admin.users.confirm.deactivate_btn")
+        if not DlgConfirm.ask(
+            tr("admin.users.confirm.deactivate", name=nombre, user=usuario),
+            title=tr("admin.users.confirm.activate_title") if target == "activo"
+                  else tr("admin.users.confirm.deactivate_title"),
+            confirm_label=accion,
+            danger=(target == "inactivo"),
+            parent=self,
+        ):
             return
-
-        # Orden: activos primero, luego inactivos
-        _ord = {"activo": 0, "inactivo": 1}
-        ordered = sorted(admins, key=lambda a: _ord.get(a.get("t_estado", ""), 9))
-
-        active_count = db_count_active_admins()
-        self.table.setRowCount(len(ordered))
-        self.table.setColumnWidth(0, _dp(52))
-        self.table.setColumnWidth(1, _dp(300))
-        self.table.setColumnWidth(2, _dp(170))
-        self.table.setColumnWidth(3, _dp(150))
-        self.table.setColumnWidth(4, _dp(130))
-        self.table.setColumnWidth(5, _dp(240))
-
-        for r, admin in enumerate(ordered):
-            full_name = "{} {} {}".format(
-                admin.get("t_nombre", ""),
-                admin.get("t_apellido_paterno", ""),
-                admin.get("t_apellido_materno", ""),
-            ).strip()
-            usuario = admin.get("t_usuario", "") or ""
-            rol = (admin.get("t_rol", "") or "").upper()
-            estado = (admin.get("t_estado", "activo") or "").lower()
-            estado_lbl = estado.upper()
-
-            idx_item = QTableWidgetItem(str(r + 1))
-            idx_item.setTextAlignment(Qt.AlignCenter)
-            self.table.setItem(r, 0, idx_item)
-
-            name_item = QTableWidgetItem(full_name)
-            name_item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-            self.table.setItem(r, 1, name_item)
-
-            user_item = QTableWidgetItem(f"@{usuario}" if usuario else "")
-            user_item.setTextAlignment(Qt.AlignCenter)
-            self.table.setItem(r, 2, user_item)
-
-            rol_item = QTableWidgetItem(rol)
-            rol_item.setTextAlignment(Qt.AlignCenter)
-            self.table.setItem(r, 3, rol_item)
-
-            estado_item = QTableWidgetItem(estado_lbl)
-            estado_item.setTextAlignment(Qt.AlignCenter)
-            if estado == "activo":
-                estado_item.setBackground(QColor("#e8f5e9"))
-                estado_item.setForeground(QColor("#1b5e20"))
-            else:
-                estado_item.setBackground(QColor("#fafafa"))
-                estado_item.setForeground(QColor("#000000"))
-            estado_item.setFlags(estado_item.flags() & ~Qt.ItemIsEditable)
-            self.table.setItem(r, 4, estado_item)
-
-            if self.role == "administrador":
-                acts = QWidget()
-                acts_l = QHBoxLayout(acts)
-                acts_l.setContentsMargins(4, 2, 4, 2)
-                acts_l.setSpacing(6)
-
-                btn_edit = QPushButton(tr("common.edit"))
-                btn_edit.setObjectName("btn_cfg")
-                btn_edit.setFixedHeight(_dp(28))
-                btn_edit.setCursor(Qt.PointingHandCursor)
-                btn_edit.clicked.connect(lambda _, a=admin: self._editar(a))
-                acts_l.addWidget(btn_edit)
-
-                btn = QPushButton(tr("admin.users.confirm.activate_btn") if estado == "inactivo" else tr("admin.users.confirm.deactivate_btn"))
-                btn.setObjectName("btn_toggle_on" if estado == "inactivo" else "btn_toggle_off")
-                btn.setFixedHeight(_dp(28))
-                btn.setCursor(Qt.PointingHandCursor)
-                btn.setEnabled(
-                    not (estado == "activo" and active_count <= 1)
-                    and admin.get("ID_admin") != self.admin_id
-                )
-                target = "activo" if estado == "inactivo" else "inactivo"
-                btn.clicked.connect(lambda _, a=admin, t=target: self._set_admin_status(a, t))
-                acts_l.addWidget(btn)
-
-                self.table.setCellWidget(r, 5, acts)
-            else:
-                ro_item = QTableWidgetItem(tr("admin.users.readonly"))
-                ro_item.setTextAlignment(Qt.AlignCenter)
-                ro_item.setForeground(QColor("#000000"))
-                ro_item.setFlags(ro_item.flags() & ~Qt.ItemIsEditable)
-                self.table.setItem(r, 5, ro_item)
+        try:
+            db_set_admin_estado(usuario, target, self.admin_id)
+            msg = tr("admin.users.msg.activated", user=usuario) if target == "activo" \
+                  else tr("admin.users.msg.deactivated", user=usuario)
+            DlgInfo.show(msg, parent=self)
+        except Exception as ex:
+            DlgError.show(str(ex), parent=self)
+        finally:
+            self.refresh()

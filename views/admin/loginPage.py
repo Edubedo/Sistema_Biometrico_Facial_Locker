@@ -106,63 +106,90 @@ _main_window  = None   # referencia a la ventana principal para restaurar foco
 
 _kbd_process = None
 
+
+# Prioridad de teclados táctiles en Raspberry Pi OS
+_LINUX_KEYBOARDS = [
+    ("wvkbd-mobintl", ["wvkbd-mobintl", "--landscape"]),
+    ("matchbox-keyboard", ["matchbox-keyboard"]),
+    ("onboard",           ["onboard", "--size=Small", "--layout=Phone"]),
+    ("squeekboard",       ["squeekboard"]),
+]
+
 def _open_native_keyboard(restore_widget=None):
     global _kbd_process
 
-    # evitar múltiples instancias
+    # Evitar múltiples instancias
     if _kbd_process is not None and _kbd_process.poll() is None:
         return
 
     try:
         if platform.system() == "Linux":
-            if shutil.which("onboard"):
-                # 🔥 IMPORTANTE: modo normal (NO docked)
-                _kbd_process = subprocess.Popen(["onboard"])
+            launched = False
+            for name, cmd in _LINUX_KEYBOARDS:
+                if shutil.which(name):
+                    _kbd_process = subprocess.Popen(
+                        cmd,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    )
+                    launched = True
+                    break
+            if not launched:
+                print("[Teclado] No se encontró teclado táctil instalado. "
+                      "Instala wvkbd: sudo apt install wvkbd")
 
         elif platform.system() == "Windows":
             subprocess.Popen(
                 r"C:\Program Files\Common Files\Microsoft Shared\ink\TabTip.exe",
-                shell=True
+                shell=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
             )
 
-        # 🔥 restaurar foco al input
-        if restore_widget:
-            def restore():
-                try:
-                    w = restore_widget.window()
-                    w.activateWindow()
-                    w.raise_()
-                    restore_widget.setFocus()
-                except:
-                    pass
+    except Exception as e:
+        print(f"[Teclado] Error al abrir: {e}")
 
-            QTimer.singleShot(400, restore)
+    # Restaurar foco con más margen en hardware lento (RPi)
+    if restore_widget is not None:
+        def restore():
+            try:
+                win = restore_widget.window()
+                win.activateWindow()
+                win.raise_()
+                restore_widget.setFocus()
+            except Exception as e:
+                print(f"[Teclado] Error al restaurar foco: {e}")
 
-    except:
-        pass
+        QTimer.singleShot(700, restore)  # 700ms para RPi
+
 
 def _close_native_keyboard():
     global _kbd_process
     try:
-        os_name = platform.system()
-        if os_name == "Windows":
+        if platform.system() == "Windows":
             subprocess.run(
                 ["taskkill", "/IM", "TabTip.exe", "/F"],
                 capture_output=True
             )
-        elif os_name == "Linux":
-            if _kbd_process and _kbd_process.poll() is None:
-                _kbd_process.terminate()
-                _kbd_process = None
-            # Matar cualquier instancia huérfana de onboard
-            try:
-                subprocess.run(["pkill", "-x", "onboard"],
-                               capture_output=True)
-            except Exception:
-                pass
-    except Exception:
-        pass
 
+        elif platform.system() == "Linux":
+            # Cerrar instancia rastreada
+            if _kbd_process is not None and _kbd_process.poll() is None:
+                _kbd_process.terminate()
+            _kbd_process = None
+
+            # Matar cualquier instancia huérfana de los teclados conocidos
+            for name, _ in _LINUX_KEYBOARDS:
+                try:
+                    subprocess.run(
+                        ["pkill", "-x", name],
+                        capture_output=True
+                    )
+                except Exception:
+                    pass
+
+    except Exception as e:
+        print(f"[Teclado] Error al cerrar: {e}")
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  InputField — abre el teclado en mousePressEvent, NO en focusInEvent

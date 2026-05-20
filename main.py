@@ -28,7 +28,9 @@ from PyQt5.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QStackedWidget,
+    QShortcut,
 )
+from PyQt5.QtGui import QKeySequence
 from db.models.usuarios import db_count_active_admins, db_register_admin
 from db.models.lockers import db_next_free_locker
 from db.models.sesiones import db_get_all_sesiones_activas
@@ -126,6 +128,21 @@ class MainWindow(QMainWindow):
 
         self._on_language_changed(get_language())
         self._nav(self.HOME)
+        self._install_window_shortcuts()
+
+    def _install_window_shortcuts(self):
+        QShortcut(QKeySequence("F11"), self, activated=self.toggle_fullscreen)
+        QShortcut(QKeySequence("Escape"), self, activated=self.exit_fullscreen)
+
+    def toggle_fullscreen(self):
+        if self.isFullScreen():
+            self.showNormal()
+        else:
+            self.showFullScreen()
+
+    def exit_fullscreen(self):
+        if self.isFullScreen():
+            self.showNormal()
 
     def _on_language_changed(self, lang):
         set_language(lang)
@@ -275,7 +292,12 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     w = MainWindow()
-    w.show()
+    fullscreen_env = os.getenv("APP_FULLSCREEN", "1").strip().lower()
+    fullscreen_enabled = fullscreen_env not in ("0", "false", "no", "off")
+    if fullscreen_enabled:
+        w.showFullScreen()
+    else:
+        w.show()
     exit_code = app.exec_()
 
     # Liberar pines GPIO al cerrar para evitar estado sucio en el próximo arranque

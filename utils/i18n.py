@@ -77,10 +77,10 @@ _TRANSLATIONS = {
         "admin.manage_admins":  "Gestionar administradores",
 
         # ── Admin users ────────────────────────────────────────────────────────
-        "admin.users.title":    "GESTIÓN DE ADMINISTRADORES",
+        "admin.users.title":    "GESTIÓN DE USUARIOS",
         "admin.users.subtitle": "PANEL ADMIN · USUARIOS DEL SISTEMA",
-        "admin.users.add":      "＋  NUEVO ADMIN",
-        "admin.users.refresh":  "↺  ACTUALIZAR",
+        "admin.users.add":      "  NUEVO USUARIOS",
+        "admin.users.refresh":  "  ACTUALIZAR",
         "admin.users.no_admins":"SIN ADMINISTRADORES REGISTRADOS",
         "admin.users.readonly": "SOLO LECTURA",
         "admin.users.name":     "👤 NOMBRE",
@@ -134,10 +134,10 @@ _TRANSLATIONS = {
         # ── Admin sesiones ────────────────────────────────────────────────────
         "admin.sessions.title":   "SESIONES ACTIVAS",
         "admin.sessions.subtitle": "LOCKERS ACTUALMENTE EN USO",
-        "admin.sessions.refresh": "↺  ACTUALIZAR",
+        "admin.sessions.refresh": "  ACTUALIZAR",
         "admin.sessions.no_data": "SIN SESIONES ACTIVAS",
         "admin.sessions.count":   "SESIONES\nEN CURSO",
-        "admin.sessions.status":  "SISTEMA OPERATIVO",
+        "admin.sessions.status":  "SESIONES ACITIVAS",
         "admin.sessions.table.id": "🔢 ID",
         "admin.sessions.table.locker": "📦 LOCKER",
         "admin.sessions.table.datetime": "📅 FECHA/HORA",
@@ -147,7 +147,7 @@ _TRANSLATIONS = {
         # ── Admin logs ────────────────────────────────────────────────────────
         "admin.log.title":    "REGISTRO DE ACCESOS",
         "admin.log.subtitle": "ÚLTIMOS 50 INTENTOS",
-        "admin.log.refresh":  "↺  ACTUALIZAR",
+        "admin.log.refresh":  "  ACTUALIZAR",
         "admin.log.counter":  "REGISTROS\nEN PANTALLA",
         "admin.log.status":   "MONITOREO ACTIVO",
         "admin.log.no_data":  "SIN REGISTROS DE ACCESO",
@@ -162,8 +162,8 @@ _TRANSLATIONS = {
         # ── Admin lockers ─────────────────────────────────────────────────────
         "admin.lockers.title":   "GESTIÓN DE LOCKERS",
         "admin.lockers.subtitle": "PANEL ADMIN · LOCKERS DE TIENDA",
-        "admin.lockers.new":      "＋  NUEVO LOCKER",
-        "admin.lockers.refresh":  "↺  ACTUALIZAR",
+        "admin.lockers.new":      "  NUEVO LOCKER",
+        "admin.lockers.refresh":  "  ACTUALIZAR",
         "admin.lockers.libres":   "LIBRES",
         "admin.lockers.ocupados": "OCUPADOS",
         "admin.lockers.total":    "TOTAL",
