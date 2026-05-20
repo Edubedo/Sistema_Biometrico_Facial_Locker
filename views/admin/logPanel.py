@@ -266,15 +266,7 @@ QLabel#status_text {{
     letter-spacing: 1px; font-weight: 600; font-size: {_dp(10)}px;
 }}
 
-/* ── Barra de filtros ── */
-QFrame#filter_bar {{
-    background: #ffffff; border: 1px solid #cfd8e3;
-    border-radius: {r10}px;
-}}
-QLabel#filter_lbl {{
-    color: #546e7a; font-family: 'Segoe UI', sans-serif;
-    font-size: {_dp(10)}px; letter-spacing: 1px;
-}}
+/* Barra de filtros removida para dar más espacio a la tabla */
 
 /* ── Botón Actualizar ── */
 QPushButton#btn_refresh {{
@@ -439,34 +431,7 @@ class _AdminLogPanel(QWidget):
         cb_lay.addWidget(self.status_lbl)
         root.addWidget(cb)
 
-        # ── Barra de filtros (solo toggle buttons — sin teclado) ──────────────
-        fb = QFrame(); fb.setObjectName("filter_bar")
-        _shadow(fb, _dp(8), 10, _dp(1))
-        fb_lay = QHBoxLayout(fb)
-        fb_lay.setContentsMargins(_dp(12), _dp(8), _dp(12), _dp(8))
-        fb_lay.setSpacing(_dp(8))
-
-        lbl_f = QLabel("Filtrar:"); lbl_f.setObjectName("filter_lbl")
-        fb_lay.addWidget(lbl_f)
-
-        # Tres toggle buttons: Todos / Exitoso / Fallido
-        self._tbtn_all  = ToggleBtn("Todos",   bg="#1565c0")
-        self._tbtn_ok   = ToggleBtn("✔  Exitoso", bg="#1565c0")
-        self._tbtn_fail = ToggleBtn("✖  Fallido",  bg="#c62828", border="#c62828")
-        self._tbtn_all.set_active(True)   # por defecto activo
-
-        self._tbtn_all.clicked.connect(lambda: self._apply_result_filter(""))
-        self._tbtn_ok.clicked.connect(lambda: self._apply_result_filter("exitoso"))
-        self._tbtn_fail.clicked.connect(lambda: self._apply_result_filter("fallido"))
-
-        fb_lay.addWidget(self._tbtn_all)
-        fb_lay.addWidget(self._tbtn_ok)
-        fb_lay.addWidget(self._tbtn_fail)
-        fb_lay.addStretch()
-
-
-        
-        root.addWidget(fb)
+        # Nota: la barra de filtros fue removida para maximizar espacio de tabla.
 
         # ── Tabla ─────────────────────────────────────────────────────────────
         self._model = LogTableModel()
@@ -560,9 +525,13 @@ class _AdminLogPanel(QWidget):
 
     # ── Filtros ───────────────────────────────────────────────────────────────
     def _apply_result_filter(self, val: str):
-        self._tbtn_all.set_active(val == "")
-        self._tbtn_ok.set_active(val == "exitoso")
-        self._tbtn_fail.set_active(val == "fallido")
+        # Aplicar filtro en el proxy; los botones visuales pueden no existir.
+        if hasattr(self, "_tbtn_all"):
+            self._tbtn_all.set_active(val == "")
+        if hasattr(self, "_tbtn_ok"):
+            self._tbtn_ok.set_active(val == "exitoso")
+        if hasattr(self, "_tbtn_fail"):
+            self._tbtn_fail.set_active(val == "fallido")
         self._proxy.set_result(val)
         self._page = 0
         self._render_page()
@@ -575,7 +544,8 @@ class _AdminLogPanel(QWidget):
         cur = self._page_size
         nxt = next((s for s in steps if s > cur), steps[-1])
         self._page_size = nxt
-        self._pg_size_lbl.setText(str(nxt))
+        if hasattr(self, "_pg_size_lbl"):
+            self._pg_size_lbl.setText(str(nxt))
         self._page = 0
         self._render_page()
 
@@ -584,7 +554,8 @@ class _AdminLogPanel(QWidget):
         cur = self._page_size
         prv = next((s for s in reversed(steps) if s < cur), steps[0])
         self._page_size = prv
-        self._pg_size_lbl.setText(str(prv))
+        if hasattr(self, "_pg_size_lbl"):
+            self._pg_size_lbl.setText(str(prv))
         self._page = 0
         self._render_page()
 

@@ -193,14 +193,7 @@ QLabel#status_text {{
     letter-spacing: 1px; font-weight: 600; font-size: {_dp(10)}px;
 }}
 
-QFrame#filter_bar {{
-    background: #ffffff; border: 1px solid #cfd8e3;
-    border-radius: {r10}px;
-}}
-QLabel#filter_lbl {{
-    color: #546e7a; font-family: 'Segoe UI', sans-serif;
-    font-size: {_dp(10)}px; letter-spacing: 1px;
-}}
+
 
 QPushButton#btn_refresh {{
     background: #1565c0; color: #ffffff;
@@ -309,6 +302,7 @@ class _AdminSesionesPanel(QWidget):
         self._all_rows:  list[dict] = []
         self._page      = 0
         self._page_size = self._PAGE_SIZE
+        self._sort_desc = True
 
         root = QVBoxLayout(self)
         m = _dp(12)
@@ -358,32 +352,7 @@ class _AdminSesionesPanel(QWidget):
         cb_lay.addWidget(self.status_lbl)
         root.addWidget(cb)
 
-        # ── Barra de filtros táctil ───────────────────────────────────────────
-        # Sesiones solo tienen un estado (activa), así que el filtro útil
-        # es ordenar por locker o por fecha — se expone como toggle de orden.
-        fb = QFrame(); fb.setObjectName("filter_bar")
-        _shadow(fb, _dp(8), 10, _dp(1))
-        fb_lay = QHBoxLayout(fb)
-        fb_lay.setContentsMargins(_dp(12), _dp(8), _dp(12), _dp(8))
-        fb_lay.setSpacing(_dp(8))
-
-        lbl_f = QLabel("Ordenar:"); lbl_f.setObjectName("filter_lbl")
-        fb_lay.addWidget(lbl_f)
-
-        # Toggle de orden: más reciente primero / más antiguo primero
-        self._tbtn_desc = ToggleBtn("↓  Más reciente", bg="#1565c0")
-        self._tbtn_asc  = ToggleBtn("↑  Más antiguo",  bg="#546e7a", border="#546e7a")
-        self._tbtn_desc.set_active(True)
-
-        self._sort_desc = True
-        self._tbtn_desc.clicked.connect(lambda: self._apply_sort(desc=True))
-        self._tbtn_asc.clicked.connect(lambda:  self._apply_sort(desc=False))
-
-        fb_lay.addWidget(self._tbtn_desc)
-        fb_lay.addWidget(self._tbtn_asc)
-        fb_lay.addStretch()
-
-        root.addWidget(fb)
+        # Nota: se removió la barra de filtros para dar más espacio a la tabla.
 
         # ── Tabla ─────────────────────────────────────────────────────────────
         self._model = SesionesTableModel()
@@ -486,14 +455,16 @@ class _AdminSesionesPanel(QWidget):
         steps = self._PAGE_STEPS
         nxt = next((s for s in steps if s > self._page_size), steps[-1])
         self._page_size = nxt
-        self._pg_size_lbl.setText(str(nxt))
+        if hasattr(self, "_pg_size_lbl"):
+            self._pg_size_lbl.setText(str(nxt))
         self._page = 0; self._render_page()
 
     def _dec_page_size(self):
         steps = self._PAGE_STEPS
         prv = next((s for s in reversed(steps) if s < self._page_size), steps[0])
         self._page_size = prv
-        self._pg_size_lbl.setText(str(prv))
+        if hasattr(self, "_pg_size_lbl"):
+            self._pg_size_lbl.setText(str(prv))
         self._page = 0; self._render_page()
 
     # ── Paginación ────────────────────────────────────────────────────────────

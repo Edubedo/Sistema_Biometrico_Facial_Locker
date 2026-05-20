@@ -168,14 +168,7 @@ QPushButton#btn_refresh {{
 QPushButton#btn_refresh:hover   {{ background: #e3f0ff; border-color: #1565c0; }}
 QPushButton#btn_refresh:pressed {{ background: #bbdefb; }}
 
-/* ── Barra de filtros ── */
-QFrame#filter_bar {{
-    background: #ffffff; border: 1px solid #cfd8e3; border-radius: {r10}px;
-}}
-QLabel#filter_lbl {{
-    color: #546e7a; font-family: 'Segoe UI';
-    font-size: {_dp(10)}px; letter-spacing: 1px;
-}}
+/* Barra de filtros eliminada para dar más espacio a la tabla */
 
 /* ── Tabla ── */
 QTableView#admin_users_tbl {{
@@ -625,31 +618,9 @@ class _AdminUsersPanel(QWidget):
         root.addLayout(hdr)
         root.addWidget(_divider())
 
-        # ── Barra de filtros táctil ───────────────────────────────────────────
-        fb = QFrame(); fb.setObjectName("filter_bar")
-        _shadow(fb, _dp(8), 10, _dp(1))
-        fb_lay = QHBoxLayout(fb)
-        fb_lay.setContentsMargins(_dp(12), _dp(8), _dp(12), _dp(8))
-        fb_lay.setSpacing(_dp(8))
-
-        lbl_f = QLabel("Estado:"); lbl_f.setObjectName("filter_lbl")
-        fb_lay.addWidget(lbl_f)
-
-        self._tbtn_all      = ToggleBtn("Todos",           bg="#1565c0")
-        self._tbtn_active   = ToggleBtn("✔  Activos",      bg="#2e7d32", border="#2e7d32")
-        self._tbtn_inactive = ToggleBtn("✖  Inactivos",    bg="#546e7a", border="#546e7a")
-        self._tbtn_all.set_active(True)
-
-        self._tbtn_all.clicked.connect(lambda:      self._apply_estado_filter(""))
-        self._tbtn_active.clicked.connect(lambda:   self._apply_estado_filter("activo"))
-        self._tbtn_inactive.clicked.connect(lambda: self._apply_estado_filter("inactivo"))
-
-        fb_lay.addWidget(self._tbtn_all)
-        fb_lay.addWidget(self._tbtn_active)
-        fb_lay.addWidget(self._tbtn_inactive)
-        fb_lay.addStretch()
-
-        root.addWidget(fb)
+        # Nota: la barra de filtros fue removida para maximizar espacio de tabla.
+        # Se mantiene internamente el filtro por estado iniciado en vacío.
+        self._estado_filter = ""
 
         # ── Tabla ─────────────────────────────────────────────────────────────
         self._model = AdminTableModel()
@@ -731,9 +702,13 @@ class _AdminUsersPanel(QWidget):
     # ── Filtro estado ─────────────────────────────────────────────────────────
     def _apply_estado_filter(self, val: str):
         self._estado_filter = val
-        self._tbtn_all.set_active(val == "")
-        self._tbtn_active.set_active(val == "activo")
-        self._tbtn_inactive.set_active(val == "inactivo")
+        # Si los botones existen (por compatibilidad), actualízalos.
+        if hasattr(self, "_tbtn_all"):
+            self._tbtn_all.set_active(val == "")
+        if hasattr(self, "_tbtn_active"):
+            self._tbtn_active.set_active(val == "activo")
+        if hasattr(self, "_tbtn_inactive"):
+            self._tbtn_inactive.set_active(val == "inactivo")
         self._page = 0
         self._render_page()
 
@@ -745,7 +720,9 @@ class _AdminUsersPanel(QWidget):
 
     def _dec_page_size(self):
         prv = next((s for s in reversed(self._PAGE_STEPS) if s < self._page_size), self._PAGE_STEPS[0])
-        self._page_size = prv; self._pg_size_lbl.setText(str(prv))
+        self._page_size = prv
+        if hasattr(self, "_pg_size_lbl"):
+            self._pg_size_lbl.setText(str(prv))
         self._page = 0; self._render_page()
 
     # ── Paginación ────────────────────────────────────────────────────────────
