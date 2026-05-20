@@ -96,7 +96,7 @@ def abrir_locker(num_locker):
             time.sleep(PULSE_DURATION)
             return
 
-        # 1. Buzzer — dos pitidos
+        # 1. Buzzer — dos pitidos .
         _sonar_sync(1000, 0.1)
         time.sleep(0.05)
         _sonar_sync(1000, 0.1)
