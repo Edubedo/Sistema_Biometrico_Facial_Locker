@@ -298,4 +298,13 @@ if __name__ == "__main__":
         w.showFullScreen()
     else:
         w.show()
-    sys.exit(app.exec_())
+    exit_code = app.exec_()
+
+    # Liberar pines GPIO al cerrar para evitar estado sucio en el próximo arranque
+    try:
+        from utils.gpio_locker import cleanup
+        cleanup()
+    except Exception as e:
+        print(f"[WARN] No se pudo hacer cleanup de GPIO: {e}")
+
+    sys.exit(exit_code)

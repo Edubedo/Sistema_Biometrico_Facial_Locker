@@ -1043,17 +1043,20 @@ class RetirarPage(QWidget):
         self._close_detected_dialog()
         self.scan_btn.setVisible(True)
         num_locker = db_get_locker_num_by_id(self._id_locker)
+
+        # Abrir cerradura PRIMERO, antes de modificar la BD
+        if num_locker and str(num_locker) != "?":
+            abrir_locker(str(num_locker))
+        else:
+            print(f"[WARN] _do_retirar: num_locker inválido '{num_locker}' para id_locker={self._id_locker}")
+
         db_close_sesion(self._id_sesion)
         db_set_locker_estado(self._id_locker, "libre")
         train_model()
 
-        # Abrir cerradura solenoide para que el cliente retire sus cosas
-        abrir_locker(num_locker)
-
         db_log_intento(self._id_locker, "retirar", "exitoso",
                        "Cliente retiro sus cosas. Sesion {} cerrada.".format(self._id_sesion),
                        id_sesion=self._id_sesion)
-        # Emitir señal para que main muestre la página de resultado (flujo existente)
         self.retirar_done.emit(self._face_uid, num_locker, self._id_sesion)
 
     def _do_seguir(self):
@@ -1062,7 +1065,13 @@ class RetirarPage(QWidget):
         self._close_detected_dialog()
         self.scan_btn.setVisible(True)
         num_locker = db_get_locker_num_by_id(self._id_locker)
-        abrir_locker(num_locker)
+
+        # Abrir cerradura con validación
+        if num_locker and str(num_locker) != "?":
+            abrir_locker(str(num_locker))
+        else:
+            print(f"[WARN] _do_seguir: num_locker inválido '{num_locker}' para id_locker={self._id_locker}")
+
         db_log_intento(self._id_locker, "seguir_comprando", "exitoso",
                        "Cliente consulto locker, cerradura abierta para guardar de nuevo.",
                        id_sesion=self._id_sesion)

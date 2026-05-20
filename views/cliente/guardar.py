@@ -617,12 +617,16 @@ class GuardarPage(QWidget):
         db_set_locker_estado(id_locker, "ocupado")
 
         # Abrir cerradura solenoide del locker asignado
-        abrir_locker(num_locker)
+        abrir_locker(str(num_locker))
 
         db_log_intento(id_locker, "registro_biometrico", "exitoso",
                        "Sesion {} creada. Locker #{} asignado.".format(id_sesion, num_locker),
                        id_sesion=id_sesion)
-        train_model()
+
+        # train_model en background para no bloquear la apertura de la cerradura
+        import threading
+        threading.Thread(target=train_model, daemon=True).start()
+
         self.done.emit(face_uid, num_locker, id_sesion)
 
     def _cancel(self):
