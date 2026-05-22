@@ -76,12 +76,20 @@ class CamThread(QThread):
     CAMERA_ERROR = "__CAMERA_ERROR__"
     _disable_picamera2 = False
 
-    def __init__(self, mode, face_uid="", labels=None):
+    def __init__(self, mode, face_uid="", labels=None, detect_roi=None):
+        """
+        detect_roi: tupla (x_frac, y_frac, w_frac, h_frac) normalizada [0..1].
+                    Si se pasa, la detección solo ocurre dentro de esa región
+                    del frame. Útil para limitar la detección al área del marco
+                    verde en la UI y evitar falsos positivos fuera del cuadro.
+                    Ejemplo: (0.20, 0.05, 0.60, 0.90)
+        """
         super().__init__()
-        self.mode     = mode
-        self.face_uid = face_uid
-        self.labels   = labels or {}
-        self._active  = True
+        self.mode       = mode
+        self.face_uid   = face_uid
+        self.labels     = labels or {}
+        self.detect_roi = detect_roi   # FIX #2: región de detección acotada
+        self._active    = True
         self._manual_stop = False
         self.cap = None  # Solo usado como fallback a OpenCV
 
@@ -139,11 +147,15 @@ class CamThread(QThread):
         fc = cv2.CascadeClassifier(CASCADE)
         sdir = face_dir_for(self.face_uid) if self.mode == self.CAPTURE else None
 
+        # FIX #1: CLAHE para mejorar detección en condiciones de poca luz
+        clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
+
+        # FIX #4: umbral más bajo (0.4 en lugar de 0.5) → mejora con lentes
         mp_face = None
         if MP_AVAILABLE:
             try:
                 mp_face = mp.solutions.face_detection.FaceDetection(
-                    model_selection=0, min_detection_confidence=0.5
+                    model_selection=0, min_detection_confidence=0.4
                 )
             except Exception:
                 mp_face = None
@@ -152,6 +164,7 @@ class CamThread(QThread):
             os.makedirs(sdir, exist_ok=True)
 
         while self._active:
+            # ── Lectura del frame ──────────────────────────────────────────
             if self.use_picamera2:
                 try:
                     frame = picam.capture_array()
@@ -172,34 +185,95 @@ class CamThread(QThread):
                     read_failed = True
                     break
 
+            # FIX #7: voltear horizontalmente → imagen natural (no espejo)
+            frame = cv2.flip(frame, 1)
+
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-            # Prefer MediaPipe detections if available (more robust across poses)
+            # FIX #1: aplicar CLAHE al gris para mejorar contraste en oscuridad
+            gray_enh = clahe.apply(gray)
+
+            h_img, w_img = frame.shape[:2]
+
+            # ── FIX #2: acotar zona de detección al ROI del marco verde ───
+            if self.detect_roi:
+                xf, yf, wf, hf = self.detect_roi
+                rx1 = max(0, int(xf * w_img))
+                ry1 = max(0, int(yf * h_img))
+                rx2 = min(w_img, int((xf + wf) * w_img))
+                ry2 = min(h_img, int((yf + hf) * h_img))
+                det_gray  = gray_enh[ry1:ry2, rx1:rx2]
+                det_frame = frame[ry1:ry2, rx1:rx2]
+                off_x, off_y = rx1, ry1
+            else:
+                det_gray  = gray_enh
+                det_frame = frame
+                off_x, off_y = 0, 0
+
+            h_det, w_det = det_gray.shape[:2]
+
+            # ── Detección de rostros ───────────────────────────────────────
             faces = []
-            h, w = frame.shape[:2]
+
             if mp_face is not None:
                 try:
-                    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    rgb     = cv2.cvtColor(det_frame, cv2.COLOR_BGR2RGB)
                     results = mp_face.process(rgb)
                     if results.detections:
                         for det in results.detections:
                             bbox = det.location_data.relative_bounding_box
-                            x = int(bbox.xmin * w)
-                            y = int(bbox.ymin * h)
-                            bw = int(bbox.width * w)
-                            bh = int(bbox.height * h)
-                            x = max(0, x)
-                            y = max(0, y)
-                            bw = max(1, min(w - x, bw))
-                            bh = max(1, min(h - y, bh))
+                            # Coordenadas en píxeles relativas al sub-frame,
+                            # luego trasladadas al frame completo con off_x/off_y
+                            x  = int(bbox.xmin * w_det) + off_x
+                            y  = int(bbox.ymin * h_det) + off_y
+                            bw = int(bbox.width  * w_det)
+                            bh = int(bbox.height * h_det)
+                            x  = max(0, x)
+                            y  = max(0, y)
+                            bw = max(1, min(w_img - x, bw))
+                            bh = max(1, min(h_img - y, bh))
                             faces.append((x, y, bw, bh))
                 except Exception:
-                    faces = fc.detectMultiScale(gray, 1.3, 5)
+                    # Fallback a cascade si MediaPipe falla en este frame
+                    raw = fc.detectMultiScale(
+                        det_gray, scaleFactor=1.2, minNeighbors=4,
+                        minSize=(50, 50), flags=cv2.CASCADE_SCALE_IMAGE
+                    )
+                    if len(raw):
+                        faces = [
+                            (int(x) + off_x, int(y) + off_y, int(w), int(h))
+                            for x, y, w, h in raw
+                        ]
             else:
-                faces = fc.detectMultiScale(gray, 1.3, 5)
+                # FIX #3: parámetros optimizados para velocidad:
+                #   scaleFactor 1.2 (más fino que 1.3) → más detecciones por ciclo
+                #   minNeighbors 4 (era 5) → menos fallos a costa de algún falso +
+                #   minSize (50,50) → descarta áreas pequeñas (más rápido)
+                raw = fc.detectMultiScale(
+                    det_gray, scaleFactor=1.2, minNeighbors=4,
+                    minSize=(50, 50), flags=cv2.CASCADE_SCALE_IMAGE
+                )
+                if len(raw):
+                    faces = [
+                        (int(x) + off_x, int(y) + off_y, int(w), int(h))
+                        for x, y, w, h in raw
+                    ]
 
-            for (x, y, w, h) in faces:
-                roi = cv2.resize(gray[y:y+h, x:x+w], (IMG_W, IMG_H))
+            # FIX #8: conservar únicamente el rostro más grande
+            #         → evita procesar 2-3 rostros detectados a la vez
+            if len(faces) > 1:
+                faces = [max(faces, key=lambda f: f[2] * f[3])]
+
+            # ── Procesado del único rostro detectado ───────────────────────
+            for (x, y, fw, fh) in faces:
+                # Clamp para no salir del frame
+                x  = max(0, min(x, w_img - 1))
+                y  = max(0, min(y, h_img - 1))
+                fw = max(1, min(fw, w_img - x))
+                fh = max(1, min(fh, h_img - y))
+
+                # ROI para guardar/reconocer (se usa gray_enh para mejor calidad)
+                roi = cv2.resize(gray_enh[y:y + fh, x:x + fw], (IMG_W, IMG_H))
 
                 if self.mode == self.CAPTURE:
                     cv2.imwrite(os.path.join(sdir, "{}.png".format(capture_count)), roi)
@@ -220,12 +294,12 @@ class CamThread(QThread):
                                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (80, 180, 255), 2)
                             self._active = False
                             break
-                    except:
+                    except Exception:
                         pass
 
             self._emit_frame(frame)
 
-        # Al terminar: liberar solo OpenCV si se usó como fallback.
+        # ── Liberación de recursos ─────────────────────────────────────────
         # La Picamera2 global NO se cierra aquí — se reutiliza en el siguiente hilo.
         if self.cap is not None:
             self.cap.release()
