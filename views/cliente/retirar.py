@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                               QFrame, QSizePolicy, QLabel, QApplication)
 
 from biometria.biometria import train_model
+from db.connection import connectionDB
 from db.models.intentos_acceso import db_log_intento
 from db.models.lockers import db_set_locker_estado
 from db.models.sesiones import db_close_sesion, db_get_active_sesion_by_face
@@ -24,6 +25,35 @@ def _dp(value: float) -> int:
     scale = min(dpi / 96, 1.25)
     return max(1, round(value * scale))
 
+
+# ── Proporciones del marco de escaneo ────────────────────────────────────────
+# FIX: marco más grande (0.62 ancho, 0.90 alto) → igual que guardar.py.
+#       La detección queda acotada exactamente a esta región visual.
+_FRAME_W_FRAC = 0.62
+_FRAME_H_FRAC = 0.90
+_FRAME_X_FRAC = (1.0 - _FRAME_W_FRAC) / 2.0   # ≈ 0.19
+_FRAME_Y_FRAC = (1.0 - _FRAME_H_FRAC) / 2.0   # ≈ 0.05
+_DETECT_ROI   = (_FRAME_X_FRAC, _FRAME_Y_FRAC, _FRAME_W_FRAC, _FRAME_H_FRAC)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _get_locker_estado(id_locker) -> str | None:
+    """
+    Devuelve el estado actual del locker desde la BD.
+    FIX: usado para evitar re-abrir una puerta ya abierta y para bloquear
+         el retiro cuando el locker ya fue abierto en esta sesión.
+    """
+    try:
+        with connectionDB() as con:
+            row = con.execute(
+                "SELECT estado FROM Lockers WHERE ID_locker=?", (id_locker,)
+            ).fetchone()
+            return row[0] if row else None
+    except Exception:
+        return None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 
 class ScanLine(QWidget):
     def __init__(self, parent):
@@ -91,25 +121,29 @@ STYLE = """
 QWidget#retirar_page { background: transparent; }
 
 QLabel#h2 {
-    color: #dceaff; font-size: 16px; font-weight: 700;
+    color: #dceaff; font-size: 17px; font-weight: 700;
     font-family: 'Segoe UI', sans-serif;
 }
 QLabel#h3 {
-    color: #dceaff; font-size: 14px; font-weight: 700;
+    color: #dceaff; font-size: 15px; font-weight: 700;
     font-family: 'Segoe UI', sans-serif;
 }
 QLabel#tag {
     color: rgba(110,140,190,0.90); font-size: 12px; font-weight: 700;
     font-family: 'Courier New'; letter-spacing: 2px;
 }
-QLabel#body  { color: #b0c8f0; font-size: 13px; font-family: 'Segoe UI', sans-serif; }
-QLabel#small { color: #6e8cbe; font-size: 10px; font-family: 'Courier New'; }
+QLabel#tag_scan_hint {
+    color: #B9EA89; font-size: 13px; font-weight: 800;
+    font-family: 'Segoe UI', sans-serif; letter-spacing: 1px;
+}
+QLabel#body  { color: #b0c8f0; font-size: 14px; font-family: 'Segoe UI', sans-serif; }
+QLabel#small { color: #6e8cbe; font-size: 11px; font-family: 'Courier New'; }
 QLabel#ok    {
-    color: #B9EA89; font-size: 12px; font-weight: 700;
+    color: #B9EA89; font-size: 13px; font-weight: 700;
     font-family: 'Segoe UI', sans-serif;
 }
 QLabel#err   {
-    color: #ff6b6b; font-size: 12px; font-weight: 700;
+    color: #ff6b6b; font-size: 13px; font-weight: 700;
     font-family: 'Segoe UI', sans-serif;
 }
 
@@ -156,7 +190,7 @@ QPushButton#btn_blue {
         stop:0.5 rgba(41,128,255,0.90),
         stop:1 rgba(80,140,240,0.90));
     color: #ffffff; border: 1.5px solid rgba(41,128,255,0.55); border-radius: 12px;
-    padding: 10px 12px; font-size: 14px; font-weight: 800;
+    padding: 10px 12px; font-size: 15px; font-weight: 800;
     font-family: 'Segoe UI', sans-serif; letter-spacing: 1px;
 }
 QPushButton#btn_blue:hover {
@@ -166,25 +200,23 @@ QPushButton#btn_blue:hover {
         stop:1 rgba(100,160,255,0.98));
     border-color: rgba(41,128,255,0.95);
 }
-QPushButton#btn_blue:pressed {
-    background: rgba(20,38,78,0.95);
-}
+QPushButton#btn_blue:pressed { background: rgba(20,38,78,0.95); }
 QPushButton#btn_blue:disabled {
     background: rgba(20,38,78,0.60);
     color: rgba(110,140,190,0.55);
     border-color: rgba(40,70,140,0.30);
 }
 
+/* FIX: botón de salir más grande */
 QPushButton#btn_sm {
     background: rgba(20,38,78,0.80);
     color: #b0c8f0; border: 1.5px solid rgba(41,128,255,0.40); border-radius: 10px;
-    padding: 10px 16px; margin-bottom: 6px; font-size: 14px; font-family: 'Segoe UI', sans-serif; font-weight: 700;
-    min-height: 48px; min-width: 120px;
+    padding: 12px 20px; margin-bottom: 6px;
+    font-size: 15px; font-family: 'Segoe UI', sans-serif; font-weight: 700;
+    min-height: 56px; min-width: 140px;
 }
 QPushButton#btn_sm:hover   { background: rgba(26,48,96,0.95); border-color: rgba(41,128,255,0.80); color: #dceaff; }
-QPushButton#btn_sm:pressed {
-    background: rgba(14,26,58,0.95);
-}
+QPushButton#btn_sm:pressed { background: rgba(14,26,58,0.95); }
 
 /* ── Acciones post-deteccion ── */
 QFrame#actions_card {
@@ -224,7 +256,7 @@ QPushButton#btn_action_green:pressed {
 /* ── Carousel ── */
 QFrame#carousel_inner { background: rgba(12,22,50,0.70); border-radius: 10px; border: 1px solid rgba(40,70,140,0.50); }
 QLabel#carousel_text  {
-    color: #b0c8f0; font-size: 12px; font-weight: 600;
+    color: #b0c8f0; font-size: 13px; font-weight: 600;
     font-family: 'Segoe UI', sans-serif;
 }
 QPushButton#dot_inactive {
@@ -320,7 +352,7 @@ CAROUSEL_STEPS = [
 
 
 class CarouselWidget(QWidget):
-    """Carousel plano, sin QFrame propio — vive dentro del card azul del panel izquierdo."""
+    """Carousel plano — vive dentro del card azul del panel izquierdo."""
     def __init__(self, parent=None):
         super().__init__(parent)
         self._current = 0
@@ -344,7 +376,8 @@ class CarouselWidget(QWidget):
         inner_l.setAlignment(Qt.AlignCenter)
 
         self._svg = QSvgWidget()
-        self._svg.setFixedSize(100, 100)
+        # FIX: icono más grande para mejor visibilidad en pantalla táctil
+        self._svg.setFixedSize(112, 112)
         self._svg.setStyleSheet("background: transparent;")
         inner_l.addWidget(self._svg, alignment=Qt.AlignCenter)
 
@@ -354,7 +387,7 @@ class CarouselWidget(QWidget):
         self._text_lbl.setWordWrap(True)
         inner_l.addWidget(self._text_lbl)
 
-        root.addWidget(self._inner, 1)   # stretch=1: rellena el espacio
+        root.addWidget(self._inner, 1)
 
         dots_row = QHBoxLayout()
         dots_row.setSpacing(6)
@@ -408,35 +441,31 @@ class ActionTile(QWidget):
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         if mode == "take":
-            self._accent = QColor(217, 11, 11)
+            self._accent      = QColor(217, 11, 11)
             self._accent_soft = QColor(255, 107, 107, 45)
-            self._card_bg = QColor(16, 30, 62)
-            self._icon_bg = QColor(120, 20, 20)
-            self._icon_bg2 = QColor(217, 11, 11)
+            self._card_bg     = QColor(16, 30, 62)
+            self._icon_bg     = QColor(120, 20, 20)
+            self._icon_bg2    = QColor(217, 11, 11)
         else:
-            self._accent = QColor(25, 168, 91)
+            self._accent      = QColor(25, 168, 91)
             self._accent_soft = QColor(185, 234, 137, 45)
-            self._card_bg = QColor(16, 30, 62)
-            self._icon_bg = QColor(42, 124, 50)
-            self._icon_bg2 = QColor(25, 168, 91)
+            self._card_bg     = QColor(16, 30, 62)
+            self._icon_bg     = QColor(42, 124, 50)
+            self._icon_bg2    = QColor(25, 168, 91)
 
     def enterEvent(self, _):
-        self._hovered = True
-        self.update()
+        self._hovered = True; self.update()
 
     def leaveEvent(self, _):
-        self._hovered = False
-        self.update()
+        self._hovered = False; self.update()
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
-            self._pressed = True
-            self.update()
+            self._pressed = True; self.update()
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
-            self._pressed = False
-            self.update()
+            self._pressed = False; self.update()
             if self.rect().contains(event.pos()):
                 self.clicked.emit()
 
@@ -476,7 +505,10 @@ class ActionTile(QWidget):
             p.drawRect(pad, pad, W - pad * 2, H - pad * 2)
 
         p.setClipping(False)
-        border_pen = QPen(self._accent.lighter(120) if self._hovered else QColor(73, 118, 190, 160), _dp(1.5) if not self._hovered else _dp(2))
+        border_pen = QPen(
+            self._accent.lighter(120) if self._hovered else QColor(73, 118, 190, 160),
+            _dp(1.5) if not self._hovered else _dp(2)
+        )
         p.setPen(border_pen)
         p.setBrush(Qt.NoBrush)
         p.drawRoundedRect(card_rect.adjusted(0.5, 0.5, -0.5, -0.5), _dp(18), _dp(18))
@@ -508,7 +540,8 @@ class ActionTile(QWidget):
         image_path = os.path.join(project_root, "public", self.image_name)
         pix = QPixmap(image_path)
         if not pix.isNull():
-            pix = pix.scaled(int(icon_size * 0.78), int(icon_size * 0.78), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            pix = pix.scaled(int(icon_size * 0.78), int(icon_size * 0.78),
+                             Qt.KeepAspectRatio, Qt.SmoothTransformation)
             px = int(cx - pix.width() / 2)
             py = int(cy - pix.height() / 2)
             p.drawPixmap(px, py, pix)
@@ -570,7 +603,9 @@ class InlineResultCard(QWidget):
         cl.addWidget(self._subtitle)
 
         self._divider = QFrame()
-        self._divider.setStyleSheet("background: rgba(135, 178, 235, 0.90); border: none; min-height: 1px; max-height: 1px;")
+        self._divider.setStyleSheet(
+            "background: rgba(135, 178, 235, 0.90); border: none; min-height: 1px; max-height: 1px;"
+        )
         cl.addWidget(self._divider)
 
         self._detail = QLabel("")
@@ -592,15 +627,15 @@ class InlineResultCard(QWidget):
     def show_result(self, kind: str, title: str, subtitle: str, detail: str = ""):
         accent = {
             "ok_blue": "#2f80ed",
-            "ok": "#2e7d32",
-            "warn": "#e66c00",
-            "err": "#c62828",
+            "ok":      "#2e7d32",
+            "warn":    "#e66c00",
+            "err":     "#c62828",
         }.get(kind, "#2f80ed")
         badge = {
             "ok_blue": tr("result.ok"),
-            "ok": tr("result.ok"),
-            "warn": tr("result.warn"),
-            "err": tr("result.err"),
+            "ok":      tr("result.ok"),
+            "warn":    tr("result.warn"),
+            "err":     tr("result.err"),
         }.get(kind, tr("result.ok"))
 
         self._icon.setStyleSheet(
@@ -631,6 +666,8 @@ class InlineResultCard(QWidget):
         self.setVisible(False)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+
 class RetirarPage(QWidget):
 
     go_back      = pyqtSignal()
@@ -645,14 +682,17 @@ class RetirarPage(QWidget):
         self.setObjectName("retirar_page")
         self.setStyleSheet(STYLE)
 
-        self.cam_thread  = None
-        self._face_uid   = None
-        self._id_sesion  = None
-        self._id_locker  = None
-        self._detected_msg = None
+        self.cam_thread    = None
+        self._face_uid     = None
+        self._id_sesion    = None
+        self._id_locker    = None
+        self._scan_started = False   # FIX: guard contra doble-inicio (auto + manual)
+        self._action_done  = False   # FIX: guard contra doble-tap en tiles de acción
+
+        self._detected_msg         = None
         self._closing_detected_msg = False
-        self._detected_left = 0
-        self._detected_timer = QTimer(self)
+        self._detected_left        = 0
+        self._detected_timer       = QTimer(self)
         self._detected_timer.setInterval(1000)
         self._detected_timer.timeout.connect(self._tick_detected_dialog)
         self._detected_force_close = QTimer(self)
@@ -665,14 +705,19 @@ class RetirarPage(QWidget):
 
         # ── Header ────────────────────────────────────────────────────────────
         hdr = QHBoxLayout(); hdr.setSpacing(8)
+
+        # FIX: botón de salir más grande — altura mínima 64px, ancho mínimo 140px
         self.back_btn = QPushButton("")
         back = self.back_btn
         back.setObjectName("btn_sm")
-        back.setFixedHeight(touch_height(48))
+        back.setFixedHeight(touch_height(64))
+        back.setMinimumWidth(140)
         back.setCursor(Qt.PointingHandCursor)
+        back.setFocusPolicy(Qt.NoFocus)
         back.clicked.connect(self._cancel)
+
         htxt = QVBoxLayout(); htxt.setSpacing(0)
-        self.title_lbl = lbl("", "h2")
+        self.title_lbl    = lbl("", "h2")
         self.subtitle_lbl = lbl("", "tag")
         htxt.addWidget(self.title_lbl)
         htxt.addWidget(self.subtitle_lbl)
@@ -683,30 +728,32 @@ class RetirarPage(QWidget):
         # ── Body ──────────────────────────────────────────────────────────────
         body = QHBoxLayout(); body.setSpacing(8)
 
-        # ── Panel izquierdo ───────────────────────────────────────────────────
+        # ── Panel izquierdo — FIX: más ancho para no verse pequeño ───────────
         left = QFrame(); left.setObjectName("card")
         left.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
-        left.setFixedWidth(300)
+        left.setFixedWidth(340)   # era 300
         ll = QVBoxLayout(left)
-        ll.setContentsMargins(10, 8, 10, 8)
-        ll.setSpacing(6)
+        ll.setContentsMargins(12, 10, 12, 10)
+        ll.setSpacing(8)
 
         self._carousel = CarouselWidget()
         ll.addWidget(self._carousel, 1)
 
+        # FIX: setFocusPolicy(NoFocus) elimina el doble-tap en pantallas táctiles
         self.scan_btn = QPushButton("  INICIAR ESCANEO")
         self.scan_btn.setObjectName("btn_blue")
-        self.scan_btn.setIcon(_svg_to_icon(_CAM_ICON_SVG, 24))
-        self.scan_btn.setIconSize(QSize(24, 24))
-        self.scan_btn.setFixedHeight(touch_height(80))
+        self.scan_btn.setIcon(_svg_to_icon(_CAM_ICON_SVG, 26))
+        self.scan_btn.setIconSize(QSize(26, 26))
+        self.scan_btn.setFixedHeight(touch_height(84))
         self.scan_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.scan_btn.setCursor(Qt.PointingHandCursor)
+        self.scan_btn.setFocusPolicy(Qt.NoFocus)
         self.scan_btn.clicked.connect(self._start_scan)
         ll.addWidget(self.scan_btn)
 
         self.scan_lbl = lbl("", "err")
         self.scan_lbl.setWordWrap(True)
-        self.scan_lbl.setFixedHeight(28)
+        self.scan_lbl.setFixedHeight(32)
         ll.addWidget(self.scan_lbl)
 
         body.addWidget(left)
@@ -716,6 +763,9 @@ class RetirarPage(QWidget):
         right.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         rl = QVBoxLayout(right)
         rl.setContentsMargins(6, 6, 6, 6); rl.setSpacing(4)
+
+        # FIX: etiqueta de instrucción — se cambia a "MIRA DIRECTO A LA CÁMARA"
+        #      cuando el escaneo está activo para guiar al usuario
         self.scan_title_lbl = lbl("", "tag", Qt.AlignCenter)
         rl.addWidget(self.scan_title_lbl)
 
@@ -744,7 +794,7 @@ class RetirarPage(QWidget):
 
         rl.addWidget(self.detect_card)
 
-        # ── Widget de camara a pantalla completa dentro del panel ───────────
+        # ── Widget de cámara ─────────────────────────────────────────────────
         self.cam = CamWidget(self._CAM_W, self._CAM_H)
         self.cam.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         rl.addWidget(self.cam, 1)
@@ -761,13 +811,14 @@ class RetirarPage(QWidget):
         btn_row = QHBoxLayout(); btn_row.setSpacing(14)
         btn_row.setAlignment(Qt.AlignCenter)
 
+        # FIX: tiles más grandes para mejor usabilidad táctil
         self.btn_retirar = ActionTile("take", "RETIRAR COSAS", "abierta.png")
-        self.btn_retirar.setMinimumSize(260, 300)
+        self.btn_retirar.setMinimumSize(280, 320)
         self.btn_retirar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.btn_retirar.clicked.connect(self._do_retirar)
 
         self.btn_seguir = ActionTile("keep", "SEGUIR COMPRANDO", "cerrada.png")
-        self.btn_seguir.setMinimumSize(260, 300)
+        self.btn_seguir.setMinimumSize(280, 320)
         self.btn_seguir.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.btn_seguir.clicked.connect(self._do_seguir)
 
@@ -784,7 +835,7 @@ class RetirarPage(QWidget):
         body.addWidget(right, 1)
         root.addLayout(body, 1)
 
-        # ── Overlays de camara ─────────────────────────────────────────────
+        # ── Overlays de cámara ────────────────────────────────────────────────
         self.face_guide = QSvgWidget(self.cam)
         self.face_guide.load(b"""
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120">
@@ -812,16 +863,19 @@ class RetirarPage(QWidget):
         self.scan_line = ScanLine(self.cam)
         self.set_language(get_language())
 
+    # ── Idioma ────────────────────────────────────────────────────────────────
+
     def set_language(self, lang: str):
         self.back_btn.setText(tr("ret.back"))
         self.title_lbl.setText(tr("ret.title"))
         self.subtitle_lbl.setText(tr("ret.subtitle"))
         self.scan_title_lbl.setText(tr("ret.scan_title"))
         self.detect_title_lbl.setText(tr("ret.detect_title"))
-        self.scan_btn.setText(tr("ret.start"))
+        self.scan_btn.setText("  " + tr("ret.start"))
         self._carousel.set_language(lang)
         self._carousel._render(self._carousel._current)
-        self._carousel.set_language(lang)
+
+    # ── Modos de visualización ────────────────────────────────────────────────
 
     def _show_camera_mode(self):
         self.detect_card.setVisible(False)
@@ -855,6 +909,8 @@ class RetirarPage(QWidget):
         self.result_card.show_result(kind, title, subtitle, detail)
         self.scan_title_lbl.setText(tr("ret.scan_title"))
 
+    # ── Pintura de fondo ──────────────────────────────────────────────────────
+
     def paintEvent(self, _):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
@@ -887,6 +943,18 @@ class RetirarPage(QWidget):
 
     # ── Eventos ───────────────────────────────────────────────────────────────
 
+    # FIX: auto-inicio al entrar a la página → 1 solo click desde la pantalla anterior
+    def showEvent(self, e):
+        super().showEvent(e)
+        self._scan_started = False
+        self._action_done  = False
+        QTimer.singleShot(400, self._auto_start)
+
+    def _auto_start(self):
+        """Arranca el escaneo automáticamente cuando la página aparece."""
+        if not self._scan_started:
+            self._start_scan()
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         QTimer.singleShot(0, self._update_overlay)
@@ -894,10 +962,15 @@ class RetirarPage(QWidget):
     def _update_overlay(self):
         cam_w = self.cam.width()
         cam_h = self.cam.height()
-        frame_w = int(cam_w * 0.42)
-        frame_h = int(cam_h * 0.80)
+
+        # FIX: proporciones ampliadas — usa las mismas constantes que guardar.py
+        #      (_FRAME_W_FRAC=0.62, _FRAME_H_FRAC=0.90) y el detect_roi que se
+        #      pasa a CamThread coincide exactamente con este marco visual.
+        frame_w = int(cam_w * _FRAME_W_FRAC)
+        frame_h = int(cam_h * _FRAME_H_FRAC)
         frame_x = (cam_w - frame_w) // 2
         frame_y = (cam_h - frame_h) // 2
+
         self.scan_frame.setGeometry(frame_x, frame_y, frame_w, frame_h)
         self.face_guide.setGeometry(frame_x, frame_y, frame_w, frame_h)
         self.scan_line.update_bounds(frame_x, frame_y, frame_w, frame_h)
@@ -905,13 +978,19 @@ class RetirarPage(QWidget):
     # ── Escaneo ───────────────────────────────────────────────────────────────
 
     def _start_scan(self):
+        # FIX: guard contra doble disparo
+        if self._scan_started:
+            return
+        self._scan_started = True
+
         labels = train_model()
         if not labels:
+            self._scan_started = False
             beep_error()
             self.scan_lbl.setText(tr("ret.no_biometrics"))
             return
-        
-        # Stop and wait for any previous thread completely
+
+        # Detener hilo previo si existe
         if self.cam_thread:
             if self.cam_thread.isRunning():
                 self.cam_thread.stop()
@@ -928,11 +1007,19 @@ class RetirarPage(QWidget):
         self.scan_btn.setEnabled(False)
         self.opts.setVisible(False)
         self.scan_lbl.setText("")
+
+        # FIX: instrucción directa cuando el escaneo está activo
+        self.scan_title_lbl.setText(tr("ret.look_straight"))   # "MIRA DIRECTO A LA CÁMARA"
         self.cam.set_status("Escaneando biometria...", "#000000")
-        
-        beep_start_scan()  # Audio signal: scan starting
-        
-        self.cam_thread = CamThread(CamThread.RECOGNIZE, labels=labels)
+
+        beep_start_scan()
+
+        # FIX: detect_roi acota la detección al marco verde visible
+        self.cam_thread = CamThread(
+            CamThread.RECOGNIZE,
+            labels=labels,
+            detect_roi=_DETECT_ROI,
+        )
         self.cam_thread.frame_sig.connect(self.cam.update_frame)
         self.cam_thread.rec_done.connect(self._on_recognized)
         self.cam_thread.finished.connect(self._on_scan_thread_finished)
@@ -944,23 +1031,28 @@ class RetirarPage(QWidget):
             self.cam_thread = None
 
     def _on_recognized(self, face_uid):
+        self._scan_started = False   # permite reintentar si hay error
         self.scan_btn.setEnabled(True)
+
         if face_uid == CamThread.CAMERA_ERROR:
-            beep_error()  # Audio signal: camera error
+            beep_error()
             self.cam.idle()
             self.scan_frame.setVisible(False)
             self.scan_line.hide()
             self.face_guide.setVisible(False)
+            self.scan_title_lbl.setText(tr("ret.scan_title"))
             self.scan_lbl.setText(tr("ret.cam_open_error"))
             db_log_intento(1, "retirar", "fallido",
                            "No se pudo abrir la camara en escaneo de retirar")
             return
+
         if not face_uid:
-            beep_error()  # Audio signal: face not recognized
+            beep_error()
             self.cam.idle()
             self.scan_frame.setVisible(False)
             self.scan_line.hide()
             self.face_guide.setVisible(False)
+            self.scan_title_lbl.setText(tr("ret.scan_title"))
             db_log_intento(1, "retirar", "fallido",
                            "Rostro no reconocido en escaneo de retirar")
             self.scan_lbl.setText(tr("ret.not_recognized"))
@@ -968,15 +1060,15 @@ class RetirarPage(QWidget):
 
         sesion = db_get_active_sesion_by_face(face_uid)
         if not sesion:
-            beep_error()  # Audio signal: no active session
+            beep_error()
             self.cam.idle()
             self.scan_frame.setVisible(False)
             self.scan_line.hide()
             self.face_guide.setVisible(False)
+            self.scan_title_lbl.setText(tr("ret.scan_title"))
             self.scan_lbl.setText(tr("ret.no_active_session"))
             return
 
-        beep_success()  # Audio signal: face recognized successfully
         self._face_uid = face_uid
         if isinstance(sesion, dict):
             self._id_sesion = sesion["ID_sesion"]
@@ -984,8 +1076,26 @@ class RetirarPage(QWidget):
         else:
             self._id_sesion, self._id_locker = sesion
 
+        # FIX: si el locker ya está marcado como "abierto" en la BD,
+        #       no permitir que vuelva a realizar la acción de retirar/seguir
+        #       hasta que el estado cambie (evita re-apertura y doble retiro).
+        current_estado = _get_locker_estado(self._id_locker)
+        if current_estado == "abierto":
+            beep_error()
+            self.cam.idle()
+            self.scan_frame.setVisible(False)
+            self.scan_line.hide()
+            self.face_guide.setVisible(False)
+            self.scan_title_lbl.setText(tr("ret.scan_title"))
+            self.scan_lbl.setText(tr("ret.locker_already_open"))
+            db_log_intento(self._id_locker, "retirar", "fallido",
+                           "Locker ya estaba en estado abierto al intentar acceder.")
+            return
+
+        beep_success()
         self.scan_lbl.setText("")
         self.scan_btn.setVisible(False)
+        self._action_done = False   # reset para esta sesión de reconocimiento
         self._show_actions_mode()
 
     # ── Dialogo de deteccion ──────────────────────────────────────────────────
@@ -1030,25 +1140,37 @@ class RetirarPage(QWidget):
         self.scan_btn.setVisible(True)
         self.scan_btn.setEnabled(True)
         self.scan_lbl.setText("")
-        self._face_uid = None
-        self._id_sesion = None
-        self._id_locker = None
+        self._face_uid     = None
+        self._id_sesion    = None
+        self._id_locker    = None
+        self._scan_started = False
+        self._action_done  = False
         self.detect_card.setVisible(False)
         self.result_card.clear()
+        self.scan_title_lbl.setText(tr("ret.scan_title"))
         self.cam.idle()
 
     def _do_retirar(self):
         if not self._id_sesion:
             return
+        # FIX: guard contra doble-tap en el tile de retirar
+        if self._action_done:
+            return
+        self._action_done = True
+
         self._close_detected_dialog()
         self.scan_btn.setVisible(True)
         num_locker = db_get_locker_num_by_id(self._id_locker)
 
-        # Abrir cerradura PRIMERO, antes de modificar la BD
-        if num_locker and str(num_locker) != "?":
-            abrir_locker(str(num_locker))
+        # FIX: verificar estado antes de abrir — no re-abrir si ya está abierto
+        current_estado = _get_locker_estado(self._id_locker)
+        if current_estado != "abierto":
+            if num_locker and str(num_locker) != "?":
+                abrir_locker(str(num_locker))
+            else:
+                print(f"[WARN] _do_retirar: num_locker inválido '{num_locker}' para id_locker={self._id_locker}")
         else:
-            print(f"[WARN] _do_retirar: num_locker inválido '{num_locker}' para id_locker={self._id_locker}")
+            print(f"[INFO] _do_retirar: locker {num_locker} ya estaba abierto, se omite abrir_locker()")
 
         db_close_sesion(self._id_sesion)
         db_set_locker_estado(self._id_locker, "libre")
@@ -1062,15 +1184,24 @@ class RetirarPage(QWidget):
     def _do_seguir(self):
         if not self._id_sesion:
             return
+        # FIX: guard contra doble-tap en el tile de seguir comprando
+        if self._action_done:
+            return
+        self._action_done = True
+
         self._close_detected_dialog()
         self.scan_btn.setVisible(True)
         num_locker = db_get_locker_num_by_id(self._id_locker)
 
-        # Abrir cerradura con validación
-        if num_locker and str(num_locker) != "?":
-            abrir_locker(str(num_locker))
+        # FIX: no re-abrir si el locker ya está en estado "abierto"
+        current_estado = _get_locker_estado(self._id_locker)
+        if current_estado != "abierto":
+            if num_locker and str(num_locker) != "?":
+                abrir_locker(str(num_locker))
+            else:
+                print(f"[WARN] _do_seguir: num_locker inválido '{num_locker}' para id_locker={self._id_locker}")
         else:
-            print(f"[WARN] _do_seguir: num_locker inválido '{num_locker}' para id_locker={self._id_locker}")
+            print(f"[INFO] _do_seguir: locker {num_locker} ya estaba abierto, se omite abrir_locker()")
 
         db_log_intento(self._id_locker, "seguir_comprando", "exitoso",
                        "Cliente consulto locker, cerradura abierta para guardar de nuevo.",

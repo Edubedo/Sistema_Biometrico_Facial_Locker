@@ -42,6 +42,8 @@ _TRANSLATIONS = {
         "guard.start":          "INICIAR ESCANEO",
         "guard.no_lockers_now": "No hay lockers disponibles en este momento.",
         "guard.no_lockers":     "Sin lockers disponibles.",
+        "guard.already_has_locker_title": "Ya tiene un locker activo",
+        "guard.already_has_locker": "Ya tiene un locker activo. Debe liberar el locker #{num} antes de guardar de nuevo.",
         "guard.cam_open_error": "No se pudo acceder a la cámara. Verifique que no esté en uso.",
         "guard.capture_error":  "Error al capturar imagen. Inténtelo de nuevo.",
         "guard.face_ok":        "Rostro detectado correctamente.",
@@ -309,6 +311,8 @@ _TRANSLATIONS = {
         "guard.start":          "START SCAN",
         "guard.no_lockers_now": "No lockers are currently available.",
         "guard.no_lockers":     "No lockers available.",
+        "guard.already_has_locker_title": "You already have an active locker",
+        "guard.already_has_locker": "You already have an active locker. Please release locker #{num} before storing again.",
         "guard.cam_open_error": "Unable to access the camera. Make sure it is not in use.",
         "guard.capture_error":  "Image capture failed. Please try again.",
         "guard.face_ok":        "Face detected successfully.",
@@ -538,6 +542,10 @@ _TRANSLATIONS = {
         "flow.keep_sub":       "Your belongings are safe. Your locker remains active.",
         "flow.no_space_title": "No Lockers Available",
         "flow.no_space_sub":   "All lockers are currently in use. Please try again later.",
+
+
+        "ret.look_straight" : "MIRA DIRECTO A LA CÁMARA",
+        "ret.locker_already_open" : "El acceso ya está abierto, espera un momento"
     },
 }
 

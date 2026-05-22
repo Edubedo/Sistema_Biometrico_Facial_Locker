@@ -110,7 +110,7 @@ class MainWindow(QMainWindow):
         guard_failed = getattr(self.p_guard, "failed", None)
         if guard_failed is not None:
             guard_failed.connect(
-                lambda msg: self._show_result("err", tr("flow.no_space_title"), msg)
+                lambda msg: self._show_result("err", tr("guard.already_has_locker_title"), msg)
             )
         else:
             print("[WARN] GuardarPage no expone la senal 'failed'.")
