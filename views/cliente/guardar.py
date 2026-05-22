@@ -11,9 +11,10 @@ from biometria.biometria import delete_face_data, train_model, face_dir_for
 from db.connection import connectionDB
 from db.models.intentos_acceso import db_log_intento
 from db.models.lockers import db_set_locker_estado, db_next_free_locker
-from db.models.sesiones import db_create_sesion
+from db.models.sesiones import db_create_sesion, db_get_active_sesion_by_face
 from utils.camera import CamThread
 from utils.gpio_locker import abrir_locker, beep_start_scan, beep_success, beep_error
+from utils.helpers import db_get_locker_num_by_id
 from views.style.widgets.widgets import lbl, sep_line, CamWidget
 from utils.i18n import tr, get_language
 from utils.ui_touch import touch_height
@@ -365,6 +366,19 @@ class CarouselWidget(QWidget):
         self._timer.start(2800)
 
 
+# ── Proporciones del marco de escaneo ────────────────────────────────────────
+# FIX #2: marco más grande (0.62 ancho, 0.90 alto) → el usuario cabe mejor
+#          y la detección se acota a exactamente esta zona.
+_FRAME_W_FRAC = 0.62
+_FRAME_H_FRAC = 0.90
+_FRAME_X_FRAC = (1.0 - _FRAME_W_FRAC) / 2.0   # ≈ 0.19 — margen izquierdo
+_FRAME_Y_FRAC = (1.0 - _FRAME_H_FRAC) / 2.0   # ≈ 0.05 — margen superior
+
+# detect_roi que se pasa a CamThread: coincide con el marco visual
+_DETECT_ROI = (_FRAME_X_FRAC, _FRAME_Y_FRAC, _FRAME_W_FRAC, _FRAME_H_FRAC)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
 class GuardarPage(QWidget):
     done    = pyqtSignal(str, str, int)
     failed  = pyqtSignal(str)
@@ -372,14 +386,27 @@ class GuardarPage(QWidget):
 
     _CAM_W = 440
     _CAM_H = 390
+    # Tiempo máximo (ms) para la fase de pre-verificación (reconocimiento previo).
+    # Si en este tiempo no se detecta ninguna cara conocida, se pasa a captura.
+    _PRECHECK_TIMEOUT_MS = 6000
 
     def __init__(self):
         super().__init__()
         self.setObjectName("guardar_page")
         self.setStyleSheet(STYLE)
         self.cam_thread = None
-        self._face_uid  = None
-        self._id_locker = None
+        self._face_uid        = None
+        self._id_locker       = None
+        self._num_locker      = None   # FIX #5: guardamos num para no re-consultar
+        self._capture_started = False  # FIX #6: evita doble disparo del auto-inicio
+        self._phase           = None   # 'precheck' | 'capture'
+
+        # Timer de seguridad para la fase de pre-verificación.
+        # Si la cámara no detecta ninguna cara conocida en _PRECHECK_TIMEOUT_MS,
+        # se pasa automáticamente a la fase de captura.
+        self._pre_check_timer = QTimer(self)
+        self._pre_check_timer.setSingleShot(True)
+        self._pre_check_timer.timeout.connect(self._on_precheck_timeout)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(8, 8, 8, 6)
@@ -394,7 +421,7 @@ class GuardarPage(QWidget):
         back.setCursor(Qt.PointingHandCursor)
         back.clicked.connect(self._cancel)
         htxt = QVBoxLayout(); htxt.setSpacing(0)
-        self.title_lbl = lbl("", "h2")
+        self.title_lbl    = lbl("", "h2")
         self.subtitle_lbl = lbl("", "tag")
         htxt.addWidget(self.title_lbl)
         htxt.addWidget(self.subtitle_lbl)
@@ -417,6 +444,8 @@ class GuardarPage(QWidget):
         self._carousel = CarouselWidget()
         ll.addWidget(self._carousel, 1)
 
+        # FIX #6: el botón queda como "REINTENTAR" después del primer auto-inicio.
+        #         setFocusPolicy(NoFocus) elimina el doble-tap en pantallas táctiles.
         self.start_btn = QPushButton("INICIAR ESCANEO")
         self.start_btn.setObjectName("btn_blue")
         self.start_btn.setIcon(_svg_to_icon(_CAM_ICON_SVG, 20))
@@ -424,6 +453,7 @@ class GuardarPage(QWidget):
         self.start_btn.setFixedHeight(touch_height(72))
         self.start_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.start_btn.setCursor(Qt.PointingHandCursor)
+        self.start_btn.setFocusPolicy(Qt.NoFocus)   # evita doble-tap en touch
         self.start_btn.clicked.connect(self._start_capture)
         ll.addWidget(self.start_btn)
 
@@ -517,37 +547,49 @@ class GuardarPage(QWidget):
 
     def showEvent(self, e):
         super().showEvent(e)
+        self._capture_started = False   # reset al mostrar la página
+
         result = db_next_free_locker()
         if result:
-            self._id_locker = result[0]
+            # FIX #5: guardar id Y num en un solo lugar → _on_capture_done
+            #          no necesita volver a consultar la BD (evita doble asignación)
+            self._id_locker, self._num_locker = result
             self.start_btn.setEnabled(True)
             self.err_lbl.setText("")
+
+            # FIX #6: auto-arranque con 1 solo toque en la pantalla anterior.
+            #          400 ms de margen para que la página termine de pintarse.
+            QTimer.singleShot(400, self._auto_start)
         else:
-            self._id_locker = None
+            self._id_locker  = None
+            self._num_locker = None
             self.err_lbl.setText(tr("guard.no_lockers_now"))
             self.start_btn.setEnabled(False)
+
+    def _auto_start(self):
+        """Dispara el escaneo automáticamente al entrar a la página."""
+        if not self._capture_started and self._id_locker:
+            self._start_capture()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
         QTimer.singleShot(0, self._update_overlay)
 
     def _start_capture(self):
+        # Guard contra doble disparo (auto + click manual simultáneo)
+        if self._capture_started:
+            return
+        self._capture_started = True
+
         if not self._id_locker:
+            self._capture_started = False
             self.err_lbl.setText(tr("guard.no_lockers"))
             beep_error()
             return
-        
-        # Stop and wait for any previous thread completely
-        if self.cam_thread:
-            if self.cam_thread.isRunning():
-                self.cam_thread.stop()
-                # Force wait with timeout to avoid hanging
-                if not self.cam_thread.wait(2000):
-                    print("[WARN] Camera thread did not stop cleanly, terminating forcefully")
-                    self.cam_thread.terminate()
-                    self.cam_thread.wait(1000)
-            self.cam_thread = None
-        
+
+        self._stop_cam_thread()
+
+        # Generar uid temporal para las fotos de esta sesión
         tmp_uid = "tmp_{}".format(datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
         self._face_uid = tmp_uid
         self.start_btn.setEnabled(False)
@@ -555,28 +597,137 @@ class GuardarPage(QWidget):
         self.scan_frame.setVisible(True)
         self.face_guide.setVisible(True)
         self._update_overlay()
-        
-        beep_start_scan()  # Audio signal: scan starting
-        
-        self.cam_thread = CamThread(CamThread.CAPTURE, face_uid=tmp_uid)
-        self.cam_thread.frame_sig.connect(self.cam.update_frame)
-        self.cam_thread.progress.connect(self.cam.set_progress)
-        self.cam_thread.cap_done.connect(self._on_capture_done)
-        self.cam_thread.finished.connect(self._on_capture_thread_finished)
-        self.cam_thread.start()
+        beep_start_scan()
 
-    def _on_capture_thread_finished(self):
+        # ── FASE 1: Pre-verificación ──────────────────────────────────────
+        # Antes de capturar fotos nuevas, intentar RECONOCER a la persona
+        # contra el modelo actual.  Si se la encuentra con sesión activa →
+        # ya tiene un locker asignado → bloquear y mostrar el número.
+        # Si no se la reconoce (o no hay modelo) → pasar a Fase 2 (captura).
+        labels = train_model()
+        if labels:
+            self._phase = "precheck"
+            self.scan_title_lbl.setText(tr("guard.verifying"))  # "VERIFICANDO..."
+            self._pre_check_timer.start(self._PRECHECK_TIMEOUT_MS)
+
+            self.cam_thread = CamThread(
+                CamThread.RECOGNIZE,
+                labels=labels,
+                detect_roi=_DETECT_ROI,
+            )
+            self.cam_thread.frame_sig.connect(self.cam.update_frame)
+            self.cam_thread.rec_done.connect(self._on_precheck_done)
+            self.cam_thread.finished.connect(self._on_cam_thread_finished)
+            self.cam_thread.start()
+        else:
+            # No hay caras registradas → ir directo a captura
+            self._start_phase2_capture()
+
+    # ── Helpers de hilo ───────────────────────────────────────────────────────
+
+    def _stop_cam_thread(self):
+        """Detiene el hilo de cámara activo y espera a que termine."""
+        if self.cam_thread:
+            if self.cam_thread.isRunning():
+                self.cam_thread.stop()
+                if not self.cam_thread.wait(2000):
+                    self.cam_thread.terminate()
+                    self.cam_thread.wait(1000)
+            self.cam_thread = None
+
+    def _on_cam_thread_finished(self):
         sender = self.sender()
         if sender is self.cam_thread:
             self.cam_thread = None
 
+    # ── Fase 1: Pre-verificación ──────────────────────────────────────────────
+
+    def _on_precheck_timeout(self):
+        """
+        El timeout de pre-verificación se agotó sin detectar ninguna cara
+        conocida → la persona es nueva → pasar a Fase 2 (captura).
+        """
+        self._stop_cam_thread()
+        self._start_phase2_capture()
+
+    def _on_precheck_done(self, face_uid: str):
+        """
+        Callback de la Fase 1 (RECOGNIZE).  Tres posibles resultados:
+          - face_uid válido + sesión activa  → persona ya tiene locker → bloquear
+          - face_uid válido + sin sesión     → persona registrada pero sin locker → capturar
+          - face_uid vacío / CAMERA_ERROR   → no reconocido / error → capturar
+        """
+        self._pre_check_timer.stop()
+
+        if face_uid and face_uid != CamThread.CAMERA_ERROR:
+            sesion = db_get_active_sesion_by_face(face_uid)
+            if sesion:
+                # ── BLOQUEADO: ya tiene locker activo ────────────────────
+                if isinstance(sesion, dict):
+                    id_locker_e = sesion.get("ID_locker")
+                else:
+                    id_locker_e = sesion[1] if len(sesion) > 1 else None
+
+                num_e = db_get_locker_num_by_id(id_locker_e) if id_locker_e else "?"
+
+                beep_error()
+                self._stop_cam_thread()
+                self._capture_started = False
+                self.scan_frame.setVisible(False)
+                self.scan_line.hide()
+                self.face_guide.setVisible(False)
+                self.scan_title_lbl.setText(tr("guard.scan_title"))
+
+                msg = tr("guard.already_has_locker").format(num=num_e)
+                self.cam.set_status(msg, "#bd0a0a")
+                self.cam.idle()
+                self.err_lbl.setText(msg)
+                self.start_btn.setEnabled(True)
+
+                db_log_intento(
+                    id_locker_e or 0, "registro_biometrico", "bloqueado",
+                    "Persona ya tiene locker #{} activo. Se negó nuevo registro.".format(num_e)
+                )
+                return
+
+        # No reconocido o sin sesión activa → proceder a captura
+        self._start_phase2_capture()
+
+    # ── Fase 2: Captura de rostro ─────────────────────────────────────────────
+
+    def _start_phase2_capture(self):
+        """
+        Inicia el hilo de captura (CAPTURE mode).
+        Se llama cuando la Fase 1 confirma que la persona NO tiene locker activo.
+        """
+        self._phase = "capture"
+        self._stop_cam_thread()   # asegurar que el hilo de precheck terminó
+        self.scan_title_lbl.setText(tr("guard.scan_title"))
+
+        self.cam_thread = CamThread(
+            CamThread.CAPTURE,
+            face_uid=self._face_uid,
+            detect_roi=_DETECT_ROI,
+        )
+        self.cam_thread.frame_sig.connect(self.cam.update_frame)
+        self.cam_thread.progress.connect(self.cam.set_progress)
+        self.cam_thread.cap_done.connect(self._on_capture_done)
+        self.cam_thread.finished.connect(self._on_cam_thread_finished)
+        self.cam_thread.start()
+
+    def _on_capture_thread_finished(self):
+        # Mantenido por compatibilidad; la lógica real está en _on_cam_thread_finished
+        self._on_cam_thread_finished()
+
     def _on_capture_done(self, ok, tmp_uid):
+        self._capture_started = False   # permite reintentar si hay error
         self.start_btn.setEnabled(True)
         self.scan_frame.setVisible(False)
         self.scan_line.hide()
         self.face_guide.setVisible(False)
+
         if tmp_uid == CamThread.CAMERA_ERROR:
-            beep_error()  # Audio signal: camera error
+            beep_error()
             self.cam.set_status(tr("guard.cam_open_error"), "#bd0a0a")
             self.cam.idle()
             if self._id_locker:
@@ -584,8 +735,9 @@ class GuardarPage(QWidget):
                                "No se pudo abrir la camara en registro")
             self.err_lbl.setText(tr("guard.cam_open_error"))
             return
+
         if not ok:
-            beep_error()  # Audio signal: capture failed
+            beep_error()
             self.cam.set_status(tr("guard.capture_error"), "#bd0a0a")
             self.cam.idle()
             delete_face_data(tmp_uid)
@@ -594,15 +746,22 @@ class GuardarPage(QWidget):
                                "Error durante la captura de imagenes")
             self.err_lbl.setText(tr("guard.capture_error"))
             return
-        beep_success()  # Audio signal: capture successful
+
+        beep_success()
         self.cam.set_status(tr("guard.face_ok"), "#B9EA89")
         QTimer.singleShot(850, self.cam.idle)
-        locker = db_next_free_locker()
-        if not locker:
+
+        # FIX #5: usar el locker ya asignado en showEvent (self._id_locker /
+        #          self._num_locker) en lugar de volver a llamar db_next_free_locker().
+        #          Esto evita que se asignen dos lockers distintos a la misma persona.
+        if not self._id_locker or self._num_locker is None:
             delete_face_data(tmp_uid)
             self.failed.emit(tr("guard.no_lockers"))
             return
-        id_locker, num_locker = locker
+
+        id_locker  = self._id_locker
+        num_locker = self._num_locker
+
         id_sesion = db_create_sesion(id_locker, tmp_uid)
         face_uid  = "sesion_{}".format(id_sesion)
         old_dir   = face_dir_for(tmp_uid)
@@ -627,30 +786,27 @@ class GuardarPage(QWidget):
         import threading
         threading.Thread(target=train_model, daemon=True).start()
 
+        # Limpiar referencia al locker para que no pueda reasignarse
+        self._id_locker  = None
+        self._num_locker = None
+
         self.done.emit(face_uid, num_locker, id_sesion)
 
     def _cancel(self):
-        if self.cam_thread:
-            if self.cam_thread.isRunning():
-                self.cam_thread.stop()
-                if not self.cam_thread.wait(2000):
-                    self.cam_thread.terminate()
-                    self.cam_thread.wait(1000)
-            self.cam_thread = None
+        self._pre_check_timer.stop()
+        self._stop_cam_thread()
         if self._face_uid:
             delete_face_data(self._face_uid)
         self.go_back.emit()
 
     def reset(self):
-        if self.cam_thread:
-            if self.cam_thread.isRunning():
-                self.cam_thread.stop()
-                if not self.cam_thread.wait(2000):
-                    self.cam_thread.terminate()
-                    self.cam_thread.wait(1000)
-            self.cam_thread = None
-        self._face_uid  = None
-        self._id_locker = None
+        self._pre_check_timer.stop()
+        self._stop_cam_thread()
+        self._face_uid        = None
+        self._id_locker       = None
+        self._num_locker      = None
+        self._capture_started = False
+        self._phase           = None
         self.err_lbl.setText("")
         self.cam.idle()
         self.start_btn.setEnabled(True)
@@ -661,12 +817,16 @@ class GuardarPage(QWidget):
     def _update_overlay(self):
         cam_w = self.cam.width()
         cam_h = self.cam.height()
-        # Marco: proporcion vertical alta para cubrir cabeza + hombros
-        frame_w = int(cam_w * 0.42)
-        frame_h = int(cam_h * 0.80)
+
+        # FIX #2: proporciones ampliadas — ahora usan las constantes globales
+        #          (_FRAME_W_FRAC=0.62, _FRAME_H_FRAC=0.90) en lugar de 0.42/0.80.
+        #          Estas mismas fracciones se pasan como detect_roi a CamThread,
+        #          de modo que el área verde y la zona de detección siempre coinciden.
+        frame_w = int(cam_w * _FRAME_W_FRAC)
+        frame_h = int(cam_h * _FRAME_H_FRAC)
         frame_x = (cam_w - frame_w) // 2
         frame_y = (cam_h - frame_h) // 2
+
         self.scan_frame.setGeometry(frame_x, frame_y, frame_w, frame_h)
-        # Silueta coincide exactamente con el marco
         self.face_guide.setGeometry(frame_x, frame_y, frame_w, frame_h)
         self.scan_line.update_bounds(frame_x, frame_y, frame_w, frame_h)

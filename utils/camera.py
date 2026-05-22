@@ -2,6 +2,7 @@ import sys
 import os
 import cv2
 import time
+import math
 import numpy as np
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtGui import QImage
@@ -18,19 +19,14 @@ except Exception:
     mp = None
     MP_AVAILABLE = False
 
-# Importamos tus configuraciones locales
 from biometria.biometria import CASCADE, face_dir_for, face_model, IMG_H, IMG_W
 
 # ── Singleton global de Picamera2 ─────────────────────────────────────────────
-# La Raspberry Pi solo permite una instancia activa a la vez.
-# Reutilizamos la misma instancia entre hilos para evitar el error
-# "Camera in Configured state trying acquire() requiring state Available".
 _picam_instance = None
 _picam_lock = __import__("threading").Lock()
 
 
 def _get_picam():
-    """Devuelve la instancia global de Picamera2, creándola si no existe."""
     global _picam_instance
     with _picam_lock:
         if _picam_instance is not None:
@@ -51,7 +47,6 @@ def _get_picam():
 
 
 def _release_picam():
-    """Detiene y libera la instancia global de Picamera2."""
     global _picam_instance
     with _picam_lock:
         if _picam_instance is not None:
@@ -61,6 +56,45 @@ def _release_picam():
             except Exception:
                 pass
             _picam_instance = None
+
+
+# ── Helpers de validación ─────────────────────────────────────────────────────
+
+def _is_valid_face(x: int, y: int, fw: int, fh: int, w_img: int, h_img: int) -> bool:
+    """
+    Valida que una detección sea realmente un rostro y no ropa u otro objeto.
+
+    Criterios:
+    - Tamaño mínimo: el rostro debe tener al menos 70×70 px.
+    - Relación de aspecto: entre 0.5 y 1.6 (caras no son muy alargadas ni muy anchas).
+    - Posición vertical: el borde inferior del bounding box no debe superar el 90 %
+      del alto del frame, lo que evita detectar el torso/ropa en la parte baja.
+    """
+    if fh <= 0 or fw <= 0:
+        return False
+    if fw < 70 or fh < 70:
+        return False
+    aspect = fw / fh
+    if not (0.50 <= aspect <= 1.60):
+        return False
+    face_bottom_frac = (y + fh) / h_img
+    if face_bottom_frac > 0.90:
+        return False
+    return True
+
+
+def _boxes_overlap(a, b, min_iou: float = 0.15) -> bool:
+    """
+    Comprueba si dos cajas (x, y, w, h) se solapan al menos min_iou (IoU).
+    Usado para validación cruzada MediaPipe ↔ cascade.
+    """
+    ax1, ay1, ax2, ay2 = a[0], a[1], a[0] + a[2], a[1] + a[3]
+    bx1, by1, bx2, by2 = b[0], b[1], b[0] + b[2], b[1] + b[3]
+    ix = max(0, min(ax2, bx2) - max(ax1, bx1))
+    iy = max(0, min(ay2, by2) - max(ay1, by1))
+    inter = ix * iy
+    union = a[2] * a[3] + b[2] * b[3] - inter
+    return (inter / union) >= min_iou if union > 0 else False
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -76,24 +110,30 @@ class CamThread(QThread):
     CAMERA_ERROR = "__CAMERA_ERROR__"
     _disable_picamera2 = False
 
+    # Número de fotos a capturar por sesión.
+    CAPTURE_TARGET = 12
+
+    # ── Parámetros de anclaje de posición (solo CAPTURE mode) ────────────────
+    # Una vez detectado el primer rostro, solo se aceptan rostros cuyo centro
+    # esté dentro de ANCHOR_RADIUS px del ancla.  Evita que una segunda persona
+    # que aparezca en cámara "robe" la sesión de captura.
+    _ANCHOR_RADIUS   = 180   # px — tolerancia de movimiento de cabeza
+    _ANCHOR_MAX_MISS = 20    # frames sin detección antes de resetear el ancla
+
     def __init__(self, mode, face_uid="", labels=None, detect_roi=None):
         """
-        detect_roi: tupla (x_frac, y_frac, w_frac, h_frac) normalizada [0..1].
-                    Si se pasa, la detección solo ocurre dentro de esa región
-                    del frame. Útil para limitar la detección al área del marco
-                    verde en la UI y evitar falsos positivos fuera del cuadro.
-                    Ejemplo: (0.20, 0.05, 0.60, 0.90)
+        detect_roi: (x_frac, y_frac, w_frac, h_frac) normalizado [0..1].
+                    Limita la detección al área del marco verde de la UI.
         """
         super().__init__()
         self.mode       = mode
         self.face_uid   = face_uid
         self.labels     = labels or {}
-        self.detect_roi = detect_roi   # FIX #2: región de detección acotada
+        self.detect_roi = detect_roi
         self._active    = True
         self._manual_stop = False
-        self.cap = None  # Solo usado como fallback a OpenCV
+        self.cap = None
 
-        # Intentar usar el singleton de Picamera2
         if Picamera2 is not None and not CamThread._disable_picamera2:
             self.use_picamera2 = True
         else:
@@ -126,9 +166,13 @@ class CamThread(QThread):
         self.wait(3000)
 
     def run(self):
-        capture_count = 0
+        capture_count  = 0
         recognized_uid = ""
-        read_failed = False
+        read_failed    = False
+
+        # Estado del anclaje de posición (solo CAPTURE)
+        face_anchor    = None   # (cx, cy) del primer rostro capturado
+        anchor_misses  = 0      # frames consecutivos sin detección válida
 
         if self.use_picamera2:
             picam = _get_picam()
@@ -144,18 +188,17 @@ class CamThread(QThread):
                 self.rec_done.emit(self.CAMERA_ERROR)
             return
 
-        fc = cv2.CascadeClassifier(CASCADE)
-        sdir = face_dir_for(self.face_uid) if self.mode == self.CAPTURE else None
-
-        # FIX #1: CLAHE para mejorar detección en condiciones de poca luz
+        fc    = cv2.CascadeClassifier(CASCADE)
+        sdir  = face_dir_for(self.face_uid) if self.mode == self.CAPTURE else None
         clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
 
-        # FIX #4: umbral más bajo (0.4 en lugar de 0.5) → mejora con lentes
+        # FIX ROPA: confianza más alta (0.65 en lugar de 0.4).
+        # A 0.4 MediaPipe deja pasar texturas de ropa y fondo.
         mp_face = None
         if MP_AVAILABLE:
             try:
                 mp_face = mp.solutions.face_detection.FaceDetection(
-                    model_selection=0, min_detection_confidence=0.4
+                    model_selection=0, min_detection_confidence=0.65
                 )
             except Exception:
                 mp_face = None
@@ -185,17 +228,15 @@ class CamThread(QThread):
                     read_failed = True
                     break
 
-            # FIX #7: voltear horizontalmente → imagen natural (no espejo)
+            # Espejo corregido
             frame = cv2.flip(frame, 1)
 
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-            # FIX #1: aplicar CLAHE al gris para mejorar contraste en oscuridad
-            gray_enh = clahe.apply(gray)
+            gray     = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            gray_enh = clahe.apply(gray)   # mejora contraste en oscuridad
 
             h_img, w_img = frame.shape[:2]
 
-            # ── FIX #2: acotar zona de detección al ROI del marco verde ───
+            # ── ROI de detección (limita al marco verde) ───────────────────
             if self.detect_roi:
                 xf, yf, wf, hf = self.detect_roi
                 rx1 = max(0, int(xf * w_img))
@@ -213,7 +254,7 @@ class CamThread(QThread):
             h_det, w_det = det_gray.shape[:2]
 
             # ── Detección de rostros ───────────────────────────────────────
-            faces = []
+            raw_faces = []   # candidatos antes de filtrar
 
             if mp_face is not None:
                 try:
@@ -221,9 +262,11 @@ class CamThread(QThread):
                     results = mp_face.process(rgb)
                     if results.detections:
                         for det in results.detections:
+                            score = det.score[0] if det.score else 0
+                            # FIX ROPA: descartamos detecciones de baja confianza
+                            if score < 0.65:
+                                continue
                             bbox = det.location_data.relative_bounding_box
-                            # Coordenadas en píxeles relativas al sub-frame,
-                            # luego trasladadas al frame completo con off_x/off_y
                             x  = int(bbox.xmin * w_det) + off_x
                             y  = int(bbox.ymin * h_det) + off_y
                             bw = int(bbox.width  * w_det)
@@ -232,70 +275,149 @@ class CamThread(QThread):
                             y  = max(0, y)
                             bw = max(1, min(w_img - x, bw))
                             bh = max(1, min(h_img - y, bh))
-                            faces.append((x, y, bw, bh))
+                            raw_faces.append((x, y, bw, bh))
                 except Exception:
-                    # Fallback a cascade si MediaPipe falla en este frame
-                    raw = fc.detectMultiScale(
-                        det_gray, scaleFactor=1.2, minNeighbors=4,
-                        minSize=(50, 50), flags=cv2.CASCADE_SCALE_IMAGE
+                    # Fallback cascade con parámetros más estrictos
+                    casc_raw = fc.detectMultiScale(
+                        det_gray, scaleFactor=1.2, minNeighbors=6,
+                        minSize=(80, 80), flags=cv2.CASCADE_SCALE_IMAGE
                     )
-                    if len(raw):
-                        faces = [
+                    if len(casc_raw):
+                        raw_faces = [
                             (int(x) + off_x, int(y) + off_y, int(w), int(h))
-                            for x, y, w, h in raw
+                            for x, y, w, h in casc_raw
                         ]
             else:
-                # FIX #3: parámetros optimizados para velocidad:
-                #   scaleFactor 1.2 (más fino que 1.3) → más detecciones por ciclo
-                #   minNeighbors 4 (era 5) → menos fallos a costa de algún falso +
-                #   minSize (50,50) → descarta áreas pequeñas (más rápido)
-                raw = fc.detectMultiScale(
-                    det_gray, scaleFactor=1.2, minNeighbors=4,
-                    minSize=(50, 50), flags=cv2.CASCADE_SCALE_IMAGE
+                # Solo cascade — parámetros más estrictos para evitar falsos +
+                casc_raw = fc.detectMultiScale(
+                    det_gray, scaleFactor=1.2, minNeighbors=6,
+                    minSize=(80, 80), flags=cv2.CASCADE_SCALE_IMAGE
                 )
-                if len(raw):
-                    faces = [
+                if len(casc_raw):
+                    raw_faces = [
                         (int(x) + off_x, int(y) + off_y, int(w), int(h))
-                        for x, y, w, h in raw
+                        for x, y, w, h in casc_raw
                     ]
 
-            # FIX #8: conservar únicamente el rostro más grande
-            #         → evita procesar 2-3 rostros detectados a la vez
+            # ── FIX ROPA: validación de aspecto, tamaño y posición ────────
+            # Filtra cualquier detección que no tenga la geometría de un rostro.
+            faces = [
+                f for f in raw_faces
+                if _is_valid_face(f[0], f[1], f[2], f[3], w_img, h_img)
+            ]
+
+            # ── FIX DOS PERSONAS: si hay 2+ rostros → saltar el frame ─────
+            # No capturamos ni reconocemos cuando hay más de una persona en
+            # cámara.  Se dibuja aviso visual y se espera a que quede 1 solo.
             if len(faces) > 1:
-                faces = [max(faces, key=lambda f: f[2] * f[3])]
+                # Dibujar todos los bounding boxes en naranja
+                for (fx, fy, ffw, ffh) in faces:
+                    cv2.rectangle(frame, (fx, fy), (fx + ffw, fy + ffh),
+                                  (0, 140, 255), 2)
+                # Aviso centrado
+                txt = "Solo 1 persona a la vez"
+                (tw, th), _ = cv2.getTextSize(
+                    txt, cv2.FONT_HERSHEY_SIMPLEX, 0.65, 2)
+                tx = max(0, (w_img - tw) // 2)
+                ty = 34
+                cv2.rectangle(frame, (tx - 6, ty - th - 6),
+                              (tx + tw + 6, ty + 6), (0, 0, 0), -1)
+                cv2.putText(frame, txt, (tx, ty),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 140, 255), 2)
+                # Si había ancla, incrementar misses (quizás se pusieron dos personas)
+                anchor_misses += 1
+                if anchor_misses >= self._ANCHOR_MAX_MISS:
+                    face_anchor   = None
+                    anchor_misses = 0
+                self._emit_frame(frame)
+                continue   # no procesar este frame
 
-            # ── Procesado del único rostro detectado ───────────────────────
-            for (x, y, fw, fh) in faces:
-                # Clamp para no salir del frame
-                x  = max(0, min(x, w_img - 1))
-                y  = max(0, min(y, h_img - 1))
-                fw = max(1, min(fw, w_img - x))
-                fh = max(1, min(fh, h_img - y))
+            # ── Un solo rostro válido ──────────────────────────────────────
+            if not faces:
+                # Sin detección — acumular misses y posiblemente resetear ancla
+                anchor_misses += 1
+                if anchor_misses >= self._ANCHOR_MAX_MISS:
+                    face_anchor   = None
+                    anchor_misses = 0
+                self._emit_frame(frame)
+                continue
 
-                # ROI para guardar/reconocer (se usa gray_enh para mejor calidad)
-                roi = cv2.resize(gray_enh[y:y + fh, x:x + fw], (IMG_W, IMG_H))
+            # Exactamente 1 cara
+            (x, y, fw, fh) = faces[0]
 
-                if self.mode == self.CAPTURE:
-                    cv2.imwrite(os.path.join(sdir, "{}.png".format(capture_count)), roi)
-                    capture_count += 1
-                    self.progress.emit(capture_count)
-                    cv2.putText(frame, f"{capture_count}/20", (x, y - 8),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (80, 180, 255), 2)
-                    if capture_count >= 20:
+            # ── FIX DOS PERSONAS (CAPTURE): ancla de posición ─────────────
+            # Al capturar, anclamos en el primer rostro detectado y rechazamos
+            # cualquier detección que aparezca lejos de esa posición (otra persona).
+            if self.mode == self.CAPTURE:
+                cx_now = x + fw // 2
+                cy_now = y + fh // 2
+
+                if face_anchor is None:
+                    # Primera detección → establecer ancla
+                    face_anchor   = (cx_now, cy_now)
+                    anchor_misses = 0
+                else:
+                    dist = math.hypot(cx_now - face_anchor[0],
+                                      cy_now - face_anchor[1])
+                    if dist > self._ANCHOR_RADIUS:
+                        # Cara demasiado lejos del ancla → otra persona, rechazar
+                        cv2.rectangle(frame, (x, y), (x + fw, y + fh),
+                                      (0, 80, 220), 2)
+                        txt2 = "Mantente frente a la camara"
+                        cv2.putText(frame, txt2, (10, 30),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6,
+                                    (0, 80, 220), 2)
+                        anchor_misses += 1
+                        self._emit_frame(frame)
+                        continue
+                    # Cara dentro del área aceptable → suavizar ancla
+                    face_anchor = (
+                        int(0.85 * face_anchor[0] + 0.15 * cx_now),
+                        int(0.85 * face_anchor[1] + 0.15 * cy_now),
+                    )
+                    anchor_misses = 0
+
+            # ── Clamp final para no salir del frame ───────────────────────
+            x  = max(0, min(x,  w_img - 1))
+            y  = max(0, min(y,  h_img - 1))
+            fw = max(1, min(fw, w_img - x))
+            fh = max(1, min(fh, h_img - y))
+
+            # ROI para guardar/reconocer — usa gray_enh (mejor calidad con CLAHE)
+            roi = cv2.resize(gray_enh[y:y + fh, x:x + fw], (IMG_W, IMG_H))
+
+            # ── CAPTURE ───────────────────────────────────────────────────
+            if self.mode == self.CAPTURE:
+                cv2.rectangle(frame, (x, y), (x + fw, y + fh),
+                              (185, 234, 137), 2)
+                cv2.imwrite(
+                    os.path.join(sdir, "{}.png".format(capture_count)), roi
+                )
+                capture_count += 1
+                self.progress.emit(capture_count)
+                cv2.putText(
+                    frame,
+                    f"{capture_count}/{self.CAPTURE_TARGET}",
+                    (x, y - 8),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (80, 180, 255), 2,
+                )
+                if capture_count >= self.CAPTURE_TARGET:
+                    self._active = False
+
+            # ── RECOGNIZE ─────────────────────────────────────────────────
+            elif self.mode == self.RECOGNIZE:
+                try:
+                    lbl_idx, conf = face_model.predict(roi)
+                    if conf < 100 and lbl_idx in self.labels:
+                        recognized_uid = self.labels[lbl_idx]
+                        cv2.rectangle(frame, (x, y), (x + fw, y + fh),
+                                      (185, 234, 137), 2)
+                        cv2.putText(frame, recognized_uid, (x, y - 8),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.7,
+                                    (80, 180, 255), 2)
                         self._active = False
-                        break
-
-                elif self.mode == self.RECOGNIZE:
-                    try:
-                        lbl_idx, conf = face_model.predict(roi)
-                        if conf < 100 and lbl_idx in self.labels:
-                            recognized_uid = self.labels[lbl_idx]
-                            cv2.putText(frame, recognized_uid, (x, y - 8),
-                                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (80, 180, 255), 2)
-                            self._active = False
-                            break
-                    except Exception:
-                        pass
+                except Exception:
+                    pass
 
             self._emit_frame(frame)
 
@@ -312,17 +434,17 @@ class CamThread(QThread):
                 pass
 
         if self.mode == self.CAPTURE:
-            if capture_count >= 20 or not self._manual_stop:
+            if capture_count >= self.CAPTURE_TARGET or not self._manual_stop:
                 ref = self.face_uid
                 if read_failed and capture_count == 0:
                     ref = self.CAMERA_ERROR
-                self.cap_done.emit(capture_count >= 20, ref)
+                self.cap_done.emit(capture_count >= self.CAPTURE_TARGET, ref)
         elif self.mode == self.RECOGNIZE:
             if recognized_uid:
                 self.rec_done.emit(recognized_uid)
             elif read_failed and not self._manual_stop:
                 self.rec_done.emit(self.CAMERA_ERROR)
-            elif self._active is False and not self._manual_stop:
+            elif not self._active and not self._manual_stop:
                 self.rec_done.emit("")
 
     def _emit_frame(self, frame):
