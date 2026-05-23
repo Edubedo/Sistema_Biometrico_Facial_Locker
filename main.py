@@ -130,13 +130,6 @@ class MainWindow(QMainWindow):
         self._nav(self.HOME)
         self._install_window_shortcuts()
 
-        # ── Monitor de lockers abiertos ──────────────────────────────────────
-        self._alerta_visible = False
-        self._alerta_banner  = self._crear_banner_alerta()
-        self._lockers_alertando = set()
-        self._monitor_timer = QTimer(self)
-        self._monitor_timer.timeout.connect(self._check_lockers_abiertos)
-        self._monitor_timer.start(2000)  # revisa cada 2 segundos
 
     def _install_window_shortcuts(self):
         QShortcut(QKeySequence("F11"), self, activated=self.toggle_fullscreen)
@@ -253,55 +246,6 @@ class MainWindow(QMainWindow):
         """Admin autenticado correctamente."""
         self.p_admin.set_admin(admin_data)
         self._nav(self.ADMIN)
-
-    # ── Banner alerta locker abierto ─────────────────────────────────────────
-
-    def _crear_banner_alerta(self):
-        banner = QLabel(self)
-        banner.setAlignment(Qt.AlignCenter)
-        banner.setWordWrap(True)
-        banner.setStyleSheet("""
-            background-color: #D32F2F;
-            color: white;
-            font-size: 22px;
-            font-weight: bold;
-            padding: 18px;
-            border-radius: 0px;
-        """)
-        banner.hide()
-        return banner
-
-    def _check_lockers_abiertos(self):
-        try:
-            from utils.gpio_locker import locker_esta_abierto, SWITCH_PINS, iniciar_monitor, detener_monitor
-        except ImportError:
-            return
-
-        abiertos = []
-        for num in SWITCH_PINS.keys():
-            if locker_esta_abierto(num):
-                abiertos.append(num)
-                if num not in self._lockers_alertando:
-                    self._lockers_alertando.add(num)
-                    iniciar_monitor(num)
-            else:
-                if num in self._lockers_alertando:
-                    self._lockers_alertando.discard(num)
-                    detener_monitor(num)
-
-        if abiertos:
-            nums = ", ".join(f"#{n}" for n in abiertos)
-            self._alerta_banner.setText(f"⚠  LOCKER {nums} ABIERTO — POR FAVOR CIÉRRALO  ⚠")
-            self._alerta_banner.setGeometry(0, 0, self.width(), 70)
-            self._alerta_banner.raise_()
-            self._alerta_banner.show()
-        else:
-            self._alerta_banner.hide()
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        if self._alerta_banner and not self._alerta_banner.isHidden():
-            self._alerta_banner.setGeometry(0, 0, self.width(), 70)
 
     def closeEvent(self, event):
         # Detiene hilos de captura/reconocimiento antes de cerrar Qt.
