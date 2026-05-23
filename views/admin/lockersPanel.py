@@ -15,6 +15,7 @@ from db.models.sesiones import db_close_sesion, db_get_all_sesiones_activas
 from db.models.intentos_acceso import db_log_intento
 from biometria.biometria import train_model
 from views.style.adminDialogs import DlgError, DlgInfo, DlgInput, DlgLiberar
+from utils.gpio_locker import abrir_locker
 from utils.i18n import tr, get_language
 
 
@@ -537,6 +538,7 @@ class LockerCard(QFrame):
             desc = f"Admin liberó locker #{num} manualmente."
             if reason: desc += f" Motivo: {reason}"
             self._log("liberacion_admin", "exitoso", desc)
+            abrir_locker(str(num))
             train_model()
             if self.on_refresh: self.on_refresh()
         except Exception as ex:
