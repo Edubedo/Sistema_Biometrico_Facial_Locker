@@ -78,8 +78,10 @@ def abrir_locker(num_locker):
 
     pin = LOCKER_PINS.get(str(num_locker))
     if pin is None:
-        print(f"[GPIO] ERROR: '{num_locker}' no tiene pin. Claves: {list(LOCKER_PINS.keys())}")
-        return
+        raise ValueError(
+            f"El locker #{num_locker} no tiene un pin GPIO asignado.\n"
+            f"Agrega '\"{ num_locker }\": <pin>' en LOCKER_PINS dentro de utils/gpio_locker.py"
+        )
 
     if not GPIO:
         print(f"[SIMULADO] Locker {num_locker} abierto (sin hardware)")

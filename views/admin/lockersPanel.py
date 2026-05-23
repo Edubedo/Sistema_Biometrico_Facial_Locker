@@ -533,12 +533,12 @@ class LockerCard(QFrame):
         confirmed, reason = DlgLiberar.ask(num, parent=self)
         if not confirmed: return
         try:
+            abrir_locker(str(num))
             self._close_active_session(extra_desc=reason)
             db_set_locker_estado(self.locker["ID_locker"], "libre", self.admin_id)
             desc = f"Admin liberó locker #{num} manualmente."
             if reason: desc += f" Motivo: {reason}"
             self._log("liberacion_admin", "exitoso", desc)
-            abrir_locker(str(num))
             train_model()
             if self.on_refresh: self.on_refresh()
         except Exception as ex:
