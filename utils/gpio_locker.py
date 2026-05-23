@@ -99,13 +99,15 @@ def abrir_locker(num_locker):
             time.sleep(0.05)
             _sonar_sync(1000, 0.15)
 
-            # Abrir cerradura (LED en NO del relay, enciende y apaga solo)
+            # Abrir cerradura + encender LED
+            GPIO.output(LED_PIN, GPIO.HIGH)
             GPIO.output(pin, GPIO.LOW)
             print(f"[GPIO] Relay ON — locker {num_locker} ABIERTO")
 
             time.sleep(PULSE_DURATION)
 
             GPIO.output(pin, GPIO.HIGH)
+            GPIO.output(LED_PIN, GPIO.LOW)
             print(f"[GPIO] Relay OFF — locker {num_locker} CERRADO")
 
         except Exception as e:
