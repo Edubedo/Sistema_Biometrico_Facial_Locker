@@ -112,10 +112,6 @@ class CamThread(QThread):
 
     # Número de fotos a capturar por sesión.
     CAPTURE_TARGET = 12
-    # Reconocimiento: umbral máximo de confianza (LBPH devuelve distancia; menor es mejor)
-    RECOGNIZE_CONF_THRESHOLD = 60
-    # Número de frames consecutivos con la misma etiqueta requeridos para confirmar
-    RECOGNIZE_CONFIRM_FRAMES = 2
 
     # ── Parámetros de anclaje de posición (solo CAPTURE mode) ────────────────
     # Una vez detectado el primer rostro, solo se aceptan rostros cuyo centro
@@ -133,18 +129,6 @@ class CamThread(QThread):
         self.mode       = mode
         self.face_uid   = face_uid
         self.labels     = labels or {}
-        # Número de etiquetas en el modelo (cantidad de personas registradas)
-        self.labels_count = len(self.labels) if self.labels is not None else 0
-        # Umbral dinámico de reconocimiento (LBPH devuelve distancia; menor es mejor)
-        if self.labels_count < 2:
-            # Desactivar reconocimiento cuando hay menos de 2 personas.
-            self._recognize_threshold = None
-        elif self.labels_count <= 3:
-            self._recognize_threshold = 45
-        elif self.labels_count <= 8:
-            self._recognize_threshold = 60
-        else:
-            self._recognize_threshold = 80
         self.detect_roi = detect_roi
         self._active    = True
         self._manual_stop = False
@@ -423,34 +407,15 @@ class CamThread(QThread):
             # ── RECOGNIZE ─────────────────────────────────────────────────
             elif self.mode == self.RECOGNIZE:
                 try:
-                    # Si no hay suficientes etiquetas, no intentamos reconocer.
-                    if getattr(self, '_recognize_threshold', None) is None:
-                        continue
                     lbl_idx, conf = face_model.predict(roi)
-                    # LBPH: menor distancia -> mejor coincidencia
-                    if conf < self._recognize_threshold and lbl_idx in self.labels:
-                        # Mantener buffer de confirmación entre frames
-                        if 'last_lbl_idx' not in locals():
-                            last_lbl_idx = None
-                            last_count = 0
-                        if last_lbl_idx == lbl_idx:
-                            last_count += 1
-                        else:
-                            last_lbl_idx = lbl_idx
-                            last_count = 1
-                        if last_count >= self.RECOGNIZE_CONFIRM_FRAMES:
-                            recognized_uid = self.labels[lbl_idx]
-                            cv2.rectangle(frame, (x, y), (x + fw, y + fh),
-                                          (185, 234, 137), 2)
-                            cv2.putText(frame, recognized_uid, (x, y - 8),
-                                        cv2.FONT_HERSHEY_SIMPLEX, 0.7,
-                                        (80, 180, 255), 2)
-                            self._active = False
-                    else:
-                        # reset on weak/unknown predictions
-                        if 'last_lbl_idx' in locals():
-                            last_lbl_idx = None
-                            last_count = 0
+                    if conf < 100 and lbl_idx in self.labels:
+                        recognized_uid = self.labels[lbl_idx]
+                        cv2.rectangle(frame, (x, y), (x + fw, y + fh),
+                                      (185, 234, 137), 2)
+                        cv2.putText(frame, recognized_uid, (x, y - 8),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.7,
+                                    (80, 180, 255), 2)
+                        self._active = False
                 except Exception:
                     pass
 

@@ -599,12 +599,29 @@ class GuardarPage(QWidget):
         self._update_overlay()
         beep_start_scan()
 
-        # Directo a Fase 2: saltamos el pre-check porque LBPH con pocos
-        # ejemplos produce falsos positivos (confunde nuevas personas
-        # con la única existente). Antes hacíamos train_model() + RECOGNIZE;
-        # eso provocaba que gente nueva quedara bloqueada. Ahora vamos
-        # siempre a la captura.
-        self._start_phase2_capture()
+        # ── FASE 1: Pre-verificación ──────────────────────────────────────
+        # Antes de capturar fotos nuevas, intentar RECONOCER a la persona
+        # contra el modelo actual.  Si se la encuentra con sesión activa →
+        # ya tiene un locker asignado → bloquear y mostrar el número.
+        # Si no se la reconoce (o no hay modelo) → pasar a Fase 2 (captura).
+        labels = train_model()
+        if labels:
+            self._phase = "precheck"
+            self.scan_title_lbl.setText(tr("guard.verifying"))  # "VERIFICANDO..."
+            self._pre_check_timer.start(self._PRECHECK_TIMEOUT_MS)
+
+            self.cam_thread = CamThread(
+                CamThread.RECOGNIZE,
+                labels=labels,
+                detect_roi=_DETECT_ROI,
+            )
+            self.cam_thread.frame_sig.connect(self.cam.update_frame)
+            self.cam_thread.rec_done.connect(self._on_precheck_done)
+            self.cam_thread.finished.connect(self._on_cam_thread_finished)
+            self.cam_thread.start()
+        else:
+            # No hay caras registradas → ir directo a captura
+            self._start_phase2_capture()
 
     # ── Helpers de hilo ───────────────────────────────────────────────────────
 
