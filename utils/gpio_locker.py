@@ -80,10 +80,14 @@ def beep_error():
     threading.Thread(target=_w, daemon=True).start()
 
 def _beep_alerta():
-    """3 pitidos cortos — alerta locker abierto."""
+    """Alarma continua y agresiva — locker abierto."""
+    for _ in range(6):
+        _sonar_sync(2000, 0.2)
+        time.sleep(0.05)
+    time.sleep(0.3)
     for _ in range(3):
-        _sonar_sync(1500, 0.1)
-        time.sleep(0.08)
+        _sonar_sync(1000, 0.4)
+        time.sleep(0.1)
 
 # ── Detección de estado del locker ────────────────────────────────────────────
 def locker_esta_abierto(num_locker):
@@ -94,7 +98,7 @@ def locker_esta_abierto(num_locker):
     pin = SWITCH_PINS.get(str(num_locker))
     if pin is None or not GPIO:
         return False
-    return GPIO.input(pin) == GPIO.HIGH
+    return GPIO.input(pin) == GPIO.LOW
 
 # ── Alerta de locker olvidado abierto ─────────────────────────────────────────
 def _monitor_locker_abierto(num_locker, stop_event):
