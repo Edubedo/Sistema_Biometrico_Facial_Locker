@@ -14,8 +14,8 @@ from db.models.lockers import db_set_locker_estado, db_next_free_locker
 from db.models.sesiones import db_create_sesion, db_get_active_sesion_by_face
 from utils.camera import CamThread
 from utils.gpio_locker import abrir_locker, beep_start_scan, beep_success, beep_error
-from utils.helpers import db_get_locker_num_by_id
 from views.style.widgets.widgets import lbl, sep_line, CamWidget
+from utils.helpers import db_get_locker_num_by_id
 from utils.i18n import tr, get_language
 from utils.ui_touch import touch_height
 
@@ -77,19 +77,21 @@ class ScanLine(QWidget):
         p.end()
 
 
-# ─── Paleta ──────────────────────────────────────────────────────────────────
+# ─── Paleta (mismos tokens que home.py) ─────────────────────────────────────
 BG_TOP       = QColor(10,  20,  45)
 BG_BOT       = QColor(16,  32,  68)
 ACCENT_BLUE  = QColor(41, 128, 255)
-ACCENT_GREEN = QColor(185, 234, 137)
+ACCENT_GREEN = QColor(185, 234, 137)   # verde del scan — funcional, se conserva
 CARD_BG      = QColor(20,  38,  78)
 CARD_BORDER  = QColor(40,  70, 140)
 TEXT_PRIMARY = QColor(220, 235, 255)
 TEXT_MUTED   = QColor(110, 140, 190)
 
 STYLE = """
+/* ── Base ────────────────────────────────────────────────────────────── */
 QWidget#guardar_page { background: transparent; color: #dceaff; }
 
+/* ── Tipografía ───────────────────────────────────────────────────────── */
 QLabel#h2 {
     color: #dceaff;
     font-size: 16px; font-weight: 700;
@@ -108,11 +110,13 @@ QLabel#err   {
     font-family: 'Segoe UI', sans-serif;
 }
 
+/* ── Separadores ──────────────────────────────────────────────────────── */
 QFrame#sep {
     background: rgba(41,128,255,0.25);
     min-height: 1px; max-height: 1px; border: none;
 }
 
+/* ── Cards ────────────────────────────────────────────────────────────── */
 QFrame#card {
     background: rgba(20,38,78,0.92);
     border: 1.5px solid rgba(40,70,140,0.80);
@@ -124,12 +128,14 @@ QFrame#cam_card {
     border-radius: 16px;
 }
 
+/* ── Cámara ───────────────────────────────────────────────────────────── */
 QLabel#cam {
     background: #050a1a;
     border: 3px solid rgba(185, 234, 137, 0.6);
     border-radius: 12px;
 }
 
+/* ── Barra de progreso ───────────────────────────────────────────────── */
 QFrame#prog_bg {
     background: rgba(10,20,50,0.80);
     border-radius: 4px; min-height: 7px; max-height: 7px;
@@ -140,6 +146,7 @@ QFrame#prog_fill {
     border-radius: 4px; min-height: 7px; max-height: 7px;
 }
 
+/* ── Botones principales ─────────────────────────────────────────────── */
 QPushButton#btn_blue {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
         stop:0 rgba(20,50,120,0.95),
@@ -151,6 +158,7 @@ QPushButton#btn_blue {
     padding: 10px 12px;
     font-size: 14px; font-weight: 800;
     font-family: 'Segoe UI', sans-serif;
+    letter-spacing: 0px;
 }
 QPushButton#btn_blue:hover {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
@@ -159,13 +167,16 @@ QPushButton#btn_blue:hover {
         stop:1 rgba(100,160,255,0.98));
     border-color: rgba(41,128,255,0.95);
 }
-QPushButton#btn_blue:pressed { background: rgba(20,38,78,0.95); }
+QPushButton#btn_blue:pressed {
+    background: rgba(20,38,78,0.95);
+}
 QPushButton#btn_blue:disabled {
     background: rgba(20,38,78,0.60);
     color: rgba(110,140,190,0.55);
     border-color: rgba(40,70,140,0.30);
 }
 
+/* ── Botones secundarios ─────────────────────────────────────────────── */
 QPushButton#btn_sm {
     background: rgba(20,38,78,0.80);
     color: #b0c8f0;
@@ -180,40 +191,59 @@ QPushButton#btn_sm:hover {
     border-color: rgba(41,128,255,0.80);
     color: #dceaff;
 }
-QPushButton#btn_sm:pressed { background: rgba(14,26,58,0.95); }
+QPushButton#btn_sm:pressed {
+    background: rgba(14,26,58,0.95);
+}
 
-/* ── Step overlay ────────────────────────────────────────────────────────── */
-QFrame#step_card {
-    background: rgba(8, 16, 42, 0.91);
-    border: 2px solid rgba(41,128,255,0.50);
-    border-radius: 20px;
+/* ── Carousel ────────────────────────────────────────────────────────── */
+QFrame#carousel_inner {
+    background: rgba(12,22,50,0.70);
+    border: 1px solid rgba(40,70,140,0.50);
+    border-radius: 10px;
 }
-QLabel#step_counter {
-    color: rgba(110,140,190,0.85);
-    font-size: 11px; font-weight: 700;
-    font-family: 'Courier New'; letter-spacing: 3px;
-}
-QLabel#step_main_text {
-    color: #dceaff;
-    font-size: 16px; font-weight: 700;
+QLabel#carousel_text {
+    color: #b0c8f0;
+    font-size: 12px; font-weight: 600;
     font-family: 'Segoe UI', sans-serif;
 }
-QFrame#dots_row { background: transparent; border: none; }
 QPushButton#dot_inactive {
-    background: rgba(41,128,255,0.25);
+    background: transparent;
     border: 2px solid rgba(41,128,255,0.35);
-    border-radius: 4px;
-    min-width: 8px; max-width: 8px;
-    min-height: 8px; max-height: 8px;
+    border-radius: 3px;
+    min-width: 7px; max-width: 7px;
+    min-height: 7px; max-height: 7px;
+}
+QPushButton#dot_inactive:hover {
+    background: rgba(41,128,255,0.25);
+    border-color: rgba(41,128,255,0.80);
 }
 QPushButton#dot_active {
     background: #2980ff;
-    border: 2px solid rgba(41,128,255,0.90);
-    border-radius: 5px;
-    min-width: 10px; max-width: 10px;
-    min-height: 10px; max-height: 10px;
+    border: 2px solid rgba(41,128,255,0.80);
+    border-radius: 4px;
+    min-width: 9px; max-width: 9px;
+    min-height: 9px; max-height: 9px;
 }
 """
+
+_CAM_ICON_SVG = b"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+     fill="none" stroke="white" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8
+           a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+  <circle cx="12" cy="13" r="4"/>
+</svg>"""
+
+
+def _svg_to_icon(svg_bytes: bytes, size: int = 15) -> QIcon:
+    renderer = QSvgRenderer(svg_bytes)
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.transparent)
+    painter = QPainter(pixmap)
+    renderer.render(painter)
+    painter.end()
+    return QIcon(pixmap)
+
 
 CAROUSEL_STEPS = [
     (b"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
@@ -258,129 +288,95 @@ CAROUSEL_STEPS = [
      </svg>""", "Tus imagenes se borran al terminar"),
 ]
 
-_STEP_KEYS = [
-    "guard.step1", "guard.step2", "guard.step3", "guard.step4", "guard.step5"
-]
 
-# ── Proporciones del marco de escaneo ────────────────────────────────────────
-_FRAME_W_FRAC = 0.62
-_FRAME_H_FRAC = 0.90
-_FRAME_X_FRAC = (1.0 - _FRAME_W_FRAC) / 2.0
-_FRAME_Y_FRAC = (1.0 - _FRAME_H_FRAC) / 2.0
-_DETECT_ROI   = (_FRAME_X_FRAC, _FRAME_Y_FRAC, _FRAME_W_FRAC, _FRAME_H_FRAC)
-# ─────────────────────────────────────────────────────────────────────────────
-
-# Duración de cada paso en ms antes de avanzar al siguiente
-_STEP_DURATION_MS = 2200
-
-
-class StepOverlay(QWidget):
-    """
-    Overlay que muestra los pasos del proceso uno por uno sobre la cámara.
-    Cada paso dura _STEP_DURATION_MS ms. Al terminar el último emite `finished`.
-    No tiene botón — avanza solo. Se posiciona como hijo de CamWidget.
-    """
-    finished = pyqtSignal()
-
+class CarouselWidget(QWidget):
+    """Carousel sin QFrame propio — vive dentro del card azul del panel izquierdo."""
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setAttribute(Qt.WA_TransparentForMouseEvents, False)
         self._current = 0
         self._dot_btns = []
+        self._step_keys = [
+            "guard.step1", "guard.step2", "guard.step3", "guard.step4", "guard.step5"
+        ]
 
-        # Layout raíz — centra la card en el widget
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
-        root.setAlignment(Qt.AlignCenter)
+        root.setSpacing(6)
 
-        # Card flotante
-        self._card = QFrame()
-        self._card.setObjectName("step_card")
-        card_l = QVBoxLayout(self._card)
-        card_l.setContentsMargins(28, 22, 28, 22)
-        card_l.setSpacing(14)
-        card_l.setAlignment(Qt.AlignCenter)
+        self.how_lbl = lbl("", "tag", Qt.AlignCenter)
+        root.addWidget(self.how_lbl)
 
-        # Contador "PASO X DE 5"
-        self._counter_lbl = QLabel()
-        self._counter_lbl.setObjectName("step_counter")
-        self._counter_lbl.setAlignment(Qt.AlignCenter)
-        card_l.addWidget(self._counter_lbl)
+        # Card blanco interior — stretch=1 para llenar espacio disponible
+        self._inner = QFrame()
+        self._inner.setObjectName("carousel_inner")
+        inner_l = QVBoxLayout(self._inner)
+        inner_l.setContentsMargins(10, 10, 10, 10)
+        inner_l.setSpacing(8)
+        inner_l.setAlignment(Qt.AlignCenter)
 
-        # Icono SVG grande
         self._svg = QSvgWidget()
-        self._svg.setFixedSize(90, 90)
+        self._svg.setFixedSize(56, 56)
         self._svg.setStyleSheet("background: transparent;")
-        card_l.addWidget(self._svg, alignment=Qt.AlignCenter)
+        inner_l.addWidget(self._svg, alignment=Qt.AlignCenter)
 
-        # Texto del paso
         self._text_lbl = QLabel()
-        self._text_lbl.setObjectName("step_main_text")
+        self._text_lbl.setObjectName("carousel_text")
         self._text_lbl.setAlignment(Qt.AlignCenter)
         self._text_lbl.setWordWrap(True)
-        card_l.addWidget(self._text_lbl)
+        inner_l.addWidget(self._text_lbl)
 
-        # Dots de progreso
+        root.addWidget(self._inner, 1)   # rellena el espacio
+
         dots_row = QHBoxLayout()
-        dots_row.setSpacing(8)
+        dots_row.setSpacing(6)
         dots_row.setAlignment(Qt.AlignCenter)
         for i in range(len(CAROUSEL_STEPS)):
             btn = QPushButton()
-            btn.setFocusPolicy(Qt.NoFocus)
-            btn.setAttribute(Qt.WA_TransparentForMouseEvents)  # solo decorativos
+            btn.setCursor(Qt.PointingHandCursor)
+            btn.clicked.connect(lambda _, idx=i: self._go_to(idx))
             dots_row.addWidget(btn)
             self._dot_btns.append(btn)
-        card_l.addLayout(dots_row)
+        root.addLayout(dots_row)
 
-        root.addWidget(self._card)
-
-        # Timer que avanza los pasos
         self._timer = QTimer(self)
-        self._timer.setSingleShot(True)
-        self._timer.timeout.connect(self._next_step)
-
+        self._timer.timeout.connect(self._next)
+        self._timer.start(2800)
+        self._render(0)
         self.set_language(get_language())
 
     def set_language(self, _lang: str):
+        self.how_lbl.setText(tr("guard.how"))
         self._render(self._current)
-
-    def start(self):
-        """Reinicia desde el paso 0 y arranca el timer."""
-        self._current = 0
-        self._render(0)
-        self._timer.start(_STEP_DURATION_MS)
-
-    def stop(self):
-        self._timer.stop()
 
     def _render(self, idx):
         self._current = idx
-        svg_data, _fallback = CAROUSEL_STEPS[idx]
+        svg_data, _ = CAROUSEL_STEPS[idx]
         self._svg.load(svg_data)
-        self._text_lbl.setText(tr(_STEP_KEYS[idx]))
-        total = len(CAROUSEL_STEPS)
-        self._counter_lbl.setText("PASO {} DE {}".format(idx + 1, total))
+        self._text_lbl.setText(tr(self._step_keys[idx]))
         for i, btn in enumerate(self._dot_btns):
             btn.setObjectName("dot_active" if i == idx else "dot_inactive")
             btn.setStyle(btn.style())
 
-    def _next_step(self):
-        nxt = self._current + 1
-        if nxt >= len(CAROUSEL_STEPS):
-            # Último paso terminado → ocultar y avisar
-            self.hide()
-            self.finished.emit()
-        else:
-            self._render(nxt)
-            self._timer.start(_STEP_DURATION_MS)
+    def _next(self):
+        self._render((self._current + 1) % len(CAROUSEL_STEPS))
 
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        # Card entre 300 y 500 px de ancho, con margen de 40 px a cada lado
-        max_w = min(self.width() - 40, 500)
-        max_w = max(max_w, 300)
-        self._card.setMaximumWidth(max_w)
-        self._card.setMinimumWidth(min(300, self.width() - 40))
+    def _go_to(self, idx):
+        self._timer.stop()
+        self._render(idx)
+        self._timer.start(2800)
+
+
+# ── Proporciones del marco de escaneo ────────────────────────────────────────
+# FIX #2: marco más grande (0.62 ancho, 0.90 alto) → el usuario cabe mejor
+#          y la detección se acota a exactamente esta zona.
+_FRAME_W_FRAC = 0.62
+_FRAME_H_FRAC = 0.90
+_FRAME_X_FRAC = (1.0 - _FRAME_W_FRAC) / 2.0   # ≈ 0.19 — margen izquierdo
+_FRAME_Y_FRAC = (1.0 - _FRAME_H_FRAC) / 2.0   # ≈ 0.05 — margen superior
+
+# detect_roi que se pasa a CamThread: coincide con el marco visual
+_DETECT_ROI = (_FRAME_X_FRAC, _FRAME_Y_FRAC, _FRAME_W_FRAC, _FRAME_H_FRAC)
+# ─────────────────────────────────────────────────────────────────────────────
 
 
 class GuardarPage(QWidget):
@@ -396,13 +392,14 @@ class GuardarPage(QWidget):
         super().__init__()
         self.setObjectName("guardar_page")
         self.setStyleSheet(STYLE)
-        self.cam_thread = None
+        self.cam_thread       = None
         self._face_uid        = None
         self._id_locker       = None
-        self._num_locker      = None
-        self._capture_started = False
-        self._phase           = None
+        self._num_locker      = None   # guardamos num para no re-consultar BD
+        self._capture_started = False  # evita doble disparo del auto-inicio
+        self._phase           = None   # 'precheck' | 'capture'
 
+        # Timer de seguridad para la fase de pre-verificacion.
         self._pre_check_timer = QTimer(self)
         self._pre_check_timer.setSingleShot(True)
         self._pre_check_timer.timeout.connect(self._on_precheck_timeout)
@@ -411,7 +408,7 @@ class GuardarPage(QWidget):
         root.setContentsMargins(8, 8, 8, 6)
         root.setSpacing(4)
 
-        # ── Header ───────────────────────────────────────────────────────────
+        # Header
         hdr = QHBoxLayout(); hdr.setSpacing(6)
         self.back_btn = QPushButton("")
         back = self.back_btn
@@ -424,31 +421,50 @@ class GuardarPage(QWidget):
         self.subtitle_lbl = lbl("", "tag")
         htxt.addWidget(self.title_lbl)
         htxt.addWidget(self.subtitle_lbl)
-
-        self.err_lbl = lbl("", "err")
-        self.err_lbl.setWordWrap(True)
-        self.err_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-
-        hdr.addWidget(back)
-        hdr.addSpacing(6)
-        hdr.addLayout(htxt)
-        hdr.addStretch()
-        hdr.addWidget(self.err_lbl)
+        hdr.addWidget(back); hdr.addSpacing(6); hdr.addLayout(htxt); hdr.addStretch()
         root.addLayout(hdr)
         root.addWidget(sep_line())
 
-        # ── Body: cámara ocupa todo el ancho ─────────────────────────────────
-        body = QHBoxLayout()
-        body.setSpacing(0)
+        # Body
+        body = QHBoxLayout(); body.setSpacing(8)
         body.setContentsMargins(6, 4, 6, 4)
 
-        cam_card = QFrame()
-        cam_card.setObjectName("cam_card")
-        cam_card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        rl = QVBoxLayout(cam_card)
-        rl.setContentsMargins(6, 6, 6, 6)
-        rl.setSpacing(4)
+        # Panel izquierdo — ancho fijo para dejar espacio a la camara
+        left = QFrame(); left.setObjectName("card")
+        left.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+        left.setFixedWidth(300)
+        ll = QVBoxLayout(left)
+        ll.setContentsMargins(12, 10, 12, 10)
+        ll.setSpacing(10)
 
+        self._carousel = CarouselWidget()
+        ll.addWidget(self._carousel, 1)
+
+        # FIX #6: el botón queda como "REINTENTAR" después del primer auto-inicio.
+        #         setFocusPolicy(NoFocus) elimina el doble-tap en pantallas táctiles.
+        self.start_btn = QPushButton("INICIAR ESCANEO")
+        self.start_btn.setObjectName("btn_blue")
+        self.start_btn.setIcon(_svg_to_icon(_CAM_ICON_SVG, 20))
+        self.start_btn.setIconSize(QSize(20, 20))
+        self.start_btn.setFixedHeight(touch_height(72))
+        self.start_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.start_btn.setCursor(Qt.PointingHandCursor)
+        self.start_btn.setFocusPolicy(Qt.NoFocus)   # evita doble-tap en touch
+        self.start_btn.clicked.connect(self._start_capture)
+        ll.addWidget(self.start_btn)
+
+        self.err_lbl = lbl("", "err")
+        self.err_lbl.setWordWrap(True)
+        self.err_lbl.setFixedHeight(28)
+        ll.addWidget(self.err_lbl)
+
+        body.addWidget(left)
+
+        # Panel derecho — camara
+        right = QFrame(); right.setObjectName("cam_card")
+        right.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        rl = QVBoxLayout(right)
+        rl.setContentsMargins(6, 6, 6, 6); rl.setSpacing(4)
         self.scan_title_lbl = lbl("", "tag", Qt.AlignCenter)
         rl.addWidget(self.scan_title_lbl, 0)
 
@@ -456,10 +472,10 @@ class GuardarPage(QWidget):
         self.cam.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         rl.addWidget(self.cam, 1)
 
-        body.addWidget(cam_card, 1)
+        body.addWidget(right, 1)
         root.addLayout(body, 1)
 
-        # ── Overlays de escaneo (sin cambios) ────────────────────────────────
+        # Overlays (hijos de self.cam — coordenadas relativas al widget de video)
         self.face_guide = QSvgWidget(self.cam)
         self.face_guide.load(b"""
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120">
@@ -485,15 +501,8 @@ class GuardarPage(QWidget):
         self.scan_frame.setVisible(False)
 
         self.scan_line = ScanLine(self.cam)
-
-        # ── Step overlay (hijo de self.cam, encima de todo) ───────────────────
-        self._step_overlay = StepOverlay(self.cam)
-        self._step_overlay.finished.connect(self._start_capture)
-        self._step_overlay.setVisible(False)
-
         self.set_language(get_language())
 
-    # ── paintEvent sin cambios ────────────────────────────────────────────────
     def paintEvent(self, _):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
@@ -529,38 +538,41 @@ class GuardarPage(QWidget):
         self.title_lbl.setText(tr("guard.title"))
         self.subtitle_lbl.setText(tr("guard.subtitle"))
         self.scan_title_lbl.setText(tr("guard.scan_title"))
-        self._step_overlay.set_language(lang)
+        self.start_btn.setText(tr("guard.start"))
+        self._carousel.set_language(lang)
 
     def showEvent(self, e):
         super().showEvent(e)
-        self._capture_started = False
+        self._capture_started = False   # reset al mostrar la página
 
         result = db_next_free_locker()
         if result:
+            # FIX #5: guardar id Y num en un solo lugar → _on_capture_done
+            #          no necesita volver a consultar la BD (evita doble asignación)
             self._id_locker, self._num_locker = result
+            self.start_btn.setEnabled(True)
             self.err_lbl.setText("")
-            QTimer.singleShot(400, self._show_steps)
+
+            # FIX #6: auto-arranque con 1 solo toque en la pantalla anterior.
+            #          400 ms de margen para que la página termine de pintarse.
+            QTimer.singleShot(400, self._auto_start)
         else:
             self._id_locker  = None
             self._num_locker = None
             self.err_lbl.setText(tr("guard.no_lockers_now"))
+            self.start_btn.setEnabled(False)
 
-    def _show_steps(self):
-        """Posiciona el overlay sobre self.cam y arranca la secuencia de pasos."""
-        self._step_overlay.setGeometry(0, 0, self.cam.width(), self.cam.height())
-        self._step_overlay.raise_()
-        self._step_overlay.setVisible(True)
-        self._step_overlay.start()
+    def _auto_start(self):
+        """Dispara el escaneo automáticamente al entrar a la página."""
+        if not self._capture_started and self._id_locker:
+            self._start_capture()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
         QTimer.singleShot(0, self._update_overlay)
-        if self._step_overlay.isVisible():
-            self._step_overlay.setGeometry(0, 0, self.cam.width(), self.cam.height())
-
-    # ── Resto de métodos sin ningún cambio ────────────────────────────────────
 
     def _start_capture(self):
+        # Guard contra doble disparo (auto + click manual simultáneo)
         if self._capture_started:
             return
         self._capture_started = True
@@ -573,18 +585,25 @@ class GuardarPage(QWidget):
 
         self._stop_cam_thread()
 
+        # Generar uid temporal para las fotos de esta sesión
         tmp_uid = "tmp_{}".format(datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
         self._face_uid = tmp_uid
+        self.start_btn.setEnabled(False)
         self.err_lbl.setText("")
         self.scan_frame.setVisible(True)
         self.face_guide.setVisible(True)
         self._update_overlay()
         beep_start_scan()
 
+        # ── FASE 1: Pre-verificación ──────────────────────────────────────
+        # Antes de capturar fotos nuevas, intentar RECONOCER a la persona
+        # contra el modelo actual.  Si se la encuentra con sesión activa →
+        # ya tiene un locker asignado → bloquear y mostrar el número.
+        # Si no se la reconoce (o no hay modelo) → pasar a Fase 2 (captura).
         labels = train_model()
         if labels:
             self._phase = "precheck"
-            self.scan_title_lbl.setText(tr("guard.verifying"))
+            self.scan_title_lbl.setText(tr("guard.verifying"))  # "VERIFICANDO..."
             self._pre_check_timer.start(self._PRECHECK_TIMEOUT_MS)
 
             self.cam_thread = CamThread(
@@ -597,9 +616,13 @@ class GuardarPage(QWidget):
             self.cam_thread.finished.connect(self._on_cam_thread_finished)
             self.cam_thread.start()
         else:
+            # No hay caras registradas → ir directo a captura
             self._start_phase2_capture()
 
+    # ── Helpers de hilo ───────────────────────────────────────────────────────
+
     def _stop_cam_thread(self):
+        """Detiene el hilo de cámara activo y espera a que termine."""
         if self.cam_thread:
             if self.cam_thread.isRunning():
                 self.cam_thread.stop()
@@ -613,16 +636,29 @@ class GuardarPage(QWidget):
         if sender is self.cam_thread:
             self.cam_thread = None
 
+    # ── Fase 1: Pre-verificación ──────────────────────────────────────────────
+
     def _on_precheck_timeout(self):
+        """
+        El timeout de pre-verificación se agotó sin detectar ninguna cara
+        conocida → la persona es nueva → pasar a Fase 2 (captura).
+        """
         self._stop_cam_thread()
         self._start_phase2_capture()
 
     def _on_precheck_done(self, face_uid: str):
+        """
+        Callback de la Fase 1 (RECOGNIZE).  Tres posibles resultados:
+          - face_uid válido + sesión activa  → persona ya tiene locker → bloquear
+          - face_uid válido + sin sesión     → persona registrada pero sin locker → capturar
+          - face_uid vacío / CAMERA_ERROR   → no reconocido / error → capturar
+        """
         self._pre_check_timer.stop()
 
         if face_uid and face_uid != CamThread.CAMERA_ERROR:
             sesion = db_get_active_sesion_by_face(face_uid)
             if sesion:
+                # ── BLOQUEADO: ya tiene locker activo ────────────────────
                 if isinstance(sesion, dict):
                     id_locker_e = sesion.get("ID_locker")
                 else:
@@ -642,6 +678,7 @@ class GuardarPage(QWidget):
                 self.cam.set_status(msg, "#bd0a0a")
                 self.cam.idle()
                 self.err_lbl.setText(msg)
+                self.start_btn.setEnabled(True)
 
                 db_log_intento(
                     id_locker_e or 0, "registro_biometrico", "bloqueado",
@@ -649,11 +686,18 @@ class GuardarPage(QWidget):
                 )
                 return
 
+        # No reconocido o sin sesión activa → proceder a captura
         self._start_phase2_capture()
 
+    # ── Fase 2: Captura de rostro ─────────────────────────────────────────────
+
     def _start_phase2_capture(self):
+        """
+        Inicia el hilo de captura (CAPTURE mode).
+        Se llama cuando la Fase 1 confirma que la persona NO tiene locker activo.
+        """
         self._phase = "capture"
-        self._stop_cam_thread()
+        self._stop_cam_thread()   # asegurar que el hilo de precheck terminó
         self.scan_title_lbl.setText(tr("guard.scan_title"))
 
         self.cam_thread = CamThread(
@@ -668,10 +712,12 @@ class GuardarPage(QWidget):
         self.cam_thread.start()
 
     def _on_capture_thread_finished(self):
+        # Mantenido por compatibilidad; la lógica real está en _on_cam_thread_finished
         self._on_cam_thread_finished()
 
     def _on_capture_done(self, ok, tmp_uid):
-        self._capture_started = False
+        self._capture_started = False   # permite reintentar si hay error
+        self.start_btn.setEnabled(True)
         self.scan_frame.setVisible(False)
         self.scan_line.hide()
         self.face_guide.setVisible(False)
@@ -701,6 +747,9 @@ class GuardarPage(QWidget):
         self.cam.set_status(tr("guard.face_ok"), "#B9EA89")
         QTimer.singleShot(850, self.cam.idle)
 
+        # FIX #5: usar el locker ya asignado en showEvent (self._id_locker /
+        #          self._num_locker) en lugar de volver a llamar db_next_free_locker().
+        #          Esto evita que se asignen dos lockers distintos a la misma persona.
         if not self._id_locker or self._num_locker is None:
             delete_face_data(tmp_uid)
             self.failed.emit(tr("guard.no_lockers"))
@@ -723,25 +772,17 @@ class GuardarPage(QWidget):
         db_set_locker_estado(id_locker, "ocupado")
 
         # Abrir cerradura solenoide del locker asignado
-        try:
-            try:
-                abrir_locker(str(num_locker))
-            except ValueError as e:
-                from views.style.adminDialogs import DlgError
-                DlgError.show(str(e), parent=self)
-                return
-        except ValueError as e:
-            from views.style.adminDialogs import DlgError
-            DlgError.show(str(e), parent=self)
-            return
+        abrir_locker(str(num_locker))
 
         db_log_intento(id_locker, "registro_biometrico", "exitoso",
                        "Sesion {} creada. Locker #{} asignado.".format(id_sesion, num_locker),
                        id_sesion=id_sesion)
 
+        # train_model en background para no bloquear la apertura de la cerradura
         import threading
         threading.Thread(target=train_model, daemon=True).start()
 
+        # Limpiar referencia al locker para que no pueda reasignarse
         self._id_locker  = None
         self._num_locker = None
 
@@ -749,7 +790,6 @@ class GuardarPage(QWidget):
 
     def _cancel(self):
         self._pre_check_timer.stop()
-        self._step_overlay.stop()
         self._stop_cam_thread()
         if self._face_uid:
             delete_face_data(self._face_uid)
@@ -757,7 +797,6 @@ class GuardarPage(QWidget):
 
     def reset(self):
         self._pre_check_timer.stop()
-        self._step_overlay.stop()
         self._stop_cam_thread()
         self._face_uid        = None
         self._id_locker       = None
@@ -766,15 +805,19 @@ class GuardarPage(QWidget):
         self._phase           = None
         self.err_lbl.setText("")
         self.cam.idle()
+        self.start_btn.setEnabled(True)
         self.scan_frame.setVisible(False)
         self.scan_line.hide()
         self.face_guide.setVisible(False)
-        self._step_overlay.setVisible(False)
 
     def _update_overlay(self):
         cam_w = self.cam.width()
         cam_h = self.cam.height()
 
+        # FIX #2: proporciones ampliadas — ahora usan las constantes globales
+        #          (_FRAME_W_FRAC=0.62, _FRAME_H_FRAC=0.90) en lugar de 0.42/0.80.
+        #          Estas mismas fracciones se pasan como detect_roi a CamThread,
+        #          de modo que el área verde y la zona de detección siempre coinciden.
         frame_w = int(cam_w * _FRAME_W_FRAC)
         frame_h = int(cam_h * _FRAME_H_FRAC)
         frame_x = (cam_w - frame_w) // 2
