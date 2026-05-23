@@ -26,7 +26,7 @@ SWITCH_PINS = {
 
 LED_PIN        = 22    # Pin físico 15 — LED indicador
 PULSE_DURATION = 2.0   # Segundos que el solenoide permanece abierto
-ALERTA_SEGUNDOS = 10   # Segundos antes de que el buzzer alerte locker abierto
+ALERTA_SEGUNDOS = 0    # Empieza a alertar de inmediato
 
 # ── Setup inicial ──────────────────────────────────────────────────────────────
 if GPIO:

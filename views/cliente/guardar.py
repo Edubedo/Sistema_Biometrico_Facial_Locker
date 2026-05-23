@@ -724,7 +724,12 @@ class GuardarPage(QWidget):
 
         # Abrir cerradura solenoide del locker asignado
         try:
-            abrir_locker(str(num_locker))
+            try:
+                abrir_locker(str(num_locker))
+            except ValueError as e:
+                from views.style.adminDialogs import DlgError
+                DlgError.show(str(e), parent=self)
+                return
         except ValueError as e:
             from views.style.adminDialogs import DlgError
             DlgError.show(str(e), parent=self)
