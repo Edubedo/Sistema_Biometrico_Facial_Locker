@@ -18,14 +18,23 @@ LOCKER_PINS = {
     "2": 27,           # Pin físico 13 — relay cerradura 2
 }
 
-LED_PIN    = 22        # Pin físico 15 — LED indicador
+# Switches para detectar si el locker está abierto o cerrado
+SWITCH_PINS = {
+    "1": 23,           # Pin físico 16 — switch locker 1
+    "2": 25,           # Pin físico 22 — switch locker 2
+}
+
+LED_PIN        = 22    # Pin físico 15 — LED indicador
 PULSE_DURATION = 2.0   # Segundos que el solenoide permanece abierto
+ALERTA_SEGUNDOS = 10   # Segundos antes de que el buzzer alerte locker abierto
 
 # ── Setup inicial ──────────────────────────────────────────────────────────────
 if GPIO:
     for pin in LOCKER_PINS.values():
         GPIO.setup(pin, GPIO.OUT, initial=GPIO.HIGH)
         GPIO.output(pin, GPIO.HIGH)
+    for pin in SWITCH_PINS.values():
+        GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # pull-up interno
     GPIO.setup(LED_PIN,    GPIO.OUT, initial=GPIO.HIGH)
     GPIO.output(LED_PIN,    GPIO.HIGH)
     GPIO.setup(BUZZER_PIN, GPIO.OUT, initial=GPIO.LOW)
@@ -34,6 +43,9 @@ if GPIO:
 
 # ── Lock global para el buzzer (evita colisión de PWM) ────────────────────────
 _buzzer_lock = threading.Lock()
+
+# ── Hilos de alerta activos por locker ────────────────────────────────────────
+_alertas_activas = {}   # num_locker -> threading.Event (para detener alerta)
 
 def _sonar_sync(frecuencia, duracion):
     """Tono síncrono con lock para evitar colisión de PWM."""
@@ -67,20 +79,81 @@ def beep_error():
         _sonar_sync(220, 0.25)
     threading.Thread(target=_w, daemon=True).start()
 
+def _beep_alerta():
+    """3 pitidos cortos — alerta locker abierto."""
+    for _ in range(3):
+        _sonar_sync(1500, 0.1)
+        time.sleep(0.08)
+
+# ── Detección de estado del locker ────────────────────────────────────────────
+def locker_esta_abierto(num_locker):
+    """
+    Retorna True si el switch detecta que el locker está abierto.
+    Switch en NO + pull-up: LOW = cerrado, HIGH = abierto.
+    """
+    pin = SWITCH_PINS.get(str(num_locker))
+    if pin is None or not GPIO:
+        return False
+    return GPIO.input(pin) == GPIO.HIGH
+
+# ── Alerta de locker olvidado abierto ─────────────────────────────────────────
+def _monitor_locker_abierto(num_locker, stop_event):
+    """
+    Espera ALERTA_SEGUNDOS y si el locker sigue abierto,
+    suena el buzzer en loop hasta que se cierre.
+    """
+    print(f"[SWITCH] Monitor iniciado — locker {num_locker}")
+    time.sleep(ALERTA_SEGUNDOS)
+
+    while not stop_event.is_set():
+        if not locker_esta_abierto(num_locker):
+            print(f"[SWITCH] Locker {num_locker} cerrado — alerta detenida")
+            break
+        print(f"[SWITCH] Locker {num_locker} lleva más de {ALERTA_SEGUNDOS}s abierto — alertando")
+        _beep_alerta()
+        time.sleep(5)  # espera 5 segundos antes de volver a alertar
+
+def iniciar_monitor(num_locker):
+    """Inicia el monitor de locker abierto para el locker indicado."""
+    # Cancelar monitor anterior si existe
+    detener_monitor(num_locker)
+    stop_event = threading.Event()
+    _alertas_activas[str(num_locker)] = stop_event
+    t = threading.Thread(
+        target=_monitor_locker_abierto,
+        args=(num_locker, stop_event),
+        daemon=True,
+        name=f"monitor-{num_locker}"
+    )
+    t.start()
+
+def detener_monitor(num_locker):
+    """Detiene el monitor de alerta del locker indicado."""
+    ev = _alertas_activas.pop(str(num_locker), None)
+    if ev:
+        ev.set()
+
 # ── Cerraduras ─────────────────────────────────────────────────────────────────
 def abrir_locker(num_locker):
     """
-    Abre la cerradura del locker indicado, suena buzzer y enciende LED 15s.
-    Lógica invertida: LOW activa relay, HIGH lo desactiva.
-    NO es daemon — el hilo vive hasta completarse aunque el UI cambie de página.
+    Abre la cerradura del locker indicado.
+    - Bloquea si el switch detecta que ya está abierto.
+    - Enciende LED mientras está abierto.
+    - Inicia monitor de alerta si se deja abierto más de 10 segundos.
     """
-    print(f"[GPIO] abrir_locker('{num_locker}') — tipo={type(num_locker).__name__}")
+    print(f"[GPIO] abrir_locker('{num_locker}')")
 
     pin = LOCKER_PINS.get(str(num_locker))
     if pin is None:
         raise ValueError(
             f"El locker #{num_locker} no tiene un pin GPIO asignado.\n"
             f"Agrega '\"{ num_locker }\": <pin>' en LOCKER_PINS dentro de utils/gpio_locker.py"
+        )
+
+    if locker_esta_abierto(num_locker):
+        raise ValueError(
+            f"El locker #{num_locker} ya está abierto físicamente.\n"
+            "Ciérralo antes de intentar abrirlo desde el sistema."
         )
 
     if not GPIO:
@@ -90,9 +163,8 @@ def abrir_locker(num_locker):
     def _worker():
         print(f"[GPIO] _worker iniciado — locker={num_locker} pin={pin}")
         try:
-            # Esperar a que cualquier beep anterior termine
             with _buzzer_lock:
-                pass  # solo adquirir y soltar para esperar turno
+                pass
 
             # Buzzer: dos pitidos
             _sonar_sync(1000, 0.15)
@@ -110,12 +182,14 @@ def abrir_locker(num_locker):
             GPIO.output(LED_PIN, GPIO.HIGH)
             print(f"[GPIO] Relay OFF — locker {num_locker} CERRADO")
 
+            # Iniciar monitor por si el usuario deja el locker abierto
+            iniciar_monitor(num_locker)
+
         except Exception as e:
             import traceback
             print(f"[GPIO] EXCEPCION en _worker: {e}")
             traceback.print_exc()
 
-    # daemon=False: el hilo vive hasta terminar aunque el UI navegue
     t = threading.Thread(target=_worker, daemon=False, name=f"locker-{num_locker}")
     t.start()
     print(f"[GPIO] Hilo '{t.name}' lanzado — alive={t.is_alive()}")
@@ -123,6 +197,8 @@ def abrir_locker(num_locker):
 
 def cleanup():
     """Liberar pines al cerrar la app."""
+    for num in list(_alertas_activas.keys()):
+        detener_monitor(num)
     if GPIO:
         try:
             GPIO.cleanup()
