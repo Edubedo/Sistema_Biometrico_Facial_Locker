@@ -722,7 +722,13 @@ class GuardarPage(QWidget):
             )
         db_set_locker_estado(id_locker, "ocupado")
 
-        abrir_locker(str(num_locker))
+        # Abrir cerradura solenoide del locker asignado
+        try:
+            abrir_locker(str(num_locker))
+        except ValueError as e:
+            from views.style.adminDialogs import DlgError
+            DlgError.show(str(e), parent=self)
+            return
 
         db_log_intento(id_locker, "registro_biometrico", "exitoso",
                        "Sesion {} creada. Locker #{} asignado.".format(id_sesion, num_locker),
