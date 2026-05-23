@@ -107,13 +107,7 @@ def abrir_locker(num_locker):
 
             GPIO.output(pin, GPIO.HIGH)
             print(f"[GPIO] Relay OFF — locker {num_locker} CERRADO")
-
-            # LED 15 segundos
-            GPIO.output(LED_PIN, GPIO.HIGH)
-            print(f"[GPIO] LED ON")
-            time.sleep(15)
-            GPIO.output(LED_PIN, GPIO.LOW)
-            print(f"[GPIO] LED OFF")
+            # LED va en el relay, se apaga solo al cerrar
 
         except Exception as e:
             import traceback
