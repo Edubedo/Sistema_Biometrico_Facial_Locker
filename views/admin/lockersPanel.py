@@ -15,6 +15,7 @@ from db.models.sesiones import db_close_sesion, db_get_all_sesiones_activas
 from db.models.intentos_acceso import db_log_intento
 from biometria.biometria import train_model
 from views.style.adminDialogs import DlgError, DlgInfo, DlgInput, DlgLiberar
+from utils.gpio_locker import abrir_locker
 from utils.i18n import tr, get_language
 
 
@@ -532,6 +533,7 @@ class LockerCard(QFrame):
         confirmed, reason = DlgLiberar.ask(num, parent=self)
         if not confirmed: return
         try:
+            abrir_locker(str(num))
             self._close_active_session(extra_desc=reason)
             db_set_locker_estado(self.locker["ID_locker"], "libre", self.admin_id)
             desc = f"Admin liberó locker #{num} manualmente."

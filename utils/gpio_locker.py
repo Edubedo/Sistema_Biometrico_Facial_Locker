@@ -26,8 +26,8 @@ if GPIO:
     for pin in LOCKER_PINS.values():
         GPIO.setup(pin, GPIO.OUT, initial=GPIO.HIGH)
         GPIO.output(pin, GPIO.HIGH)
-    GPIO.setup(LED_PIN,    GPIO.OUT, initial=GPIO.LOW)
-    GPIO.output(LED_PIN,    GPIO.LOW)
+    GPIO.setup(LED_PIN,    GPIO.OUT, initial=GPIO.HIGH)
+    GPIO.output(LED_PIN,    GPIO.HIGH)
     GPIO.setup(BUZZER_PIN, GPIO.OUT, initial=GPIO.LOW)
     GPIO.output(BUZZER_PIN, GPIO.LOW)
     print("[GPIO] Setup inicial completo — todos los pines en estado seguro")
@@ -78,8 +78,10 @@ def abrir_locker(num_locker):
 
     pin = LOCKER_PINS.get(str(num_locker))
     if pin is None:
-        print(f"[GPIO] ERROR: '{num_locker}' no tiene pin. Claves: {list(LOCKER_PINS.keys())}")
-        return
+        raise ValueError(
+            f"El locker #{num_locker} no tiene un pin GPIO asignado.\n"
+            f"Agrega '\"{ num_locker }\": <pin>' en LOCKER_PINS dentro de utils/gpio_locker.py"
+        )
 
     if not GPIO:
         print(f"[SIMULADO] Locker {num_locker} abierto (sin hardware)")
@@ -97,21 +99,16 @@ def abrir_locker(num_locker):
             time.sleep(0.05)
             _sonar_sync(1000, 0.15)
 
-            # Abrir cerradura
+            # Abrir cerradura + encender LED
+            GPIO.output(LED_PIN, GPIO.LOW)
             GPIO.output(pin, GPIO.LOW)
             print(f"[GPIO] Relay ON — locker {num_locker} ABIERTO")
 
             time.sleep(PULSE_DURATION)
 
             GPIO.output(pin, GPIO.HIGH)
-            print(f"[GPIO] Relay OFF — locker {num_locker} CERRADO")
-
-            # LED 15 segundos
             GPIO.output(LED_PIN, GPIO.HIGH)
-            print(f"[GPIO] LED ON")
-            time.sleep(15)
-            GPIO.output(LED_PIN, GPIO.LOW)
-            print(f"[GPIO] LED OFF")
+            print(f"[GPIO] Relay OFF — locker {num_locker} CERRADO")
 
         except Exception as e:
             import traceback
