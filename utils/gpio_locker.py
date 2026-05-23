@@ -154,11 +154,7 @@ def abrir_locker(num_locker):
             f"Agrega '\"{ num_locker }\": <pin>' en LOCKER_PINS dentro de utils/gpio_locker.py"
         )
 
-    if locker_esta_abierto(num_locker):
-        raise ValueError(
-            f"El locker #{num_locker} ya está abierto físicamente.\n"
-            "Ciérralo antes de intentar abrirlo desde el sistema."
-        )
+    # Permitir apertura aunque el switch indique abierto
 
     if not GPIO:
         print(f"[SIMULADO] Locker {num_locker} abierto (sin hardware)")
