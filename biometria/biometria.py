@@ -6,6 +6,8 @@ import site
 import numpy as np
 import shutil
 
+from db.connection import connectionDB
+
 # ──────────────────────────────────────────────────────────────────────────────
 # [SECCION: BIOMETRIA]
 # Modelo LBPH + funciones de carpeta facial.
@@ -51,14 +53,48 @@ def _find_cascade():
 CASCADE = _find_cascade()
 
 
+def _decode_face_uid(raw_value):
+    if isinstance(raw_value, bytes):
+        return raw_value.decode("utf-8", errors="ignore").strip()
+    if isinstance(raw_value, str):
+        return raw_value.strip()
+    return ""
+
+
+def _get_active_face_uids():
+    """
+    Devuelve los face_uid activos segun la BD.
+    Incluye fallback por convencion: "sesion_<ID_sesion>".
+    """
+    try:
+        with connectionDB() as con:
+            rows = con.execute(
+                "SELECT ID_sesion, b_vector_biometrico_temp FROM Sesiones "
+                "WHERE t_estado='activo'"
+            ).fetchall()
+        active = set()
+        for r in rows:
+            face_uid = _decode_face_uid(r["b_vector_biometrico_temp"]) if r else ""
+            if face_uid:
+                active.add(face_uid)
+            active.add(f"sesion_{r['ID_sesion']}")
+        return active
+    except Exception:
+        return None
+
+
 def train_model():
     """
-    Entrena el reconocedor LBPH con todas las imagenes en FACES_DIR.
+    Entrena el reconocedor LBPH con imagenes activas en FACES_DIR.
     Cada subcarpeta es un face_uid = 'sesion_<ID>'.
     """
     global face_labels
     images, labels, names, idx = [], [], {}, 0
+    active_uids = _get_active_face_uids()
+
     for uid in os.listdir(FACES_DIR):
+        if active_uids is not None and uid not in active_uids:
+            continue
         sub = os.path.join(FACES_DIR, uid)
         if not os.path.isdir(sub):
             continue
@@ -69,6 +105,7 @@ def train_model():
                 images.append(cv2.resize(img, (IMG_W, IMG_H)))
                 labels.append(idx)
         idx += 1
+
     if len(images) > 1:
         face_model.train(np.array(images), np.array(labels))
     face_labels = names
