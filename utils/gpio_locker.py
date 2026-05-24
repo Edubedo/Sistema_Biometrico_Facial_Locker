@@ -46,6 +46,18 @@ _buzzer_lock = threading.Lock()
 
 # ── Hilos de alerta activos por locker ────────────────────────────────────────
 _alertas_activas = {}   # num_locker -> threading.Event (para detener alerta)
+_switch_closed_level = {}  # num_locker -> GPIO level observado como cerrado
+
+
+def _read_switch_level(pin, samples=3, delay=0.01):
+    if not GPIO:
+        return None
+    counts = {GPIO.LOW: 0, GPIO.HIGH: 0}
+    for _ in range(samples):
+        val = GPIO.input(pin)
+        counts[val] = counts.get(val, 0) + 1
+        time.sleep(delay)
+    return GPIO.HIGH if counts[GPIO.HIGH] >= counts[GPIO.LOW] else GPIO.LOW
 
 def _sonar_sync(frecuencia, duracion):
     """Tono síncrono con lock para evitar colisión de PWM."""
@@ -98,7 +110,14 @@ def locker_esta_abierto(num_locker):
     pin = SWITCH_PINS.get(str(num_locker))
     if pin is None or not GPIO:
         return False
-    return GPIO.input(pin) == GPIO.HIGH
+    level = _read_switch_level(pin)
+    if level is None:
+        return False
+    key = str(num_locker)
+    if key not in _switch_closed_level:
+        # Asumimos que el locker esta cerrado al iniciar el sistema.
+        _switch_closed_level[key] = level
+    return level != _switch_closed_level[key]
 
 # ── Alerta de locker olvidado abierto ─────────────────────────────────────────
 def _monitor_locker_abierto(num_locker, stop_event):
