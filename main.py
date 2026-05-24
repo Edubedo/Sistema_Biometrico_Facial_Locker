@@ -1,11 +1,10 @@
-import os # Sistema operativo
-import sys 
+import sys
+import os
 
 try:
     from dotenv import load_dotenv
 except ModuleNotFoundError:
     def load_dotenv(path=".env"):
-        """Minimal .env loader fallback when python-dotenv is unavailable."""
         if not os.path.exists(path):
             return False
         with open(path, "r", encoding="utf-8") as f:
@@ -22,48 +21,40 @@ except ModuleNotFoundError:
 
 from PyQt5.QtCore import QLibraryInfo, QTimer, Qt
 from PyQt5.QtWidgets import (
-    QApplication,
-    QMainWindow,
-    QWidget,
-    QVBoxLayout,
-    QStackedWidget,
-    QShortcut,
-    QLabel,
+    QApplication, QMainWindow, QWidget, QVBoxLayout,
+    QStackedWidget, QShortcut, QLabel,
 )
 from PyQt5.QtGui import QKeySequence
+
 from db.models.usuarios import db_count_active_admins, db_register_admin
 from db.models.lockers import db_next_free_locker
 from db.models.sesiones import db_get_all_sesiones_activas
 
-# Views
 from views.cliente.home import HomePage
-from views.cliente.guardar import GuardarPage 
+from views.cliente.guardar import GuardarPage
 from views.cliente.retirar import RetirarPage
 from views.cliente.resultado import ResultPage
 
-from views.admin.adminPage import  AdminPage
+from views.admin.adminPage import AdminPage
 from views.admin.loginPage import AdminLoginPage
 
 from biometria.biometria import train_model
 from utils.i18n import set_language, get_language, tr
 
-load_dotenv()  
+load_dotenv()
 
 DB_PATH = os.getenv("DB_PATH")
 
 
 def _fix_qt_plugin_path_for_linux():
-    """Avoid Qt plugin conflicts caused by OpenCV's bundled Qt plugins."""
     current = os.environ.get("QT_QPA_PLATFORM_PLUGIN_PATH", "")
-    current_norm = current.replace("\\", "/")
-    if "/site-packages/cv2/qt/plugins" in current_norm:
+    if "/site-packages/cv2/qt/plugins" in current.replace("\\", "/"):
         pyqt_plugins = QLibraryInfo.location(QLibraryInfo.PluginsPath)
         if pyqt_plugins:
             os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = pyqt_plugins
 
 
 class MainWindow(QMainWindow):
-    # Indices del QStackedWidget
     HOME   = 0
     GUARD  = 1
     RETIR  = 2
@@ -80,7 +71,6 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(cw)
         ml = QVBoxLayout(cw); ml.setContentsMargins(0, 0, 0, 0); ml.setSpacing(0)
 
-        # ── Paginas ──────────────────────────────────────────────────────────
         self.stack    = QStackedWidget()
         self.p_home   = HomePage()
         self.p_guard  = GuardarPage()
@@ -94,7 +84,7 @@ class MainWindow(QMainWindow):
             self.stack.addWidget(p)
         ml.addWidget(self.stack)
 
-        # ── Conexiones de navegacion ─────────────────────────────────────────
+        # ── Navegación ────────────────────────────────────────────────────────
         self.p_home.go_guardar.connect(self._try_go_guardar)
         self.p_home.go_retirar.connect(self._try_go_retirar)
         self.p_home.go_admin.connect(lambda: self._nav(self.ALOGIN))
@@ -104,16 +94,18 @@ class MainWindow(QMainWindow):
         guard_done = getattr(self.p_guard, "done", None)
         if guard_done is not None:
             guard_done.connect(self._on_guardado)
-        else:
-            print("[WARN] GuardarPage no expone la senal 'done'.")
 
         guard_failed = getattr(self.p_guard, "failed", None)
         if guard_failed is not None:
             guard_failed.connect(
                 lambda msg: self._show_result("err", tr("flow.no_space_title"), msg)
             )
-        else:
-            print("[WARN] GuardarPage no expone la senal 'failed'.")
+
+        # ── NUEVO: sesión ya activa detectada al guardar ──────────────────────
+        # Muestra ResultPage con aviso y redirige al inicio automáticamente.
+        guard_session = getattr(self.p_guard, "already_has_session", None)
+        if guard_session is not None:
+            guard_session.connect(self._on_session_active)
 
         self.p_retir.go_back.connect(lambda: self._nav(self.HOME))
         self.p_retir.retirar_done.connect(self._on_retirado)
@@ -130,27 +122,23 @@ class MainWindow(QMainWindow):
         self._nav(self.HOME)
         self._install_window_shortcuts()
 
-        # ── Monitor de lockers abiertos ──────────────────────────────────────
         self._alerta_visible = False
         self._alerta_banner  = self._crear_banner_alerta()
         self._lockers_alertando = set()
         self._monitor_timer = QTimer(self)
         self._monitor_timer.timeout.connect(self._check_lockers_abiertos)
-        self._monitor_timer.start(2000)  # revisa cada 2 segundos
+        self._monitor_timer.start(2000)
 
     def _install_window_shortcuts(self):
         QShortcut(QKeySequence("F11"), self, activated=self.toggle_fullscreen)
         QShortcut(QKeySequence("Escape"), self, activated=self.exit_fullscreen)
 
     def toggle_fullscreen(self):
-        if self.isFullScreen():
-            self.showNormal()
-        else:
-            self.showFullScreen()
+        if self.isFullScreen(): self.showNormal()
+        else: self.showFullScreen()
 
     def exit_fullscreen(self):
-        if self.isFullScreen():
-            self.showNormal()
+        if self.isFullScreen(): self.showNormal()
 
     def _on_language_changed(self, lang):
         set_language(lang)
@@ -159,26 +147,18 @@ class MainWindow(QMainWindow):
                 p.set_language(lang)
 
     def _try_go_guardar(self):
-        """Navigate to GuardarPage only if there is at least one free locker."""
         try:
             if db_next_free_locker() is None:
-                # No free lockers: keep the user on Home and leave the fixed no-space state visible
-                try:
-                    self.p_home.refresh()
-                except Exception:
-                    pass
+                try: self.p_home.refresh()
+                except Exception: pass
                 return
-        except Exception as e:
-            # If checking fails, stay on Home without interrupting the flow
-            try:
-                self.p_home.refresh()
-            except Exception:
-                pass
+        except Exception:
+            try: self.p_home.refresh()
+            except Exception: pass
             return
         self._nav(self.GUARD)
 
     def _try_go_retirar(self):
-        """Navigate to RetirarPage only if there is at least one active session."""
         try:
             if not db_get_all_sesiones_activas():
                 self._show_result(
@@ -196,7 +176,7 @@ class MainWindow(QMainWindow):
             return
         self._nav(self.RETIR)
 
-    # ── Navegacion ────────────────────────────────────────────────────────────
+    # ── Navegación ────────────────────────────────────────────────────────────
 
     def _nav(self, idx):
         if idx == self.HOME:
@@ -213,7 +193,6 @@ class MainWindow(QMainWindow):
     # ── Callbacks de flujo ────────────────────────────────────────────────────
 
     def _on_guardado(self, face_uid, num_locker, id_sesion):
-        """El cliente registro biometria y se le asigno un locker."""
         self.p_guard.reset()
         self._show_result(
             "ok_blue",
@@ -222,8 +201,24 @@ class MainWindow(QMainWindow):
             "LOCKER  #{}".format(num_locker)
         )
 
+    def _on_session_active(self, num_locker: str):
+        """
+        El precheck de guardar detectó que la persona ya tiene una sesión activa.
+        Muestra la ResultPage con aviso "warn" (ámbar) y redirige al inicio
+        automáticamente después de 5 segundos.
+        """
+        self.p_guard.reset()
+        self.p_result.show_result(
+            "warn",
+            "Ya tienes una sesión activa",
+            f"Tu locker #{num_locker} sigue reservado para ti.",
+            f"LOCKER  #{num_locker}",
+            auto=False,  # usamos nuestro propio timer de 5 s
+        )
+        self.stack.setCurrentIndex(self.RESULT)
+        QTimer.singleShot(5000, lambda: self._nav(self.HOME))
+
     def _on_retirado(self, face_uid, num_locker, id_sesion):
-        """El cliente retiro sus cosas, sesion cerrada, locker liberado."""
         self.p_retir.reset()
         self.p_result.show_result(
             "ok_blue",
@@ -234,7 +229,6 @@ class MainWindow(QMainWindow):
         self._nav(self.RESULT)
 
     def _on_seguir(self, face_uid, num_locker, id_sesion):
-        """El cliente sigue comprando, locker permanece activo."""
         self.p_retir.reset()
         detail = "LOCKER  #{}".format(num_locker) if num_locker else ""
         self.p_result.show_result(
@@ -246,7 +240,6 @@ class MainWindow(QMainWindow):
         self._nav(self.RESULT)
 
     def _on_login(self, admin_data):
-        """Admin autenticado correctamente."""
         self.p_admin.set_admin(admin_data)
         self._nav(self.ADMIN)
 
@@ -257,12 +250,9 @@ class MainWindow(QMainWindow):
         banner.setAlignment(Qt.AlignCenter)
         banner.setWordWrap(True)
         banner.setStyleSheet("""
-            background-color: #D32F2F;
-            color: white;
-            font-size: 22px;
-            font-weight: bold;
-            padding: 18px;
-            border-radius: 0px;
+            background-color: #D32F2F; color: white;
+            font-size: 22px; font-weight: bold;
+            padding: 18px; border-radius: 0px;
         """)
         banner.hide()
         return banner
@@ -272,7 +262,6 @@ class MainWindow(QMainWindow):
             from utils.gpio_locker import locker_esta_abierto, SWITCH_PINS, iniciar_monitor, detener_monitor
         except ImportError:
             return
-
         abiertos = []
         for num in SWITCH_PINS.keys():
             if locker_esta_abierto(num):
@@ -284,7 +273,6 @@ class MainWindow(QMainWindow):
                 if num in self._lockers_alertando:
                     self._lockers_alertando.discard(num)
                     detener_monitor(num)
-
         if abiertos:
             nums = ", ".join(f"#{n}" for n in abiertos)
             self._alerta_banner.setText(f"⚠  LOCKER {nums} ABIERTO — POR FAVOR CIÉRRALO  ⚠")
@@ -300,60 +288,44 @@ class MainWindow(QMainWindow):
             self._alerta_banner.setGeometry(0, 0, self.width(), 70)
 
     def closeEvent(self, event):
-        # Detiene hilos de captura/reconocimiento antes de cerrar Qt.
-        try:
-            self.p_guard.reset()
-        except Exception:
-            pass
-        try:
-            self.p_retir.reset()
-        except Exception:
-            pass
+        try: self.p_guard.reset()
+        except Exception: pass
+        try: self.p_retir.reset()
+        except Exception: pass
         super().closeEvent(event)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# MAIN
 # ──────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     _fix_qt_plugin_path_for_linux()
 
-    # Verificar que la base de datos existe
     if not os.path.exists(DB_PATH):
-        print("[ERROR] No se encontro la base de datos en:")
-        print("        {}".format(DB_PATH))
-        print("[INFO]  Verifica la ruta en la variable DB_PATH al inicio del archivo.")
+        print("[ERROR] No se encontro la base de datos en: {}".format(DB_PATH))
         sys.exit(1)
 
-    # Crear admin por defecto si la tabla esta vacia
     try:
         if db_count_active_admins() == 0:
             db_register_admin(
                 "Administrador", "Sistema", "Locker",
                 "admin", "admin1234", rol="administrador"
             )
-            print("[INFO] Admin por defecto creado.")
-            print("[INFO] Usuario: admin | Contrasena: admin1234")
-            print("[INFO] Cambialo desde el Panel de Administracion.")
+            print("[INFO] Admin por defecto creado: admin / admin1234")
     except Exception as e:
         print("[WARN] No se pudo verificar admins: {}".format(e))
 
-    # Cargar modelo biometrico con imagenes existentes
     train_model()
 
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     w = MainWindow()
     fullscreen_env = os.getenv("APP_FULLSCREEN", "1").strip().lower()
-    fullscreen_enabled = fullscreen_env not in ("0", "false", "no", "off")
-    if fullscreen_enabled:
+    if fullscreen_env not in ("0", "false", "no", "off"):
         w.showFullScreen()
     else:
         w.show()
     exit_code = app.exec_()
 
-    # Liberar pines GPIO al cerrar para evitar estado sucio en el próximo arranque
     try:
         from utils.gpio_locker import cleanup
         cleanup()
