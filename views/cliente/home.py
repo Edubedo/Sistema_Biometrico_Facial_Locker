@@ -405,7 +405,7 @@ class HomePage(QWidget):
         logo_px = QPixmap(logo_path)
         if not logo_px.isNull():
             logo_lbl.setPixmap(
-                logo_px.scaled(_dp(750), _dp(145), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                logo_px.scaled(_dp(750), _dp(125), Qt.KeepAspectRatio, Qt.SmoothTransformation)
             )
         
         logo_lbl.clicked.connect(self.go_admin.emit)
