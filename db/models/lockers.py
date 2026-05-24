@@ -69,12 +69,10 @@ def db_update_locker(id_locker, numero=None, zona=None, tamano=None,
         )
 
 
-def db_delete_locker(id_locker, id_admin=None):
-    """Soft-delete: marca el locker como 'eliminado' en lugar de borrarlo."""
-    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+def db_delete_locker(id_locker):
+    """Elimina físicamente el locker de la base de datos."""
     with connectionDB() as con:
         con.execute(
-            "UPDATE Lockers SET t_estado=?, d_fecha_modificacion=?, "
-            "ID_usuario_modificacion=? WHERE ID_locker=?",
-            ("eliminado", now, id_admin, id_locker)
+            "DELETE FROM Lockers WHERE ID_locker=?",
+            (id_locker,)
         )
