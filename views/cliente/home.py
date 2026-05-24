@@ -1,5 +1,5 @@
 import os
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QRectF, QPointF
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QRectF, QPointF, QSize   # ← QSize aquí
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QLabel, QFrame, QSizePolicy, QApplication
@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import (
     QPainter, QColor, QBrush, QPen, QFont,
     QLinearGradient, QRadialGradient, QPixmap,
-    QPainterPath, QFontMetrics
+    QPainterPath, QFontMetrics, QIcon
 )
 
 from db.models.lockers import db_get_all_lockers
@@ -69,20 +69,21 @@ QLabel#home_actions_subtitle {
 QFrame#lang_switch {
     background: rgba(255,255,255,0.07);
     border: 1px solid rgba(255,255,255,0.16);
-    border-radius: 12px;
+    border-radius: 14px;
 }
 QPushButton#lang_btn {
     background: transparent;
-    color: rgba(180,210,255,0.9);
+    color: rgba(180,210,255,0.75);
     border: none;
     border-radius: 10px;
     font-family: 'Segoe UI', sans-serif;
     font-weight: 800;
-    letter-spacing: 1px;
-    font-size: 15px;
-    padding: 6px 8px;
+    letter-spacing: 2px;
+    font-size: 14px;
+    padding: 0 10px;
+    text-align: center;
 }
-QPushButton#lang_btn:hover { background: rgba(255,255,255,0.12); color: #ffffff; }
+QPushButton#lang_btn:hover { background: rgba(255,255,255,0.10); color: #ffffff; }
 QPushButton#lang_btn_active {
     background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
         stop:0 rgba(41,128,255,0.98), stop:1 rgba(20,90,210,0.98));
@@ -91,9 +92,10 @@ QPushButton#lang_btn_active {
     border-radius: 10px;
     font-family: 'Segoe UI', sans-serif;
     font-weight: 900;
-    letter-spacing: 1px;
-    font-size: 15px;
-    padding: 6px 8px;
+    letter-spacing: 2px;
+    font-size: 14px;
+    padding: 0 10px;
+    text-align: center;
 }
 """
 
@@ -383,68 +385,84 @@ class HomePage(QWidget):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # ── Header ────────────────────────────────────────────────────────────
+        # hEADER
+                # ── Header ────────────────────────────────────────────────────────────
         header = QFrame()
         header.setObjectName("header_strip")
-        header.setFixedHeight(_dp(160))          # ← Aumentamos altura
+        header.setFixedHeight(_dp(145))
         header.setStyleSheet("background: transparent;")
 
         hl = QHBoxLayout(header)
-        hl.setContentsMargins(_dp(17), _dp(5), _dp(17), _dp(8))  # ← Reducimos margen superior
-        hl.setSpacing(_dp(10))
+        hl.setContentsMargins(_dp(20), _dp(-15), _dp(20), _dp(5))
+        hl.setSpacing(_dp(12))
 
         # ==================== LOGO ====================
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
         logo_path = os.path.join(project_root, "lockztar.png")
         
         logo_lbl = ClickableLogo()
-        logo_lbl.setFixedSize(_dp(680), _dp(120))           # ← Reducimos un poco el tamaño
+        logo_lbl.setFixedSize(_dp(680), _dp(120))
         logo_lbl.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         logo_lbl.setCursor(Qt.PointingHandCursor)
         
         logo_px = QPixmap(logo_path)
         if not logo_px.isNull():
             logo_lbl.setPixmap(
-                logo_px.scaled(_dp(750), _dp(125), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                logo_px.scaled(_dp(760), _dp(138), Qt.KeepAspectRatio, Qt.SmoothTransformation)
             )
         
         logo_lbl.clicked.connect(self.go_admin.emit)
-        
         hl.addWidget(logo_lbl, 0, Qt.AlignTop | Qt.AlignLeft)
 
         hl.addStretch()
 
-        # Derecha: selector de idioma + ADMIN (panel colapsable)
+        # ==================== SELECTOR DE IDIOMA CON BANDERAS ====================
         rhl = QHBoxLayout()
         rhl.setSpacing(_dp(8))
-        rhl.setAlignment(Qt.AlignVCenter)
+        rhl.setAlignment(Qt.AlignTop | Qt.AlignRight)
 
-        # Columna con selector de idioma (visible)
         lcol = QVBoxLayout()
-        lcol.setSpacing(_dp(6))
-        lcol.setAlignment(Qt.AlignVCenter)
+        lcol.setSpacing(_dp(4))
+        lcol.setAlignment(Qt.AlignTop | Qt.AlignRight)
 
         self.lang_switch = QFrame()
         self.lang_switch.setObjectName("lang_switch")
-        self.lang_switch.setFixedSize(_dp(220), _dp(70))
+        self.lang_switch.setFixedHeight(_dp(72))
+
         swl = QHBoxLayout(self.lang_switch)
-        swl.setContentsMargins(_dp(4), _dp(4), _dp(4), _dp(4))
+        swl.setContentsMargins(_dp(5), _dp(5), _dp(5), _dp(5))
         swl.setSpacing(_dp(4))
 
-        self.btn_lang_es = QPushButton("ES")
+        # Botón Español — objectName puesto al crear para que el STYLE global aplique desde el inicio
+        self.btn_lang_es = QPushButton("  ES")
+        self.btn_lang_es.setObjectName("lang_btn")
         self.btn_lang_es.setCursor(Qt.PointingHandCursor)
+        self.btn_lang_es.setFocusPolicy(Qt.NoFocus)
         self.btn_lang_es.clicked.connect(lambda: self._set_lang("es", emit=True))
-        self.btn_lang_es.setFixedSize(_dp(114), _dp(58))
+        self.btn_lang_es.setFixedSize(_dp(118), _dp(62))
 
-        self.btn_lang_en = QPushButton("EN")
+        es_icon = QPixmap(os.path.join(project_root, "public", "spain.png"))
+        if not es_icon.isNull():
+            self.btn_lang_es.setIcon(QIcon(es_icon.scaled(30, 21, Qt.KeepAspectRatio, Qt.SmoothTransformation)))
+            self.btn_lang_es.setIconSize(QSize(30, 21))
+
+        # Botón Inglés — objectName puesto al crear
+        self.btn_lang_en = QPushButton("  EN")
+        self.btn_lang_en.setObjectName("lang_btn")
         self.btn_lang_en.setCursor(Qt.PointingHandCursor)
+        self.btn_lang_en.setFocusPolicy(Qt.NoFocus)
         self.btn_lang_en.clicked.connect(lambda: self._set_lang("en", emit=True))
-        self.btn_lang_en.setFixedSize(_dp(114), _dp(58))
+        self.btn_lang_en.setFixedSize(_dp(118), _dp(62))
+
+        uk_icon = QPixmap(os.path.join(project_root, "public", "uk.png"))
+        if not uk_icon.isNull():
+            self.btn_lang_en.setIcon(QIcon(uk_icon.scaled(30, 21, Qt.KeepAspectRatio, Qt.SmoothTransformation)))
+            self.btn_lang_en.setIconSize(QSize(30, 21))
 
         swl.addWidget(self.btn_lang_es)
         swl.addWidget(self.btn_lang_en)
-        lcol.addWidget(self.lang_switch, 0, Qt.AlignRight)
 
+        lcol.addWidget(self.lang_switch, 0, Qt.AlignTop | Qt.AlignRight)
         rhl.addLayout(lcol)
         hl.addLayout(rhl)
 

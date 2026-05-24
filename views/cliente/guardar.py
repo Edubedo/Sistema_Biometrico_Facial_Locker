@@ -65,9 +65,9 @@ QPushButton#btn_blue:disabled {
 QPushButton#btn_sm {
     background: rgba(20,38,78,0.80); color: #b0c8f0;
     border: 1.5px solid rgba(41,128,255,0.40); border-radius: 10px;
-    padding: 10px 18px; margin-bottom: 6px;
-    font-size: 15px; font-family: 'Segoe UI', sans-serif; font-weight: 700;
-    min-height: 56px; min-width: 140px;
+    padding: 7.5px 20px;  margin-bottom: 6px;
+    font-size: 14px; font-family: 'Segoe UI', sans-serif; font-weight: 700;
+    min-height: 44px; min-width: 120px;
 }
 QPushButton#btn_sm:hover   { background: rgba(26,48,96,0.95); border-color: rgba(41,128,255,0.80); color: #dceaff; }
 QPushButton#btn_sm:pressed { background: rgba(14,26,58,0.95); }
@@ -323,11 +323,11 @@ class GuardarPage(QWidget):
 
         # ── Header ───────────────────────────────────────────────────────────
         hdr = QHBoxLayout(); hdr.setSpacing(6)
-        self.back_btn = QPushButton("")
+        self.back_btn = QPushButton("← Volver")
         back = self.back_btn
         back.setObjectName("btn_sm")
-        back.setFixedHeight(touch_height(64))
-        back.setMinimumWidth(140)
+        back.setFixedHeight(_dp(46))           # ← Más pequeño
+        back.setFixedWidth(_dp(130))           # ← Ancho fijo más pequeño
         back.setCursor(Qt.PointingHandCursor)
         back.setFocusPolicy(Qt.NoFocus)
         back.clicked.connect(self._cancel)
