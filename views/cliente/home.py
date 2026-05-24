@@ -390,20 +390,20 @@ class HomePage(QWidget):
         header.setStyleSheet("background: transparent;")
 
         hl = QHBoxLayout(header)
-        hl.setContentsMargins(_dp(18), _dp(2), _dp(18), _dp(8))
-        hl.setSpacing(_dp(12))
+        hl.setContentsMargins(_dp(17), _dp(2), _dp(17), _dp(8))
+        hl.setSpacing(_dp(10))
 
         # Logo
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
         logo_path = os.path.join(project_root, "lockztar.png")
         logo_lbl = ClickableLogo()
-        logo_lbl.setFixedSize(_dp(640), _dp(150))
+        logo_lbl.setFixedSize(_dp(720), _dp(130))
         logo_lbl.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         logo_lbl.setCursor(Qt.PointingHandCursor)
         logo_px = QPixmap(logo_path)
         if not logo_px.isNull():
             logo_lbl.setPixmap(
-                logo_px.scaled(_dp(620), _dp(140), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                logo_px.scaled(_dp(820), _dp(160), Qt.KeepAspectRatio, Qt.SmoothTransformation)
             )
         logo_lbl.clicked.connect(self.go_admin.emit)
         hl.addWidget(logo_lbl, 0, Qt.AlignTop)
