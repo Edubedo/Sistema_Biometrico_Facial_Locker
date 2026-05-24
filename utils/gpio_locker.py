@@ -26,7 +26,7 @@ SWITCH_PINS = {
 
 LED_PIN        = 22    # Pin físico 15 — LED indicador
 PULSE_DURATION = 2.0   # Segundos que el solenoide permanece abierto
-ALERTA_SEGUNDOS = 0    # Empieza a alertar de inmediato
+ALERTA_SEGUNDOS = 10    # Empieza a alertar despues de 10 segundos
 
 # ── Setup inicial ──────────────────────────────────────────────────────────────
 if GPIO:
@@ -134,7 +134,7 @@ def _monitor_locker_abierto(num_locker, stop_event):
             break
         print(f"[SWITCH] Locker {num_locker} lleva más de {ALERTA_SEGUNDOS}s abierto — alertando")
         _beep_alerta()
-        time.sleep(5)  # espera 5 segundos antes de volver a alertar
+        time.sleep(1)  # espera 1 segundo antes de volver a alertar
 
 def iniciar_monitor(num_locker):
     """Inicia el monitor de locker abierto para el locker indicado."""
