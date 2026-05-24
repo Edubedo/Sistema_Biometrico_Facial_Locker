@@ -11,16 +11,18 @@ from utils.i18n import tr, get_language
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Helpers  (idénticos al resto del proyecto)
+#  Helpers
 # ─────────────────────────────────────────────────────────────────────────────
 def _dp(value: float) -> int:
     screen = QApplication.primaryScreen()
-    dpi    = screen.logicalDotsPerInch() if screen else 96
-    scale  = min(dpi / 96, 1.25)
+    if screen:
+        scale = screen.logicalDotsPerInch() / 96
+    else:
+        scale = 1.77   # fallback 7" ~170 DPI
     return max(1, round(value * scale))
 
 
-_TOUCH_H = 52   # altura mínima de objetivo táctil en px
+_TOUCH_H = 52
 
 
 def _shadow(widget, blur=12, alpha=18, dy=2):
@@ -32,7 +34,7 @@ def _shadow(widget, blur=12, alpha=18, dy=2):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Modelo de tabla  (QAbstractTableModel)
+#  Modelo de tabla
 # ─────────────────────────────────────────────────────────────────────────────
 _COL_KEYS = [
     "admin.sessions.col.id",
@@ -75,14 +77,14 @@ class SesionesTableModel(QAbstractTableModel):
         col = index.column()
 
         if role == Qt.DisplayRole:
-            if col == 0:   # Sesión
+            if col == 0:
                 return f"SESIÓN  #{row.get('ID_sesion', '—')}"
-            if col == 1:   # Locker
+            if col == 1:
                 v = row.get("t_numero_locker", "")
                 return str(v) if v else "—"
-            if col == 2:   # Fecha/Hora
+            if col == 2:
                 return _fmt_ts(str(row.get("d_fecha_hora_entrada", "") or ""))
-            if col == 3:   # Estado — siempre activa en este panel
+            if col == 3:
                 return tr("admin.sessions.active")
             return ""
 
@@ -100,7 +102,8 @@ class SesionesTableModel(QAbstractTableModel):
             return int(Qt.AlignLeft | Qt.AlignVCenter)
 
         if role == Qt.FontRole:
-            f = QFont("Segoe UI", _dp(11))
+            # FIX: fuente más grande en toda la tabla
+            f = QFont("Segoe UI", _dp(13))
             if col == 3: f.setBold(True)
             return f
 
@@ -134,7 +137,7 @@ class StatusDot(QWidget):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Botón toggle táctil  (mismo que adminLogPanel)
+#  Botón toggle táctil
 # ─────────────────────────────────────────────────────────────────────────────
 class ToggleBtn(QPushButton):
     _ON  = "QPushButton{{background:{bg};color:{fg};border:2px solid {bg};border-radius:{r}px;font-family:'Segoe UI',sans-serif;font-weight:800;font-size:{fs}px;letter-spacing:1px;padding:0 {pad}px;}}"
@@ -174,11 +177,11 @@ QWidget#admin_sessions_panel {{ background: transparent; }}
 QLabel#section_title {{
     color: #1565c0; font-weight: 900;
     font-family: 'Segoe UI', sans-serif;
-    letter-spacing: 3px; font-size: {_dp(13)}px;
+    letter-spacing: 3px; font-size: {_dp(14)}px;
 }}
 QLabel#section_sub {{
     color: #37474f; font-family: 'Segoe UI', sans-serif;
-    letter-spacing: 1px; font-size: {_dp(11)}px;
+    letter-spacing: 1px; font-size: {_dp(12)}px;
 }}
 
 QFrame#counter_block {{
@@ -191,22 +194,20 @@ QLabel#counter_num {{
 }}
 QLabel#counter_key {{
     color: #37474f; font-family: 'Segoe UI', sans-serif;
-    letter-spacing: 2px; font-size: {_dp(10)}px;
+    letter-spacing: 2px; font-size: {_dp(11)}px;
 }}
 QLabel#status_text {{
     color: #37474f; font-family: 'Segoe UI', sans-serif;
-    letter-spacing: 1px; font-weight: 600; font-size: {_dp(10)}px;
+    letter-spacing: 1px; font-weight: 600; font-size: {_dp(11)}px;
 }}
-
-
 
 QPushButton#btn_refresh {{
     background: #1565c0; color: #ffffff;
     border: none; border-radius: {r10}px;
     font-family: 'Segoe UI', sans-serif;
     font-weight: 800; letter-spacing: 2px;
-    font-size: {_dp(11)}px;
-    min-height: {TH}px; min-width: {_dp(140)}px;
+    font-size: {_dp(12)}px;
+    min-height: {TH}px; min-width: {_dp(150)}px;
     padding: 0 {_dp(20)}px;
 }}
 QPushButton#btn_refresh:hover   {{ background: #1976d2; }}
@@ -220,40 +221,42 @@ QTableView#admin_sessions_tbl {{
     gridline-color: #e8f0fb;
     selection-background-color: #bbdefb;
     font-family: 'Segoe UI', sans-serif;
-    font-size: {_dp(11)}px;
+    font-size: {_dp(13)}px;
     color: #000000;
 }}
 QTableView#admin_sessions_tbl::item {{
-    padding: {_dp(10)}px {_dp(12)}px;
+    padding: {_dp(12)}px {_dp(14)}px;
     border-bottom: 1px solid #f0f4fa;
 }}
 QTableView#admin_sessions_tbl::item:selected {{
     background: #bbdefb; color: #0d47a1;
 }}
+
+/* FIX: header más alto y texto más grande */
 QHeaderView::section {{
     background: #1565c0; color: #ffffff;
     font-weight: 900; font-family: 'Segoe UI', sans-serif;
-    letter-spacing: 1px; font-size: {_dp(10)}px;
-    padding: {_dp(10)}px {_dp(12)}px;
+    letter-spacing: 2px; font-size: {_dp(14)}px;
+    padding: {_dp(14)}px {_dp(16)}px;
     border: none;
     border-right: 1px solid rgba(255,255,255,0.18);
-    min-height: {_dp(40)}px;
+    min-height: {_dp(56)}px;
 }}
 QHeaderView::section:last  {{ border-right: none; }}
 QHeaderView::section:hover {{ background: #1976d2; }}
 
 QScrollBar:vertical {{
-    background: #e8f0fb; width: {_dp(6)}px; margin: 0;
+    background: #e8f0fb; width: {_dp(8)}px; margin: 0;
 }}
 QScrollBar::handle:vertical {{
-    background: #90c4f0; border-radius: {_dp(3)}px; min-height: {_dp(28)}px;
+    background: #90c4f0; border-radius: {_dp(4)}px; min-height: {_dp(32)}px;
 }}
 QScrollBar::add-line:vertical,  QScrollBar::sub-line:vertical  {{ height: 0; }}
 QScrollBar:horizontal {{
-    background: #e8f0fb; height: {_dp(6)}px; margin: 0;
+    background: #e8f0fb; height: {_dp(8)}px; margin: 0;
 }}
 QScrollBar::handle:horizontal {{
-    background: #90c4f0; border-radius: {_dp(3)}px; min-width: {_dp(28)}px;
+    background: #90c4f0; border-radius: {_dp(4)}px; min-width: {_dp(32)}px;
 }}
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{ width: 0; }}
 
@@ -263,11 +266,11 @@ QFrame#page_bar {{
 }}
 QPushButton#btn_page {{
     background: #e3f0ff; color: #1565c0;
-    border: 2px solid #90c4f0; border-radius: {r6}px;
+    border: 2px solid #90c4f0; border-radius: {_dp(8)}px;
     font-family: 'Segoe UI', sans-serif;
-    font-size: {_dp(16)}px; font-weight: 900;
-    min-width: {_dp(56)}px; min-height: {TH}px;
-    padding: 0 {_dp(6)}px;
+    font-size: {_dp(14)}px; font-weight: 900;
+    min-width: {_dp(60)}px; min-height: {TH}px;
+    padding: 0 {_dp(8)}px;
 }}
 QPushButton#btn_page:hover   {{ background: #bbdefb; border-color: #1565c0; }}
 QPushButton#btn_page:pressed {{ background: #90c4f0; }}
@@ -276,12 +279,12 @@ QPushButton#btn_page:disabled {{
 }}
 QLabel#page_lbl {{
     color: #1565c0; font-family: 'Segoe UI', sans-serif;
-    font-size: {_dp(12)}px; font-weight: 800;
-    min-width: {_dp(100)}px;
+    font-size: {_dp(13)}px; font-weight: 800;
+    min-width: {_dp(110)}px;
 }}
 QLabel#count_lbl {{
     color: #546e7a; font-family: 'Segoe UI', sans-serif;
-    font-size: {_dp(10)}px;
+    font-size: {_dp(12)}px;
 }}
 
 QFrame#h_divider {{
@@ -342,8 +345,8 @@ class _AdminSesionesPanel(QWidget):
         cb = QFrame(); cb.setObjectName("counter_block")
         _shadow(cb, _dp(10), 14, _dp(2))
         cb_lay = QHBoxLayout(cb)
-        cb_lay.setContentsMargins(_dp(14), _dp(8), _dp(14), _dp(8))
-        cb_lay.setSpacing(_dp(8))
+        cb_lay.setContentsMargins(_dp(14), _dp(10), _dp(14), _dp(10))
+        cb_lay.setSpacing(_dp(10))
         self.counter_lbl = QLabel("0")
         self.counter_lbl.setObjectName("counter_num")
         self.key_lbl = QLabel(tr("admin.sessions.count"))
@@ -356,8 +359,6 @@ class _AdminSesionesPanel(QWidget):
         self.status_lbl.setObjectName("status_text")
         cb_lay.addWidget(self.status_lbl)
         root.addWidget(cb)
-
-        # Nota: se removió la barra de filtros para dar más espacio a la tabla.
 
         # ── Tabla ─────────────────────────────────────────────────────────────
         self._model = SesionesTableModel()
@@ -373,9 +374,12 @@ class _AdminSesionesPanel(QWidget):
         self.table.setAlternatingRowColors(True)
         self.table.setShowGrid(False)
         self.table.verticalHeader().setVisible(False)
-        self.table.verticalScrollBar().setSingleStep(_dp(48))
-        QScroller.grabGesture(self.table.viewport(), QScroller.LeftMouseButtonGesture)
+        self.table.verticalHeader().setDefaultSectionSize(_dp(56))
+        self.table.verticalScrollBar().setSingleStep(_dp(56))
+        # FIX: touch gesture correcto
         self.table.viewport().setAttribute(Qt.WA_AcceptTouchEvents, True)
+        QScroller.grabGesture(self.table.viewport(), QScroller.TouchGesture)
+        QScroller.grabGesture(self.table.viewport(), QScroller.LeftMouseButtonGesture)
 
         hh = self.table.horizontalHeader()
         hh.setHighlightSections(False)
@@ -385,17 +389,16 @@ class _AdminSesionesPanel(QWidget):
         hh.setSectionResizeMode(2, QHeaderView.Stretch)
         hh.setSectionResizeMode(3, QHeaderView.ResizeToContents)
         hh.setStretchLastSection(False)
-        self.table.verticalHeader().setDefaultSectionSize(_dp(52))
-        self.table.setSortingEnabled(False)   # el orden lo manejamos nosotros
+        self.table.setSortingEnabled(False)
 
         root.addWidget(self.table, 1)
 
-        # ── Barra de paginación táctil ────────────────────────────────────────
+        # ── Paginación ────────────────────────────────────────────────────────
         pg_bar = QFrame(); pg_bar.setObjectName("page_bar")
         _shadow(pg_bar, _dp(8), 10, _dp(1))
         pg_lay = QHBoxLayout(pg_bar)
-        pg_lay.setContentsMargins(_dp(12), _dp(6), _dp(12), _dp(6))
-        pg_lay.setSpacing(_dp(8))
+        pg_lay.setContentsMargins(_dp(14), _dp(8), _dp(14), _dp(8))
+        pg_lay.setSpacing(_dp(10))
 
         self.count_lbl = QLabel("")
         self.count_lbl.setObjectName("count_lbl")
@@ -408,10 +411,10 @@ class _AdminSesionesPanel(QWidget):
         self.btn_last  = QPushButton("»")
 
         for b, w in (
-            (self.btn_first, _dp(52)),
-            (self.btn_prev,  _dp(110)),
-            (self.btn_next,  _dp(110)),
-            (self.btn_last,  _dp(52)),
+            (self.btn_first, _dp(58)),
+            (self.btn_prev,  _dp(120)),
+            (self.btn_next,  _dp(120)),
+            (self.btn_last,  _dp(58)),
         ):
             b.setObjectName("btn_page")
             b.setFixedSize(w, _dp(_TOUCH_H))
@@ -446,8 +449,10 @@ class _AdminSesionesPanel(QWidget):
     # ── Orden ─────────────────────────────────────────────────────────────────
     def _apply_sort(self, desc: bool):
         self._sort_desc = desc
-        self._tbtn_desc.set_active(desc)
-        self._tbtn_asc.set_active(not desc)
+        if hasattr(self, "_tbtn_desc"):
+            self._tbtn_desc.set_active(desc)
+        if hasattr(self, "_tbtn_asc"):
+            self._tbtn_asc.set_active(not desc)
         self._all_rows.sort(
             key=lambda r: (r.get("d_fecha_hora_entrada", "") or ""),
             reverse=desc,
@@ -457,16 +462,14 @@ class _AdminSesionesPanel(QWidget):
 
     # ── Tamaño de página ──────────────────────────────────────────────────────
     def _inc_page_size(self):
-        steps = self._PAGE_STEPS
-        nxt = next((s for s in steps if s > self._page_size), steps[-1])
+        nxt = next((s for s in self._PAGE_STEPS if s > self._page_size), self._PAGE_STEPS[-1])
         self._page_size = nxt
         if hasattr(self, "_pg_size_lbl"):
             self._pg_size_lbl.setText(str(nxt))
         self._page = 0; self._render_page()
 
     def _dec_page_size(self):
-        steps = self._PAGE_STEPS
-        prv = next((s for s in reversed(steps) if s < self._page_size), steps[0])
+        prv = next((s for s in reversed(self._PAGE_STEPS) if s < self._page_size), self._PAGE_STEPS[0])
         self._page_size = prv
         if hasattr(self, "_pg_size_lbl"):
             self._pg_size_lbl.setText(str(prv))
@@ -474,8 +477,7 @@ class _AdminSesionesPanel(QWidget):
 
     # ── Paginación ────────────────────────────────────────────────────────────
     def _total_pages(self) -> int:
-        total = len(self._all_rows)
-        return max(1, (total + self._page_size - 1) // self._page_size)
+        return max(1, (len(self._all_rows) + self._page_size - 1) // self._page_size)
 
     def _go_page(self, page: int):
         self._page = max(0, min(page, self._total_pages() - 1))
