@@ -35,6 +35,8 @@ _DETECT_ROI   = (_FRAME_X_FRAC, _FRAME_Y_FRAC, _FRAME_W_FRAC, _FRAME_H_FRAC)
 
 # Segundos antes de reintentar el escaneo automáticamente
 _AUTO_RETRY_SECS = 3  # 3 s entre reintentos
+# Tiempo máximo de escaneo antes de declarar "no reconocido"
+_SCAN_TIMEOUT_MS = 10000  # 10 s
 
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -531,6 +533,11 @@ class RetirarPage(QWidget):
         self._retry_timer.setSingleShot(True)
         self._retry_timer.timeout.connect(self._auto_retry)
 
+        # Timeout de escaneo: si no reconoce en _SCAN_TIMEOUT_MS → error + reintento
+        self._scan_timeout = QTimer(self)
+        self._scan_timeout.setSingleShot(True)
+        self._scan_timeout.timeout.connect(self._on_scan_timeout)
+
         root = QVBoxLayout(self)
         root.setContentsMargins(8, 8, 8, 6)
         root.setSpacing(4)
@@ -770,6 +777,25 @@ class RetirarPage(QWidget):
         self.cam_thread.rec_done.connect(self._on_recognized)
         self.cam_thread.finished.connect(self._on_scan_thread_finished)
         self.cam_thread.start()
+        self._scan_timeout.start(_SCAN_TIMEOUT_MS)
+
+    def _on_scan_timeout(self):
+        if not self._scan_started:
+            return
+        self._scan_started = False
+        if self.cam_thread and self.cam_thread.isRunning():
+            self.cam_thread.stop()
+        self.cam_thread = None
+        beep_error()
+        self.cam.idle()
+        self.scan_frame.setVisible(False)
+        self.scan_line.hide()
+        self.face_guide.setVisible(False)
+        self.scan_title_lbl.setText(tr("ret.scan_title"))
+        self.scan_lbl.setText(tr("ret.not_recognized"))
+        db_log_intento(1, "retirar", "fallido",
+                       "Timeout de escaneo: rostro no reconocido en tiempo limite")
+        self._retry_timer.start(_AUTO_RETRY_SECS * 1000)
 
     def _on_scan_thread_finished(self):
         sender = self.sender()
@@ -777,7 +803,11 @@ class RetirarPage(QWidget):
             self.cam_thread = None
 
     def _on_recognized(self, face_uid):
+        # Ignorar señales obsoletas: el timeout ya procesó este ciclo de escaneo.
+        if not self._scan_started:
+            return
         self._scan_started = False
+        self._scan_timeout.stop()
         self.scan_lbl.setText("")
 
         if face_uid == CamThread.CAMERA_ERROR:
@@ -870,6 +900,7 @@ class RetirarPage(QWidget):
     # ── Acciones ──────────────────────────────────────────────────────────────
 
     def reset(self):
+        self._scan_timeout.stop()
         self._retry_timer.stop()
         self._close_detected_dialog()
         if self.cam_thread:
@@ -946,6 +977,7 @@ class RetirarPage(QWidget):
         self.seguir_done.emit(self._face_uid, num_locker, self._id_sesion)
 
     def _cancel(self):
+        self._scan_timeout.stop()
         self._retry_timer.stop()
         self._close_detected_dialog()
         self._step_overlay.stop()

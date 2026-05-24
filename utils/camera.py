@@ -267,22 +267,24 @@ class CamThread(QThread):
         else:
             self.use_picamera2 = False
 
-        # Umbrales dinámicos de reconocimiento (LBPH: menor = mejor)
+        # Umbrales LBPH (distancia: menor = mejor match).
+        # Con más usuarios se baja el umbral para no confundir personas.
+        # Con pocos usuarios se sube para tolerar lentes y cambios de apariencia.
         n = len(self.labels)
         if n <= 1:
-            self._recog_threshold  = 60
+            self._recog_threshold  = 88
             self._recog_min_frames = 2
         elif n <= 3:
-            self._recog_threshold  = 68
+            self._recog_threshold  = 82
             self._recog_min_frames = 2
         elif n <= 6:
             self._recog_threshold  = 76
             self._recog_min_frames = 2
         else:
-            self._recog_threshold  = 83
+            self._recog_threshold  = 72
             self._recog_min_frames = 3
 
-        self._recog_fast_threshold = 45
+        self._recog_fast_threshold = 52
 
         if isinstance(recog_threshold, (int, float)):
             self._recog_threshold = float(recog_threshold)

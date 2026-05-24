@@ -386,27 +386,31 @@ class HomePage(QWidget):
         # ── Header ────────────────────────────────────────────────────────────
         header = QFrame()
         header.setObjectName("header_strip")
-        header.setFixedHeight(_dp(110))
+        header.setFixedHeight(_dp(160))          # ← Aumentamos altura
         header.setStyleSheet("background: transparent;")
 
         hl = QHBoxLayout(header)
-        hl.setContentsMargins(_dp(17), _dp(2), _dp(17), _dp(8))
+        hl.setContentsMargins(_dp(17), _dp(5), _dp(17), _dp(8))  # ← Reducimos margen superior
         hl.setSpacing(_dp(10))
 
-        # Logo
+        # ==================== LOGO ====================
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
         logo_path = os.path.join(project_root, "lockztar.png")
+        
         logo_lbl = ClickableLogo()
-        logo_lbl.setFixedSize(_dp(720), _dp(130))
+        logo_lbl.setFixedSize(_dp(680), _dp(120))           # ← Reducimos un poco el tamaño
         logo_lbl.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         logo_lbl.setCursor(Qt.PointingHandCursor)
+        
         logo_px = QPixmap(logo_path)
         if not logo_px.isNull():
             logo_lbl.setPixmap(
-                logo_px.scaled(_dp(820), _dp(160), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                logo_px.scaled(_dp(750), _dp(145), Qt.KeepAspectRatio, Qt.SmoothTransformation)
             )
+        
         logo_lbl.clicked.connect(self.go_admin.emit)
-        hl.addWidget(logo_lbl, 0, Qt.AlignTop)
+        
+        hl.addWidget(logo_lbl, 0, Qt.AlignTop | Qt.AlignLeft)
 
         hl.addStretch()
 
