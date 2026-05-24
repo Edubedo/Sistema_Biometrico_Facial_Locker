@@ -126,45 +126,44 @@ class AdminPage(QWidget):
         vl.setContentsMargins(0, 0, 0, 0)
         vl.setSpacing(0)
 
-        # ── Header (contiene logo + tabs + badge + logout) ────────────────────
+        # ── Header ────────────────────────────────────────────────────────────
         header = QFrame()
         header.setObjectName("admin_header")
-        # Header un poco más alto para acomodar los tabs: 72 → 84px
-        header.setFixedHeight(_dp(84))
+        # FIX: header más alto para acomodar el logo agrandado (84 → 100px)
+        header.setFixedHeight(_dp(100))
 
         hl = QHBoxLayout(header)
         hl.setContentsMargins(_dp(14), _dp(6), _dp(14), _dp(6))
         hl.setSpacing(_dp(10))
 
-        # Logo
+        # Logo — FIX: de 200×70 a 280×90 para que se vea más grande
         project_root = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "..", "..")
         )
         logo_path = os.path.join(project_root, "lockztar.png")
         logo_lbl = QLabel()
-        logo_lbl.setFixedSize(_dp(200), _dp(70))
+        logo_lbl.setFixedSize(_dp(280), _dp(90))
         logo_lbl.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
         logo_px = QPixmap(logo_path)
         if not logo_px.isNull():
             logo_lbl.setPixmap(
-                logo_px.scaled(_dp(200), _dp(70),
+                logo_px.scaled(_dp(280), _dp(90),
                                Qt.KeepAspectRatio, Qt.SmoothTransformation)
             )
         else:
             logo_lbl.setText("LOCKZTAR")
             logo_lbl.setStyleSheet(
-                f"color:#e6f2ff; font-size:{_dp(15)}px;"
+                f"color:#e6f2ff; font-size:{_dp(20)}px;"
                 f"font-weight:900; font-family:'Segoe UI';"
             )
         hl.addWidget(logo_lbl, 0, Qt.AlignVCenter)
 
         hl.addSpacing(_dp(10))
 
-        # ── Tabs directamente en el header ────────────────────────────────────
-        tab_fs  = _dp(12)
-        # Altura y ancho de cada tab calibrados para el dedo en 7"
-        tab_h   = _dp(56)
-        tab_w   = _dp(130)
+        # ── Tabs ──────────────────────────────────────────────────────────────
+        tab_fs = _dp(12)
+        tab_h  = _dp(62)   # un poco más alto también al subir el header
+        tab_w  = _dp(130)
 
         self.t_lock = QPushButton("")
         self.t_lock.setObjectName("tab")
@@ -223,11 +222,11 @@ class AdminPage(QWidget):
 
         vl.addWidget(header)
 
-        # Línea de acento bajo el header (reemplaza al separador previo)
+        # Línea de acento
         sep = _HLinePainted()
         vl.addWidget(sep)
 
-        # ── Contenido — sube directo tras el header ───────────────────────────
+        # ── Contenido ─────────────────────────────────────────────────────────
         self.stack = QStackedWidget()
         self.stack.setObjectName("content_stack")
 
@@ -275,8 +274,8 @@ class AdminPage(QWidget):
         p.setBrush(QBrush(rg2))
         p.drawRect(0, 0, W, H)
 
-        # Header con gradiente propio
-        hh = _dp(84)
+        # Header con gradiente propio — FIX: altura actualizada a 100px
+        hh = _dp(100)
         hg = QLinearGradient(0, 0, 0, hh)
         hg.setColorAt(0.0, HEADER_TOP)
         hg.setColorAt(1.0, HEADER_BOT)
