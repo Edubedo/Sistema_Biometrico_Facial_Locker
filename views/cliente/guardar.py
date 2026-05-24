@@ -14,8 +14,8 @@ from db.models.lockers import db_set_locker_estado, db_next_free_locker
 from db.models.sesiones import db_create_sesion, db_get_active_sesion_by_face
 from utils.camera import CamThread
 from utils.gpio_locker import abrir_locker, beep_start_scan, beep_success, beep_error
-from views.style.widgets.widgets import lbl, sep_line, CamWidget
 from utils.helpers import db_get_locker_num_by_id
+from views.style.widgets.widgets import lbl, sep_line, CamWidget
 from utils.i18n import tr, get_language
 from utils.ui_touch import touch_height
 
@@ -386,20 +386,24 @@ class GuardarPage(QWidget):
 
     _CAM_W = 440
     _CAM_H = 390
+    # Tiempo máximo (ms) para la fase de pre-verificación (reconocimiento previo).
+    # Si en este tiempo no se detecta ninguna cara conocida, se pasa a captura.
     _PRECHECK_TIMEOUT_MS = 6000
 
     def __init__(self):
         super().__init__()
         self.setObjectName("guardar_page")
         self.setStyleSheet(STYLE)
-        self.cam_thread       = None
+        self.cam_thread = None
         self._face_uid        = None
         self._id_locker       = None
-        self._num_locker      = None   # guardamos num para no re-consultar BD
-        self._capture_started = False  # evita doble disparo del auto-inicio
+        self._num_locker      = None   # FIX #5: guardamos num para no re-consultar
+        self._capture_started = False  # FIX #6: evita doble disparo del auto-inicio
         self._phase           = None   # 'precheck' | 'capture'
 
-        # Timer de seguridad para la fase de pre-verificacion.
+        # Timer de seguridad para la fase de pre-verificación.
+        # Si la cámara no detecta ninguna cara conocida en _PRECHECK_TIMEOUT_MS,
+        # se pasa automáticamente a la fase de captura.
         self._pre_check_timer = QTimer(self)
         self._pre_check_timer.setSingleShot(True)
         self._pre_check_timer.timeout.connect(self._on_precheck_timeout)

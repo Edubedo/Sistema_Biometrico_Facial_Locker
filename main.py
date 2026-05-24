@@ -20,7 +20,8 @@ except ModuleNotFoundError:
                     os.environ[key] = value
         return True
 
-from PyQt5.QtCore import QLibraryInfo, QTimer, Qt
+from PyQt5.QtCore import QLibraryInfo
+
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -28,7 +29,6 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QStackedWidget,
     QShortcut,
-    QLabel,
 )
 from PyQt5.QtGui import QKeySequence
 from db.models.usuarios import db_count_active_admins, db_register_admin
@@ -129,7 +129,6 @@ class MainWindow(QMainWindow):
         self._on_language_changed(get_language())
         self._nav(self.HOME)
         self._install_window_shortcuts()
-
 
     def _install_window_shortcuts(self):
         QShortcut(QKeySequence("F11"), self, activated=self.toggle_fullscreen)
