@@ -643,6 +643,7 @@ class RetirarPage(QWidget):
         self._face_uid   = None
         self._id_sesion  = None
         self._id_locker  = None
+        self._auto_scan_pending = False
 
         root = QVBoxLayout(self)
         root.setContentsMargins(8, 8, 8, 6)
@@ -677,16 +678,6 @@ class RetirarPage(QWidget):
 
         self._carousel = CarouselWidget()
         ll.addWidget(self._carousel, 1)
-
-        self.scan_btn = QPushButton("  INICIAR ESCANEO")
-        self.scan_btn.setObjectName("btn_blue")
-        self.scan_btn.setIcon(_svg_to_icon(_CAM_ICON_SVG, 24))
-        self.scan_btn.setIconSize(QSize(24, 24))
-        self.scan_btn.setFixedHeight(touch_height(80))
-        self.scan_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.scan_btn.setCursor(Qt.PointingHandCursor)
-        self.scan_btn.clicked.connect(self._start_scan)
-        ll.addWidget(self.scan_btn)
 
         self.scan_lbl = lbl("", "err")
         self.scan_lbl.setWordWrap(True)
@@ -792,6 +783,19 @@ class RetirarPage(QWidget):
         self.scan_line = ScanLine(self.cam)
         self.set_language(get_language())
 
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._auto_scan_pending = True
+        QTimer.singleShot(2000, self._auto_start_scan)
+
+    def _auto_start_scan(self):
+        if not self._auto_scan_pending:
+            return
+        if self.cam_thread is not None:
+            return
+        self._auto_scan_pending = False
+        self._start_scan()
+
     # ── Idioma ────────────────────────────────────────────────────────────────
 
     def set_language(self, lang: str):
@@ -800,7 +804,6 @@ class RetirarPage(QWidget):
         self.subtitle_lbl.setText(tr("ret.subtitle"))
         self.scan_title_lbl.setText(tr("ret.scan_title"))
         self.detect_title_lbl.setText(tr("ret.detect_title"))
-        self.scan_btn.setText(tr("ret.start"))
         self._carousel.set_language(lang)
 
     # ── Fondo ─────────────────────────────────────────────────────────────────
@@ -856,7 +859,6 @@ class RetirarPage(QWidget):
         self.result_card.clear()
         self.opts.setVisible(False)
         self.cam.setVisible(True)
-        self.scan_btn.setVisible(True)
         self.scan_frame.setVisible(False)
         self.face_guide.setVisible(False)
         self.scan_line.hide()
@@ -896,6 +898,7 @@ class RetirarPage(QWidget):
             self.cam_thread = None
 
     def _start_scan(self):
+        self._auto_scan_pending = False
         labels = train_model()
         if not labels:
             beep_error()
@@ -907,7 +910,6 @@ class RetirarPage(QWidget):
         self.scan_frame.setVisible(True)
         self.face_guide.setVisible(True)
         self._update_overlay()
-        self.scan_btn.setEnabled(False)
         self.opts.setVisible(False)
         self.scan_lbl.setText("")
         self.cam.set_status("Escaneando biometria...", "#000000")
@@ -932,8 +934,6 @@ class RetirarPage(QWidget):
             self.cam_thread = None
 
     def _on_recognized(self, face_uid: str):
-        self.scan_btn.setEnabled(True)
-
         if face_uid == CamThread.CAMERA_ERROR:
             beep_error()
             self.cam.idle()
@@ -975,7 +975,6 @@ class RetirarPage(QWidget):
             self._id_sesion, self._id_locker = sesion
 
         self.scan_lbl.setText("")
-        self.scan_btn.setVisible(False)
         self._show_actions_mode()
 
     # ── Acciones ──────────────────────────────────────────────────────────────
@@ -1023,14 +1022,13 @@ class RetirarPage(QWidget):
     # ── Reset / cancelar ──────────────────────────────────────────────────────
 
     def reset(self):
+        self._auto_scan_pending = False
         self._stop_cam_thread()
         self.face_guide.setVisible(False)
         self.scan_frame.setVisible(False)
         self.scan_line.hide()
         self.opts.setVisible(False)
         self.cam.setVisible(True)
-        self.scan_btn.setVisible(True)
-        self.scan_btn.setEnabled(True)
         self.scan_lbl.setText("")
         self._face_uid  = None
         self._id_sesion = None
@@ -1040,5 +1038,6 @@ class RetirarPage(QWidget):
         self.cam.idle()
 
     def _cancel(self):
+        self._auto_scan_pending = False
         self._stop_cam_thread()
         self.go_back.emit()

@@ -225,13 +225,11 @@ class MainWindow(QMainWindow):
     def _on_retirado(self, face_uid, num_locker, id_sesion):
         """El cliente retiro sus cosas, sesion cerrada, locker liberado."""
         self.p_retir.reset()
-        # Show result but do NOT auto-return to home (user should see result clearly)
         self.p_result.show_result(
             "ok_blue",
             tr("flow.bye_title"),
             tr("flow.bye_sub", n=num_locker),
             "LOCKER  #{}".format(num_locker),
-            auto=False,
         )
         self._nav(self.RESULT)
 
@@ -239,13 +237,11 @@ class MainWindow(QMainWindow):
         """El cliente sigue comprando, locker permanece activo."""
         self.p_retir.reset()
         detail = "LOCKER  #{}".format(num_locker) if num_locker else ""
-        # Show result without auto-timer so the user sees the locker info
         self.p_result.show_result(
             "ok_blue",
             tr("flow.keep_title"),
             tr("flow.keep_sub"),
             detail,
-            auto=False,
         )
         self._nav(self.RESULT)
 
