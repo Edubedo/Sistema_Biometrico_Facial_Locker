@@ -40,24 +40,6 @@ GLOW_GOLD     = QColor(255, 185, 40,  50)
 STYLE = """
 QWidget#home_page { background: transparent; }
 
-QPushButton#btn_admin {
-    background: rgba(41,128,255,0.18);
-    color: #ddeeff;
-    border: 1.5px solid rgba(41,128,255,0.55);
-    border-radius: 12px;
-    font-family: 'Segoe UI', sans-serif;
-    letter-spacing: 2px;
-    font-weight: 800;
-    font-size: 15px;
-    padding: 6px 14px;
-}
-QPushButton#btn_admin:hover   {
-    background: rgba(41,128,255,0.36);
-    border-color: rgba(41,128,255,0.95);
-    color: #ffffff;
-}
-QPushButton#btn_admin:pressed { background: rgba(41,128,255,0.12); }
-
 QFrame#h_divider {
     background: rgba(41,128,255,0.18);
     border: none;
@@ -113,17 +95,16 @@ QPushButton#lang_btn_active {
     font-size: 15px;
     padding: 6px 8px;
 }
-QPushButton#btn_admin_handle {
-    background: transparent;
-    border: none;
-    color: rgba(220,235,255,0.95);
-    font-family: 'Segoe UI', sans-serif;
-    font-weight: 800;
-    font-size: 18px;
-    border-radius: 10px;
-}
-QPushButton#btn_admin_handle:hover { background: rgba(255,255,255,0.06); }
 """
+
+
+class ClickableLogo(QLabel):
+    clicked = pyqtSignal()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.clicked.emit()
+        super().mousePressEvent(event)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -415,14 +396,16 @@ class HomePage(QWidget):
         # Logo
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
         logo_path = os.path.join(project_root, "lockztar.png")
-        logo_lbl = QLabel()
-        logo_lbl.setFixedSize(_dp(520), _dp(140))
+        logo_lbl = ClickableLogo()
+        logo_lbl.setFixedSize(_dp(640), _dp(150))
         logo_lbl.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        logo_lbl.setCursor(Qt.PointingHandCursor)
         logo_px = QPixmap(logo_path)
         if not logo_px.isNull():
             logo_lbl.setPixmap(
-                logo_px.scaled(_dp(500), _dp(130), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                logo_px.scaled(_dp(620), _dp(140), Qt.KeepAspectRatio, Qt.SmoothTransformation)
             )
+        logo_lbl.clicked.connect(self.go_admin.emit)
         hl.addWidget(logo_lbl, 0, Qt.AlignTop)
 
         hl.addStretch()
@@ -458,28 +441,7 @@ class HomePage(QWidget):
         swl.addWidget(self.btn_lang_en)
         lcol.addWidget(self.lang_switch, 0, Qt.AlignRight)
 
-        # Admin button (kept large) but placed inside a collapsable panel
-        self.adm = QPushButton("")
-        self.adm.setObjectName("btn_admin")
-        self.adm.setFixedSize(_dp(240), _dp(70))
-        self.adm.setStyleSheet(
-            self.adm.styleSheet() +
-            f"font-size:{_dp(16)}px; padding:0 {_dp(16)}px;"
-        )
-        self.adm.setCursor(Qt.PointingHandCursor)
-        self.adm.clicked.connect(self.go_admin.emit)
-        self.adm.setFocusPolicy(Qt.NoFocus)
-
-        # Panel para admin (siempre visible)
-        self.admin_panel = QFrame()
-        self.admin_panel.setObjectName("admin_panel")
-        self.admin_panel.setFixedWidth(_dp(250))
-        ap_layout = QHBoxLayout(self.admin_panel)
-        ap_layout.setContentsMargins(0, 0, 0, 0)
-        ap_layout.addWidget(self.adm)
-
         rhl.addLayout(lcol)
-        rhl.addWidget(self.admin_panel, 0, Qt.AlignRight)
         hl.addLayout(rhl)
 
         root.addWidget(header)
@@ -637,7 +599,6 @@ class HomePage(QWidget):
 
     def set_language(self, lang: str):
         self._set_lang(lang, emit=False)
-        self.adm.setText(tr("home.admin"))
         self.btn_guardar.set_label(tr("home.store"))
         self.btn_recoger.set_label(tr("home.pickup"))
         self.actions_title.setText(tr("home.actions.title"))
