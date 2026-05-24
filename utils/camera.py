@@ -339,10 +339,11 @@ class CamThread(QThread):
         self.wait(3000)
 
     def run(self):
-        capture_count      = 0
-        recognized_uid     = ""
-        read_failed        = False
-        consecutive_fails  = 0   # reintentos consecutivos de lectura
+        capture_count       = 0
+        recognized_uid      = ""
+        read_failed         = False
+        consecutive_fails   = 0
+        capture_consecutive = 0   # frames consecutivos con cara válida (CAPTURE)
 
         face_anchor         = None
         anchor_misses       = 0
@@ -443,9 +444,14 @@ class CamThread(QThread):
             h_det, w_det = det_gray.shape[:2]
 
             # ── Detección de rostros (Haar cascade) ───────────────────────
-            # En baja luz: menos vecinos y tamaño mínimo menor para mayor sensibilidad
-            _min_neighbors = 4 if mean_brightness < 55 else 5
-            _min_size      = (70, 70) if mean_brightness < 55 else (80, 80)
+            # CAPTURE: siempre estricto (registro controlado, no relajar por luz)
+            # RECOGNIZE: relajar en baja luz para mayor sensibilidad
+            if self.mode == self.CAPTURE:
+                _min_neighbors = 5
+                _min_size      = (80, 80)
+            else:
+                _min_neighbors = 4 if mean_brightness < 55 else 5
+                _min_size      = (70, 70) if mean_brightness < 55 else (80, 80)
             casc_raw = fc.detectMultiScale(
                 det_gray, scaleFactor=1.1, minNeighbors=_min_neighbors,
                 minSize=_min_size, flags=cv2.CASCADE_SCALE_IMAGE
@@ -497,6 +503,7 @@ class CamThread(QThread):
                         face_anchor = None; anchor_misses = 0
                     recog_last_label    = None
                     recog_confirm_count = 0
+                    capture_consecutive = 0
                     liveness_buf.clear()
                     self._emit_frame(frame)
                     continue
@@ -517,6 +524,7 @@ class CamThread(QThread):
                     face_anchor = None; anchor_misses = 0
                 recog_last_label    = None
                 recog_confirm_count = 0
+                capture_consecutive = 0
                 liveness_buf.clear()
                 self._emit_frame(frame)
                 continue
@@ -540,6 +548,7 @@ class CamThread(QThread):
                                     (10, 30), cv2.FONT_HERSHEY_SIMPLEX,
                                     0.6, (0, 80, 220), 2)
                         anchor_misses += 1
+                        capture_consecutive = 0
                         self._emit_frame(frame)
                         continue
                     face_anchor = (
@@ -581,15 +590,19 @@ class CamThread(QThread):
 
             # ── CAPTURE ───────────────────────────────────────────────────
             if self.mode == self.CAPTURE:
+                capture_consecutive += 1
                 cv2.rectangle(frame, (x, y), (x+fw, y+fh), (0, 220, 0), 2)
-                cv2.imwrite(os.path.join(sdir, f"{capture_count}.png"), roi)
-                capture_count += 1
-                self.progress.emit(capture_count)
+                # Requerir 2 frames consecutivos antes de guardar: evita fotos de
+                # detecciones falsas momentáneas (manos, objetos, etc.)
+                if capture_consecutive >= 2:
+                    cv2.imwrite(os.path.join(sdir, f"{capture_count}.png"), roi)
+                    capture_count += 1
+                    self.progress.emit(capture_count)
+                    if capture_count >= self.CAPTURE_TARGET:
+                        self._active = False
                 cv2.putText(frame, f"{capture_count}/{self.CAPTURE_TARGET}",
                             (x, y-8), cv2.FONT_HERSHEY_SIMPLEX,
                             0.7, (80, 180, 255), 2)
-                if capture_count >= self.CAPTURE_TARGET:
-                    self._active = False
 
             # ── RECOGNIZE ─────────────────────────────────────────────────
             elif self.mode == self.RECOGNIZE:

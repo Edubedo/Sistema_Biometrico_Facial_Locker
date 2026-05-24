@@ -313,6 +313,10 @@ class GuardarPage(QWidget):
         self._pre_check_timer.setSingleShot(True)
         self._pre_check_timer.timeout.connect(self._on_precheck_timeout)
 
+        self._locker_check_timer = QTimer(self)
+        self._locker_check_timer.setInterval(2000)
+        self._locker_check_timer.timeout.connect(self._on_locker_check)
+
         root = QVBoxLayout(self)
         root.setContentsMargins(8, 8, 8, 6)
         root.setSpacing(4)
@@ -335,12 +339,14 @@ class GuardarPage(QWidget):
 
         self.err_lbl = lbl("", "err")
         self.err_lbl.setWordWrap(True)
-        self.err_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.err_lbl.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self.err_lbl.setContentsMargins(6, 2, 6, 2)
 
         hdr.addWidget(back); hdr.addSpacing(6); hdr.addLayout(htxt)
-        hdr.addStretch(); hdr.addWidget(self.err_lbl)
+        hdr.addStretch()
         root.addLayout(hdr)
         root.addWidget(sep_line())
+        root.addWidget(self.err_lbl)
 
         # ── Body: cámara a pantalla completa ─────────────────────────────────
         body = QHBoxLayout(); body.setSpacing(0); body.setContentsMargins(6, 4, 6, 4)
@@ -430,12 +436,11 @@ class GuardarPage(QWidget):
             try:
                 from utils.gpio_locker import locker_esta_abierto
                 if locker_esta_abierto(str(self._num_locker)):
-                    self._id_locker  = None
-                    self._num_locker = None
                     self.err_lbl.setText(
                         "El locker asignado está físicamente abierto. "
                         "Por favor ciérralo antes de continuar."
                     )
+                    self._locker_check_timer.start()
                     return
             except Exception:
                 pass  # Sin GPIO disponible: continuar normalmente
@@ -511,6 +516,20 @@ class GuardarPage(QWidget):
         """Timeout: nadie fue reconocido → proceder a captura normal."""
         self._stop_cam_thread()
         self._start_phase2_capture()
+
+    def _on_locker_check(self):
+        """Comprueba cada 2 s si el locker ya fue cerrado para reanudar el flujo."""
+        if not self._num_locker:
+            self._locker_check_timer.stop()
+            return
+        try:
+            from utils.gpio_locker import locker_esta_abierto
+            if not locker_esta_abierto(str(self._num_locker)):
+                self._locker_check_timer.stop()
+                self.err_lbl.setText("")
+                QTimer.singleShot(400, self._show_steps)
+        except Exception:
+            self._locker_check_timer.stop()
 
     def _on_precheck_done(self, face_uid: str):
         """
@@ -663,6 +682,7 @@ class GuardarPage(QWidget):
 
     def _cancel(self):
         self._pre_check_timer.stop()
+        self._locker_check_timer.stop()
         self._step_overlay.stop()
         self._stop_cam_thread()
         # Solo borrar si es UID temporal (captura incompleta), nunca una sesión confirmada
@@ -672,6 +692,7 @@ class GuardarPage(QWidget):
 
     def reset(self):
         self._pre_check_timer.stop()
+        self._locker_check_timer.stop()
         self._step_overlay.stop()
         self._stop_cam_thread()
         self._face_uid        = None
