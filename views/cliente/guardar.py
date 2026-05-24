@@ -519,6 +519,10 @@ class GuardarPage(QWidget):
         - Sesión activa → emitir already_has_session (aviso + redirect 5 s).
         - No reconoce   → proceder a captura normal.
         """
+        # Ignorar señales obsoletas: si el timeout ya avanzó a fase 2, descartar.
+        if self._phase != "precheck":
+            return
+
         self._pre_check_timer.stop()
 
         if face_uid == CamThread.CAMERA_ERROR:
@@ -559,10 +563,6 @@ class GuardarPage(QWidget):
                 return
 
         self._start_phase2_capture()
-
-    def _show_existing_session(self, locker_num):
-        """Delegado al MainWindow vía señal already_has_session."""
-        self.already_has_session.emit(str(locker_num))
 
     # ── Captura fase 2 ────────────────────────────────────────────────────────
 
@@ -653,9 +653,6 @@ class GuardarPage(QWidget):
         db_log_intento(id_locker, "registro_biometrico", "exitoso",
                        "Sesion {} creada. Locker #{} asignado.".format(id_sesion, num_locker),
                        id_sesion=id_sesion)
-
-        import threading
-        threading.Thread(target=train_model, daemon=True).start()
 
         self._id_locker  = None
         self._num_locker = None

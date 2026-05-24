@@ -125,7 +125,7 @@ def train_model():
                 labels.append(idx)
         idx += 1
 
-    if len(images) > 1:
+    if len(images) >= 1:
         face_model.train(np.array(images), np.array(labels))
     face_labels = names
     return names

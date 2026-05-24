@@ -204,19 +204,15 @@ class MainWindow(QMainWindow):
 
     def _on_session_active(self, num_locker: str):
         """
-        El precheck de guardar detectó que la persona ya tiene una sesión activa.
-        Muestra la ResultPage con aviso "warn" (ámbar) y redirige al inicio
-        automáticamente después de 5 segundos.
+        El precheck biométrico detectó que la persona ya tiene locker activo.
+        Muestra aviso visual con countdown de 5 s y regresa al inicio.
         """
         self.p_guard.reset()
-        self.p_result.show_result(
-            "warn",
-            "¡Ya tienes una sesión activa!",
-            f"Tu locker #{num_locker} sigue reservado para ti.",
-            f"LOCKER  #{num_locker}",
-            auto=True,  # usa el timer de AUTO_HOME_SEC para regresar al inicio
-        )
         self.stack.setCurrentIndex(self.RESULT)
+        self.p_result.show_already_has_locker(
+            num_locker=num_locker,
+            on_timeout=lambda: self._nav(self.HOME),
+        )
 
     def _on_retirado(self, face_uid, num_locker, id_sesion):
         self.p_retir.reset()
