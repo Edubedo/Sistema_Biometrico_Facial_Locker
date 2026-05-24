@@ -1,6 +1,6 @@
 import os
 
-from PyQt5.QtCore import Qt, pyqtSignal, QRectF, QSize
+from PyQt5.QtCore import Qt, pyqtSignal, QRectF, QSize, QPoint
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
     QStackedWidget, QFrame, QApplication, QToolButton, QMenu
@@ -232,25 +232,21 @@ class AdminPage(QWidget):
                 color: #ffffff;
                 border: 1px solid rgba(255,255,255,0.10);
                 border-radius: 10px;
-                padding: 6px;
+                padding: 10px;
             }
             QMenu::item {
-                padding: 12px 18px;
+                padding: 16px 22px;
                 border-radius: 8px;
-                min-width: 140px;
-                font-size: 14px;
+                min-width: 180px;
+                min-height: 44px;
+                font-size: 16px;
                 font-weight: 700;
             }
             QMenu::item:selected {
                 background: rgba(70,160,255,0.26);
             }
         """)
-        self.profile_btn.setMenu(self._profile_menu)
-        try:
-            # Use InstantPopup so click shows menu immediately
-            self.profile_btn.setPopupMode(QToolButton.InstantPopup)
-        except Exception:
-            pass
+        self.profile_btn.clicked.connect(self._show_profile_menu)
         hl.addWidget(self.profile_btn, 0, Qt.AlignVCenter)
 
         vl.addWidget(header)
@@ -392,6 +388,10 @@ class AdminPage(QWidget):
         for panel in (self.p_lockers, self.p_sesiones, self.p_log, self.p_admins):
             if hasattr(panel, "set_language"):
                 panel.set_language(lang)
+
+    def _show_profile_menu(self):
+        offset = QPoint(0, self.profile_btn.height() + _dp(10))
+        self._profile_menu.popup(self.profile_btn.mapToGlobal(offset))
 
     # ── Tab switch ────────────────────────────────────────────────────────────
     def _tab(self, i: int):

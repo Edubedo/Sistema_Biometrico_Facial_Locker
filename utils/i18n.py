@@ -544,7 +544,6 @@ _TRANSLATIONS = {
         "flow.no_space_sub":   "All lockers are currently in use. Please try again later.",
 
 
-        "ret.look_straight" : "MIRA DIRECTO A LA CÁMARA",
         "ret.locker_already_open" : "El acceso ya está abierto, espera un momento"
     },
 }
