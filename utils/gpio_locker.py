@@ -98,7 +98,7 @@ def locker_esta_abierto(num_locker):
     pin = SWITCH_PINS.get(str(num_locker))
     if pin is None or not GPIO:
         return False
-    return GPIO.input(pin) == GPIO.LOW
+    return GPIO.input(pin) == GPIO.HIGH
 
 # ── Alerta de locker olvidado abierto ─────────────────────────────────────────
 def _monitor_locker_abierto(num_locker, stop_event):
