@@ -91,13 +91,19 @@ def beep_error():
         _sonar_sync(220, 0.25)
     threading.Thread(target=_w, daemon=True).start()
 
-def _beep_alerta():
-    """Alarma continua y agresiva — locker abierto."""
+def _beep_alerta(stop_event=None):
+    """Alarma continua y agresiva — locker abierto. Respeta stop_event entre tonos."""
     for _ in range(6):
+        if stop_event and stop_event.is_set():
+            return
         _sonar_sync(2000, 0.2)
         time.sleep(0.05)
+    if stop_event and stop_event.is_set():
+        return
     time.sleep(0.3)
     for _ in range(3):
+        if stop_event and stop_event.is_set():
+            return
         _sonar_sync(1000, 0.4)
         time.sleep(0.1)
 
@@ -133,7 +139,7 @@ def _monitor_locker_abierto(num_locker, stop_event):
             print(f"[SWITCH] Locker {num_locker} cerrado — alerta detenida")
             break
         print(f"[SWITCH] Locker {num_locker} lleva más de {ALERTA_SEGUNDOS}s abierto — alertando")
-        _beep_alerta()
+        _beep_alerta(stop_event)
         time.sleep(1)  # espera 1 segundo antes de volver a alertar
 
 def iniciar_monitor(num_locker):

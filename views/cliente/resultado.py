@@ -102,6 +102,7 @@ class _IconCircle(QWidget):
 class ResultPage(QWidget):
     go_home = pyqtSignal()
 
+
     def __init__(self):
         super().__init__()
         self.setObjectName("result_page")
@@ -123,6 +124,165 @@ class ResultPage(QWidget):
                     w.setParent(None)
                 else:
                     w.deleteLater()
+
+    def show_already_has_locker(self, num_locker: str, on_timeout=None):
+        """
+        Aviso: la persona ya tiene un locker activo.
+        Muestra tarjeta de advertencia ámbar y cuenta regresiva de 5 s.
+        """
+        # ── 1. Detener TODOS los timers activos antes de tocar el layout ──────────
+        try:
+            self._timer_w.stop()
+        except Exception:
+            pass
+
+        # Detener y DESTRUIR el countdown anterior si existe
+        if hasattr(self, "_already_countdown") and self._already_countdown is not None:
+            self._already_countdown.stop()
+            self._already_countdown.deleteLater()
+            self._already_countdown = None
+
+        self._already_secs_left = 5   # resetear SIEMPRE antes de crear el nuevo timer
+
+        # ── 2. Reconstruir layout ─────────────────────────────────────────────────
+        self._kind = "warn"
+        self._clear_root_layout()
+        self._card = None
+
+        cfg = _KIND["warn"]
+
+        screen_w = self.width() or (
+            QApplication.primaryScreen().size().width()
+            if QApplication.primaryScreen() else 1024
+        )
+        sf = 1.0
+        if screen_w <= 800:
+            sf = 0.70
+        elif screen_w <= 1024:
+            sf = 0.86
+
+        def s(v):
+            return max(1, round(_dp(v) * sf))
+
+        self._root.addStretch(1)
+
+        card = QFrame()
+        card.setObjectName("result_card")
+        card_width = min(s(720), max(s(300), int(screen_w * 0.92)))
+        card.setFixedWidth(card_width)
+        border_color = cfg["border"].name()
+        accent_hex   = cfg["accent"].name()
+        card.setStyleSheet(f"""
+            QFrame#result_card {{
+                background: #ffffff;
+                border: 1px solid {border_color};
+                border-top: 4px solid {accent_hex};
+                border-radius: {s(16)}px;
+            }}
+        """)
+
+        cl = QVBoxLayout(card)
+        cl.setContentsMargins(s(56), s(48), s(56), s(48))
+        cl.setSpacing(s(18))
+        cl.setAlignment(Qt.AlignCenter)
+
+        icon_w = _IconCircle(cfg["icon"], cfg["accent"], cfg["accent_light"], size=s(120))
+        cl.addWidget(icon_w, alignment=Qt.AlignCenter)
+        cl.addSpacing(s(4))
+
+        badge = QLabel(tr("result.already_badge"))
+        badge.setAlignment(Qt.AlignCenter)
+        badge.setStyleSheet(f"""
+            background: {cfg['badge_bg'].name()};
+            color: {cfg['badge_fg']};
+            border: 1px solid {border_color};
+            border-radius: {s(10)}px;
+            font-size: {s(10)}px; font-weight: 800;
+            font-family: 'Segoe UI'; letter-spacing: 3px;
+            padding: {s(4)}px {s(16)}px;
+        """)
+        badge.setFixedHeight(s(30))
+        cl.addWidget(badge, alignment=Qt.AlignCenter)
+
+        t_lbl = QLabel(tr("result.already_title"))
+        t_lbl.setAlignment(Qt.AlignCenter)
+        t_lbl.setWordWrap(True)
+        t_lbl.setStyleSheet(f"""
+            font-size: {s(28)}px; font-weight: 900;
+            color: {accent_hex}; font-family: 'Segoe UI';
+        """)
+        cl.addWidget(t_lbl)
+
+        sub = QLabel(tr("result.already_sub"))
+        sub.setAlignment(Qt.AlignCenter)
+        sub.setWordWrap(True)
+        sub.setStyleSheet(f"""
+            font-size: {s(16)}px; font-weight: 600;
+            color: #444444; font-family: 'Segoe UI';
+        """)
+        cl.addWidget(sub)
+
+        div = QFrame()
+        div.setStyleSheet(
+            f"background:{border_color}; border:none; min-height:1px; max-height:1px;"
+        )
+        cl.addWidget(div)
+
+        num_lbl = QLabel(f"LOCKER  #{num_locker}")
+        num_lbl.setAlignment(Qt.AlignCenter)
+        num_lbl.setStyleSheet(f"""
+            font-size: {s(58)}px; font-weight: 900;
+            color: #000000; font-family: 'Segoe UI'; letter-spacing: 2px;
+        """)
+        cl.addWidget(num_lbl)
+
+        cl.addSpacing(s(6))
+
+        countdown_lbl = QLabel()
+        countdown_lbl.setAlignment(Qt.AlignCenter)
+        countdown_lbl.setStyleSheet(f"""
+            color: {accent_hex}; font-size: {s(13)}px;
+            font-weight: 700; font-family: 'Segoe UI'; letter-spacing: 1px;
+        """)
+        cl.addWidget(countdown_lbl, alignment=Qt.AlignCenter)
+
+        self._card = card
+        self._root.addWidget(card, alignment=Qt.AlignCenter)
+        self._root.addStretch(1)
+        self.update()
+
+        # ── 3. Crear timer NUEVO con referencia débil al label ────────────────────
+        import weakref
+        lbl_ref = weakref.ref(countdown_lbl)   # evita retener el widget destruido
+
+        def _tick():
+            # Si el label ya fue destruido (layout reconstruido), salir limpio
+            lbl = lbl_ref()
+            if lbl is None:
+                if hasattr(self, "_already_countdown") and self._already_countdown:
+                    self._already_countdown.stop()
+                return
+
+            n = self._already_secs_left
+            lbl.setText(tr("ui.return_home", n=n))
+
+            if n <= 0:
+                if hasattr(self, "_already_countdown") and self._already_countdown:
+                    self._already_countdown.stop()
+                if callable(on_timeout):
+                    on_timeout()
+                else:
+                    self.go_home.emit()
+                return
+
+            self._already_secs_left -= 1
+
+        _tick()   # mostrar "5 segundos..." inmediatamente
+
+        self._already_countdown = QTimer(self)
+        self._already_countdown.setInterval(1000)
+        self._already_countdown.timeout.connect(_tick)
+        self._already_countdown.start()
 
     # ── Background gradient (changes per kind) ────────────────────────────────
     def paintEvent(self, _):

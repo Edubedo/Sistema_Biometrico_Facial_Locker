@@ -12,7 +12,7 @@ from db.models.intentos_acceso import db_log_intento
 from db.models.lockers import db_set_locker_estado
 from db.models.sesiones import db_close_sesion, db_get_active_sesion_by_face
 from utils.camera import CamThread
-from utils.gpio_locker import abrir_locker, beep_start_scan, beep_success, beep_error
+from utils.gpio_locker import abrir_locker, beep_start_scan, beep_success, beep_error, locker_esta_abierto, detener_monitor
 from utils.helpers import db_get_locker_num_by_id
 from views.style.widgets.widgets import lbl, sep_line, CamWidget
 from utils.i18n import tr, get_language
@@ -27,14 +27,16 @@ def _dp(value: float) -> int:
 
 
 # ── Proporciones del marco de escaneo (igual que guardar.py) ─────────────────
-_FRAME_W_FRAC = 0.82   # ampliado
-_FRAME_H_FRAC = 0.92
+_FRAME_W_FRAC = 0.98   # Casi pantalla completa para mayor comodidad
+_FRAME_H_FRAC = 0.98
 _FRAME_X_FRAC = (1.0 - _FRAME_W_FRAC) / 2.0
 _FRAME_Y_FRAC = (1.0 - _FRAME_H_FRAC) / 2.0
 _DETECT_ROI   = (_FRAME_X_FRAC, _FRAME_Y_FRAC, _FRAME_W_FRAC, _FRAME_H_FRAC)
 
 # Segundos antes de reintentar el escaneo automáticamente
 _AUTO_RETRY_SECS = 3  # 3 s entre reintentos
+# Tiempo máximo de escaneo antes de declarar "no reconocido"
+_SCAN_TIMEOUT_MS = 10000  # 10 s
 
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -181,9 +183,9 @@ QPushButton#btn_blue:disabled {
 QPushButton#btn_sm {
     background: rgba(20,38,78,0.80); color: #b0c8f0;
     border: 1.5px solid rgba(41,128,255,0.40); border-radius: 10px;
-    padding: 12px 20px; margin-bottom: 6px;
-    font-size: 15px; font-family: 'Segoe UI', sans-serif; font-weight: 700;
-    min-height: 56px; min-width: 140px;
+    padding: 7.5px 20px;  margin-bottom: 6px;
+    font-size: 14px; font-family: 'Segoe UI', sans-serif; font-weight: 700;
+    min-height: 44px; min-width: 120px;
 }
 QPushButton#btn_sm:hover   { background: rgba(26,48,96,0.95); border-color: rgba(41,128,255,0.80); color: #dceaff; }
 QPushButton#btn_sm:pressed { background: rgba(14,26,58,0.95); }
@@ -357,7 +359,7 @@ class StepOverlay(QWidget):
         self._svg.load(svg_data)
         self._text_lbl.setText(tr(_STEP_KEYS[idx]))
         total = len(CAROUSEL_STEPS)
-        self._counter_lbl.setText("PASO {} DE {}".format(idx+1, total))
+        self._counter_lbl.setText(tr("ret.steps.counter", n=idx+1, total=total))
         for i, btn in enumerate(self._dot_btns):
             btn.setObjectName("dot_active" if i == idx else "dot_inactive")
             btn.setStyle(btn.style())
@@ -494,9 +496,11 @@ class InlineResultCard(QWidget):
 
 class RetirarPage(QWidget):
 
-    go_back      = pyqtSignal()
-    retirar_done = pyqtSignal(str, str, int)
-    seguir_done  = pyqtSignal(str, str, int)
+    go_back       = pyqtSignal()
+    retirar_done  = pyqtSignal(str, str, int)
+    seguir_done   = pyqtSignal(str, str, int)
+    # Emitida cuando se reconoce a alguien que NO tiene sesión activa
+    no_session    = pyqtSignal()
 
     _CAM_W = 440
     _CAM_H = 390
@@ -529,22 +533,25 @@ class RetirarPage(QWidget):
         self._retry_timer.setSingleShot(True)
         self._retry_timer.timeout.connect(self._auto_retry)
 
+        # Timeout de escaneo: si no reconoce en _SCAN_TIMEOUT_MS → error + reintento
+        self._scan_timeout = QTimer(self)
+        self._scan_timeout.setSingleShot(True)
+        self._scan_timeout.timeout.connect(self._on_scan_timeout)
+
         root = QVBoxLayout(self)
         root.setContentsMargins(8, 8, 8, 6)
         root.setSpacing(4)
 
         # ── Header ────────────────────────────────────────────────────────────
-        hdr = QHBoxLayout(); hdr.setSpacing(8)
-
-        self.back_btn = QPushButton("")
+        hdr = QHBoxLayout(); hdr.setSpacing(6)
+        self.back_btn = QPushButton("← Volver")
         back = self.back_btn
         back.setObjectName("btn_sm")
-        back.setFixedHeight(touch_height(64))
-        back.setMinimumWidth(140)
+        back.setFixedHeight(_dp(46))           # ← Más pequeño
+        back.setFixedWidth(_dp(130))           # ← Ancho fijo más pequeño
         back.setCursor(Qt.PointingHandCursor)
         back.setFocusPolicy(Qt.NoFocus)
         back.clicked.connect(self._cancel)
-
         htxt = QVBoxLayout(); htxt.setSpacing(0)
         self.title_lbl    = lbl("", "h2")
         self.subtitle_lbl = lbl("", "tag")
@@ -593,11 +600,11 @@ class RetirarPage(QWidget):
         self.opts.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         ol = QVBoxLayout(self.opts); ol.setContentsMargins(18,18,18,18); ol.setSpacing(12); ol.setAlignment(Qt.AlignCenter)
         btn_row = QHBoxLayout(); btn_row.setSpacing(14); btn_row.setAlignment(Qt.AlignCenter)
-        self.btn_retirar = ActionTile("take", "RETIRAR COSAS", "abierta.png")
+        self.btn_retirar = ActionTile("take", tr("ret.btn_take"), "abierta.png")
         self.btn_retirar.setMinimumSize(280, 320)
         self.btn_retirar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.btn_retirar.clicked.connect(self._do_retirar)
-        self.btn_seguir = ActionTile("keep", "SEGUIR COMPRANDO", "cerrada.png")
+        self.btn_seguir = ActionTile("keep", tr("ret.btn_continue"), "cerrada.png")
         self.btn_seguir.setMinimumSize(280, 320)
         self.btn_seguir.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.btn_seguir.clicked.connect(self._do_seguir)
@@ -648,6 +655,10 @@ class RetirarPage(QWidget):
         self.subtitle_lbl.setText(tr("ret.subtitle"))
         self.scan_title_lbl.setText(tr("ret.scan_title"))
         self.detect_title_lbl.setText(tr("ret.detect_title"))
+        self.btn_retirar.title = tr("ret.btn_take")
+        self.btn_retirar.update()
+        self.btn_seguir.title = tr("ret.btn_continue")
+        self.btn_seguir.update()
         self._step_overlay.set_language(lang)
 
     # ── Modos de visualización ────────────────────────────────────────────────
@@ -716,6 +727,7 @@ class RetirarPage(QWidget):
         """
         if not self._scan_started:   # no hay escaneo activo
             self.scan_lbl.setText("")
+            self.cam.idle()   # limpiar mensaje de error prominente antes del retry
             self._show_steps()
 
     def resizeEvent(self, event):
@@ -768,6 +780,25 @@ class RetirarPage(QWidget):
         self.cam_thread.rec_done.connect(self._on_recognized)
         self.cam_thread.finished.connect(self._on_scan_thread_finished)
         self.cam_thread.start()
+        self._scan_timeout.start(_SCAN_TIMEOUT_MS)
+
+    def _on_scan_timeout(self):
+        if not self._scan_started:
+            return
+        self._scan_started = False
+        if self.cam_thread and self.cam_thread.isRunning():
+            self.cam_thread.stop()
+        self.cam_thread = None
+        beep_error()
+        self.cam.idle()
+        self.scan_frame.setVisible(False)
+        self.scan_line.hide()
+        self.face_guide.setVisible(False)
+        self.scan_title_lbl.setText(tr("ret.scan_title"))
+        self.scan_lbl.setText(tr("ret.not_recognized"))
+        db_log_intento(1, "retirar", "fallido",
+                       "Timeout de escaneo: rostro no reconocido en tiempo limite")
+        self._retry_timer.start(_AUTO_RETRY_SECS * 1000)
 
     def _on_scan_thread_finished(self):
         sender = self.sender()
@@ -775,7 +806,11 @@ class RetirarPage(QWidget):
             self.cam_thread = None
 
     def _on_recognized(self, face_uid):
+        # Ignorar señales obsoletas: el timeout ya procesó este ciclo de escaneo.
+        if not self._scan_started:
+            return
         self._scan_started = False
+        self._scan_timeout.stop()
         self.scan_lbl.setText("")
 
         if face_uid == CamThread.CAMERA_ERROR:
@@ -811,7 +846,10 @@ class RetirarPage(QWidget):
             self.face_guide.setVisible(False)
             self.scan_title_lbl.setText(tr("ret.scan_title"))
             self.scan_lbl.setText(tr("ret.no_active_session"))
-            # Sin sesión activa: NO reintentar (la persona genuinamente no tiene locker)
+            # Sin sesión activa: emitir señal para mostrar ResultPage + redirigir a inicio
+            db_log_intento(1, "retirar", "fallido",
+                           "Persona reconocida sin sesion activa en retirar")
+            QTimer.singleShot(800, self.no_session.emit)
             return
 
         self._face_uid = face_uid
@@ -821,7 +859,7 @@ class RetirarPage(QWidget):
         else:
             self._id_sesion, self._id_locker = sesion
 
-        # Verificar estado del locker
+        # Verificar estado del locker en BD
         current_estado = _get_locker_estado(self._id_locker)
         if current_estado == "abierto":
             beep_error()
@@ -833,6 +871,29 @@ class RetirarPage(QWidget):
             db_log_intento(self._id_locker, "retirar", "fallido",
                            "Locker ya estaba en estado abierto al intentar acceder.")
             return
+
+        # Verificar estado físico del locker (sensor/switch)
+        num_locker_tmp = db_get_locker_num_by_id(self._id_locker)
+        try:
+            if num_locker_tmp and locker_esta_abierto(str(num_locker_tmp)):
+                # Detener la alarma ANTES del beep de error para evitar distorsión
+                detener_monitor(str(num_locker_tmp))
+                self.cam.idle()
+                self.scan_frame.setVisible(False); self.scan_line.hide()
+                self.face_guide.setVisible(False)
+                self.scan_title_lbl.setText(tr("ret.scan_title"))
+                self.scan_lbl.setText(tr("ret.locker_open_short"))
+                # Mostrar mensaje prominente en el área de cámara
+                self.cam.set_status(tr("ret.locker_open_physical"), "#ff4040")
+                # Pequeño delay para que el tono actual de la alarma termine
+                # antes de tocar el error — sin lock, sin distorsión
+                QTimer.singleShot(350, beep_error)
+                db_log_intento(self._id_locker, "retirar", "fallido",
+                               "Locker físicamente abierto al intentar acceder.")
+                self._retry_timer.start(_AUTO_RETRY_SECS * 1000)
+                return
+        except Exception:
+            pass  # Sin GPIO disponible: continuar normalmente
 
         beep_success()
         self.scan_lbl.setText("")
@@ -865,6 +926,7 @@ class RetirarPage(QWidget):
     # ── Acciones ──────────────────────────────────────────────────────────────
 
     def reset(self):
+        self._scan_timeout.stop()
         self._retry_timer.stop()
         self._close_detected_dialog()
         if self.cam_thread:
@@ -903,7 +965,10 @@ class RetirarPage(QWidget):
         current_estado = _get_locker_estado(self._id_locker)
         if current_estado != "abierto":
             if num_locker and str(num_locker) != "?":
-                abrir_locker(str(num_locker))
+                try:
+                    abrir_locker(str(num_locker))
+                except ValueError as e:
+                    print(f"[WARN] _do_retirar: locker ya abierto físicamente, continuando: {e}")
             else:
                 print(f"[WARN] _do_retirar: num_locker inválido '{num_locker}' para id_locker={self._id_locker}")
         else:
@@ -929,7 +994,10 @@ class RetirarPage(QWidget):
         current_estado = _get_locker_estado(self._id_locker)
         if current_estado != "abierto":
             if num_locker and str(num_locker) != "?":
-                abrir_locker(str(num_locker))
+                try:
+                    abrir_locker(str(num_locker))
+                except ValueError as e:
+                    print(f"[WARN] _do_seguir: locker ya abierto físicamente, continuando: {e}")
             else:
                 print(f"[WARN] _do_seguir: num_locker inválido '{num_locker}' para id_locker={self._id_locker}")
         else:
@@ -941,6 +1009,7 @@ class RetirarPage(QWidget):
         self.seguir_done.emit(self._face_uid, num_locker, self._id_sesion)
 
     def _cancel(self):
+        self._scan_timeout.stop()
         self._retry_timer.stop()
         self._close_detected_dialog()
         self._step_overlay.stop()

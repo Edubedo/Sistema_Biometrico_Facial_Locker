@@ -41,7 +41,14 @@ def _divider():
 # ─────────────────────────────────────────────────────────────────────────────
 #  Modelo de tabla
 # ─────────────────────────────────────────────────────────────────────────────
-_COLS_HDR = ["#", "Nombre", "Usuario", "Rol", "Estado", "Acciones"]
+_COL_HDR_KEYS = [
+    "admin.users.col.num",
+    "admin.users.col.name",
+    "admin.users.col.user",
+    "admin.users.col.role",
+    "admin.users.col.state",
+    "admin.users.col.actions",
+]
 
 class AdminTableModel(QAbstractTableModel):
     def __init__(self, parent=None):
@@ -55,11 +62,11 @@ class AdminTableModel(QAbstractTableModel):
         return self._data[row] if 0 <= row < len(self._data) else {}
 
     def rowCount(self,    p=QModelIndex()): return len(self._data)
-    def columnCount(self, p=QModelIndex()): return len(_COLS_HDR)
+    def columnCount(self, p=QModelIndex()): return len(_COL_HDR_KEYS)
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return _COLS_HDR[section]
+            return tr(_COL_HDR_KEYS[section])
         return QVariant()
 
     def data(self, index, role=Qt.DisplayRole):
@@ -706,9 +713,9 @@ class _AdminUsersPanel(QWidget):
         pg_lay.addWidget(self.count_lbl, 1)
 
         self.btn_first = QPushButton("«")
-        self.btn_prev  = QPushButton("‹  Ant")
+        self.btn_prev  = QPushButton(tr("admin.pag.prev"))
         self.page_lbl  = QLabel("1 / 1")
-        self.btn_next  = QPushButton("Sig  ›")
+        self.btn_next  = QPushButton(tr("admin.pag.next"))
         self.btn_last  = QPushButton("»")
 
         for b, w in ((self.btn_first,_dp(58)),(self.btn_prev,_dp(120)),
@@ -853,6 +860,9 @@ class _AdminUsersPanel(QWidget):
         self.sub_lbl.setText(tr("admin.users.subtitle"))
         self.btn_add.setText("＋  " + tr("admin.users.add"))
         self.btn_ref.setText("↻  " + tr("admin.users.refresh"))
+        self.btn_prev.setText(tr("admin.pag.prev"))
+        self.btn_next.setText(tr("admin.pag.next"))
+        self._model.layoutChanged.emit()
 
     def set_current_admin(self, admin_data: dict):
         self._current_admin = admin_data or {}

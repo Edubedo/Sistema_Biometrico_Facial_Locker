@@ -7,7 +7,7 @@ from PyQt5.QtGui import  QPixmap
 
 from utils.i18n import tr
 
-AUTO_HOME_SEC = 6
+AUTO_HOME_SEC = 5
 
 def sep_line():
     f = QFrame()
@@ -146,4 +146,3 @@ class AutoTimer(QWidget):
 
     def _refresh(self):
         self._lbl.setText(tr("ui.return_home", n=self._left))
-

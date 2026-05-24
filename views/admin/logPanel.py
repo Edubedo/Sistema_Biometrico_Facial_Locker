@@ -36,7 +36,13 @@ def _shadow(widget, blur=12, alpha=18, dy=2):
 # ─────────────────────────────────────────────────────────────────────────────
 #  Modelo de tabla
 # ─────────────────────────────────────────────────────────────────────────────
-_COLS = ["Tipo", "Locker", "Resultado", "Fecha / Hora", "Descripción"]
+_COL_KEYS = [
+    "admin.log.col.type",
+    "admin.log.col.locker",
+    "admin.log.col.result",
+    "admin.log.col.datetime",
+    "admin.log.col.desc",
+]
 _KEYS = [
     "t_tipo_intento",
     "t_numero_locker",
@@ -62,12 +68,12 @@ class LogTableModel(QAbstractTableModel):
         self._data = rows
         self.endResetModel()
 
-    def rowCount(self, parent=QModelIndex()):    return len(self._data)
-    def columnCount(self, parent=QModelIndex()): return len(_COLS)
+    def rowCount(self, parent=QModelIndex()):   return len(self._data)
+    def columnCount(self, parent=QModelIndex()): return len(_COL_KEYS)
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return _COLS[section]
+            return tr(_COL_KEYS[section])
         return QVariant()
 
     def data(self, index, role=Qt.DisplayRole):
@@ -452,9 +458,9 @@ class _AdminLogPanel(QWidget):
         pg_lay.addWidget(self.count_lbl, 1)
 
         self.btn_first = QPushButton("«")
-        self.btn_prev  = QPushButton("‹  Ant")
+        self.btn_prev  = QPushButton(tr("admin.pag.prev"))
         self.page_lbl  = QLabel("1 / 1")
-        self.btn_next  = QPushButton("Sig  ›")
+        self.btn_next  = QPushButton(tr("admin.pag.next"))
         self.btn_last  = QPushButton("»")
 
         for b, w in (
@@ -564,3 +570,6 @@ class _AdminLogPanel(QWidget):
         self.btn_ref.setText("↻  " + tr("admin.log.refresh"))
         self.key_lbl.setText(tr("admin.log.counter"))
         self.status_lbl.setText(tr("admin.log.status"))
+        self.btn_prev.setText(tr("admin.pag.prev"))
+        self.btn_next.setText(tr("admin.pag.next"))
+        self._model.layoutChanged.emit()

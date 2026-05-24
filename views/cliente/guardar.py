@@ -65,9 +65,9 @@ QPushButton#btn_blue:disabled {
 QPushButton#btn_sm {
     background: rgba(20,38,78,0.80); color: #b0c8f0;
     border: 1.5px solid rgba(41,128,255,0.40); border-radius: 10px;
-    padding: 10px 18px; margin-bottom: 6px;
-    font-size: 15px; font-family: 'Segoe UI', sans-serif; font-weight: 700;
-    min-height: 56px; min-width: 140px;
+    padding: 7.5px 20px;  margin-bottom: 6px;
+    font-size: 14px; font-family: 'Segoe UI', sans-serif; font-weight: 700;
+    min-height: 44px; min-width: 120px;
 }
 QPushButton#btn_sm:hover   { background: rgba(26,48,96,0.95); border-color: rgba(41,128,255,0.80); color: #dceaff; }
 QPushButton#btn_sm:pressed { background: rgba(14,26,58,0.95); }
@@ -141,8 +141,8 @@ CAROUSEL_STEPS = [
 
 _STEP_KEYS  = ["guard.step1", "guard.step2", "guard.step3", "guard.step4"]
 
-_FRAME_W_FRAC = 0.82   # ampliado para que el cliente no tenga que centrarse tanto
-_FRAME_H_FRAC = 0.92
+_FRAME_W_FRAC = 0.98   # Casi pantalla completa → el cliente no necesita centrarse con precisión
+_FRAME_H_FRAC = 0.98
 _FRAME_X_FRAC = (1.0 - _FRAME_W_FRAC) / 2.0
 _FRAME_Y_FRAC = (1.0 - _FRAME_H_FRAC) / 2.0
 _DETECT_ROI   = (_FRAME_X_FRAC, _FRAME_Y_FRAC, _FRAME_W_FRAC, _FRAME_H_FRAC)
@@ -313,17 +313,21 @@ class GuardarPage(QWidget):
         self._pre_check_timer.setSingleShot(True)
         self._pre_check_timer.timeout.connect(self._on_precheck_timeout)
 
+        self._locker_check_timer = QTimer(self)
+        self._locker_check_timer.setInterval(2000)
+        self._locker_check_timer.timeout.connect(self._on_locker_check)
+
         root = QVBoxLayout(self)
         root.setContentsMargins(8, 8, 8, 6)
         root.setSpacing(4)
 
         # ── Header ───────────────────────────────────────────────────────────
         hdr = QHBoxLayout(); hdr.setSpacing(6)
-        self.back_btn = QPushButton("")
+        self.back_btn = QPushButton("← Volver")
         back = self.back_btn
         back.setObjectName("btn_sm")
-        back.setFixedHeight(touch_height(64))
-        back.setMinimumWidth(140)
+        back.setFixedHeight(_dp(46))           # ← Más pequeño
+        back.setFixedWidth(_dp(130))           # ← Ancho fijo más pequeño
         back.setCursor(Qt.PointingHandCursor)
         back.setFocusPolicy(Qt.NoFocus)
         back.clicked.connect(self._cancel)
@@ -335,12 +339,14 @@ class GuardarPage(QWidget):
 
         self.err_lbl = lbl("", "err")
         self.err_lbl.setWordWrap(True)
-        self.err_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.err_lbl.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self.err_lbl.setContentsMargins(6, 2, 6, 2)
 
         hdr.addWidget(back); hdr.addSpacing(6); hdr.addLayout(htxt)
-        hdr.addStretch(); hdr.addWidget(self.err_lbl)
+        hdr.addStretch()
         root.addLayout(hdr)
         root.addWidget(sep_line())
+        root.addWidget(self.err_lbl)
 
         # ── Body: cámara a pantalla completa ─────────────────────────────────
         body = QHBoxLayout(); body.setSpacing(0); body.setContentsMargins(6, 4, 6, 4)
@@ -426,6 +432,15 @@ class GuardarPage(QWidget):
         result = db_next_free_locker()
         if result:
             self._id_locker, self._num_locker = result
+            # ── Verificar que el locker no esté físicamente abierto ───────
+            try:
+                from utils.gpio_locker import locker_esta_abierto
+                if locker_esta_abierto(str(self._num_locker)):
+                    self.err_lbl.setText(tr("guard.locker_open_physical"))
+                    self._locker_check_timer.start()
+                    return
+            except Exception:
+                pass  # Sin GPIO disponible: continuar normalmente
             self.err_lbl.setText("")
             QTimer.singleShot(400, self._show_steps)
         else:
@@ -499,14 +514,42 @@ class GuardarPage(QWidget):
         self._stop_cam_thread()
         self._start_phase2_capture()
 
+    def _on_locker_check(self):
+        """Comprueba cada 2 s si el locker ya fue cerrado para reanudar el flujo."""
+        if not self._num_locker:
+            self._locker_check_timer.stop()
+            return
+        try:
+            from utils.gpio_locker import locker_esta_abierto
+            if not locker_esta_abierto(str(self._num_locker)):
+                self._locker_check_timer.stop()
+                self.err_lbl.setText("")
+                QTimer.singleShot(400, self._show_steps)
+        except Exception:
+            self._locker_check_timer.stop()
+
     def _on_precheck_done(self, face_uid: str):
         """
         Resultado del precheck biométrico.
-        - Reconoce sesión activa → emite `already_has_session` para que
-          MainWindow muestre la ResultPage con aviso y redirección a los 5 s.
-        - No reconoce → procede a captura normal.
+        - CAMERA_ERROR  → mostrar error, NO continuar a captura.
+        - Sesión activa → emitir already_has_session (aviso + redirect 5 s).
+        - No reconoce   → proceder a captura normal.
         """
+        # Ignorar señales obsoletas: si el timeout ya avanzó a fase 2, descartar.
+        if self._phase != "precheck":
+            return
+
         self._pre_check_timer.stop()
+
+        if face_uid == CamThread.CAMERA_ERROR:
+            beep_error()
+            self.scan_frame.setVisible(False)
+            self.scan_line.hide()
+            self.face_guide.setVisible(False)
+            self.scan_title_lbl.setText(tr("guard.scan_title"))
+            self.err_lbl.setText(tr("guard.cam_open_error"))
+            self._capture_started = False
+            return
 
         if face_uid and face_uid != CamThread.CAMERA_ERROR:
             sesion = db_get_active_sesion_by_face(face_uid)
@@ -536,10 +579,6 @@ class GuardarPage(QWidget):
                 return
 
         self._start_phase2_capture()
-
-    def _show_existing_session(self, locker_num):
-        """Delegado al MainWindow vía señal already_has_session."""
-        self.already_has_session.emit(str(locker_num))
 
     # ── Captura fase 2 ────────────────────────────────────────────────────────
 
@@ -613,37 +652,41 @@ class GuardarPage(QWidget):
             abrir_locker(str(num_locker))
         except Exception as gpio_err:
             print(f"[WARN] abrir_locker({num_locker}) falló: {gpio_err}")
-            # El locker se marcó como ocupado; notificar igualmente al flujo.
             beep_error()
-            self.err_lbl.setText("Error al abrir el locker físico. Consulta al administrador.")
+            self.err_lbl.setText(tr("guard.locker_hw_error"))
             db_log_intento(id_locker, "registro_biometrico", "error_gpio",
                            f"GPIO falló al abrir locker #{num_locker}: {gpio_err}",
                            id_sesion=id_sesion)
-            # Aun así continuamos: la sesión quedó creada en BD.
+            # NO emitir done: el locker está abierto, no se puede continuar
+            self._capture_started = False
+            self._id_locker  = None
+            self._num_locker = None
+            return
 
         db_log_intento(id_locker, "registro_biometrico", "exitoso",
                        "Sesion {} creada. Locker #{} asignado.".format(id_sesion, num_locker),
                        id_sesion=id_sesion)
 
-        import threading
-        threading.Thread(target=train_model, daemon=True).start()
-
         self._id_locker  = None
         self._num_locker = None
+        self._face_uid   = None   # limpiar: evita que _cancel() borre sesión ya confirmada
         self.done.emit(face_uid, num_locker, id_sesion)
 
     # ── Cancelar / reset ──────────────────────────────────────────────────────
 
     def _cancel(self):
         self._pre_check_timer.stop()
+        self._locker_check_timer.stop()
         self._step_overlay.stop()
         self._stop_cam_thread()
-        if self._face_uid:
+        # Solo borrar si es UID temporal (captura incompleta), nunca una sesión confirmada
+        if self._face_uid and self._face_uid.startswith("tmp_"):
             delete_face_data(self._face_uid)
         self.go_back.emit()
 
     def reset(self):
         self._pre_check_timer.stop()
+        self._locker_check_timer.stop()
         self._step_overlay.stop()
         self._stop_cam_thread()
         self._face_uid        = None
