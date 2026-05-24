@@ -215,6 +215,35 @@ def _is_valid_face(x: int, y: int, fw: int, fh: int,
     return True
 
 
+# ── Anti-spoofing: detección de suplantación con teléfono/foto ───────────────
+_SPOOF_BRIGHT_MEAN  = 210    # Pantalla: brillo medio máximo para "screen glow"
+_SPOOF_BRIGHT_STD   = 20     # Pantalla: std mínima cuando brillo supera umbral
+_SPOOF_MOD_FRAC_MIN = 0.048  # Textura: fracción mínima de gradiente moderado
+
+
+def _is_spoof_roi(roi_gray: np.ndarray) -> bool:
+    """
+    Devuelve True si el ROI facial es claramente una suplantación estática.
+    Dos comprobaciones rápidas (fallback al liveness check como defensa principal):
+      1. Screen glow: pantalla a muy alto brillo + muy uniforme.
+      2. Textura plana: casi sin gradiente moderado (foto muy comprimida o foto impresa).
+    """
+    mean_b = float(np.mean(roi_gray))
+    std_b  = float(np.std(roi_gray))
+
+    # Pantalla con mucho brillo y poca varianza → screen glow típico
+    if mean_b > _SPOOF_BRIGHT_MEAN and std_b < _SPOOF_BRIGHT_STD:
+        return True
+
+    # Imagen demasiado plana: fracción de gradiente moderado muy baja
+    lap_abs  = np.abs(cv2.Laplacian(roi_gray.astype(np.float32), cv2.CV_32F))
+    mod_frac = float(np.sum((lap_abs > 5) & (lap_abs <= 50))) / float(lap_abs.size)
+    if mod_frac < _SPOOF_MOD_FRAC_MIN:
+        return True
+
+    return False
+
+
 # ── Blur de región ocular (tolerancia a lentes) ───────────────────────────────
 
 def _apply_eye_blur(img: np.ndarray) -> np.ndarray:
@@ -248,8 +277,15 @@ class CamThread(QThread):
     _ANCHOR_RADIUS   = 200
     _ANCHOR_MAX_MISS = 20
 
-    _LIVENESS_BUF_SIZE   = 3
-    _LIVENESS_MIN_MOTION = 2.5   # Reducido: tolera personas más quietas
+    # Liveness anti-spoofing — dos criterios independientes:
+    #   event: un solo frame con diff muy alto (respiración, parpadeo, giro de cabeza)
+    #   mean:  movimiento moderado sostenido (cabeza que se mueve gradualmente)
+    # Un teléfono con foto quieta: diffs ~0.5-2  → ningún criterio pasa
+    # Un teléfono con temblor leve: diffs ~1.5-3 → ningún criterio pasa (media < 3.5)
+    # Persona real respirando: spikes periódicos de 6-12 → pasa por event
+    _LIVENESS_BUF_SIZE        = 8    # ventana de ~0.5-1s según FPS
+    _LIVENESS_EVENT_THRESHOLD = 5.5  # diff alto de un solo frame = movimiento real
+    _LIVENESS_MIN_MOTION      = 3.5  # media alta sostenida = movimiento continuo
 
     def __init__(self, mode, face_uid="", labels=None,
                  detect_roi=None, recog_threshold=None):
@@ -334,9 +370,10 @@ class CamThread(QThread):
                 self.rec_done.emit(self.CAMERA_ERROR)
             return
 
-        fc    = cv2.CascadeClassifier(CASCADE)
-        sdir  = face_dir_for(self.face_uid) if self.mode == self.CAPTURE else None
-        clahe = cv2.createCLAHE(clipLimit=3.5, tileGridSize=(8, 8))
+        fc         = cv2.CascadeClassifier(CASCADE)
+        sdir       = face_dir_for(self.face_uid) if self.mode == self.CAPTURE else None
+        clahe_norm = cv2.createCLAHE(clipLimit=3.5, tileGridSize=(8, 8))
+        clahe_dark = cv2.createCLAHE(clipLimit=5.5, tileGridSize=(8, 8))
 
         if sdir:
             os.makedirs(sdir, exist_ok=True)
@@ -376,14 +413,16 @@ class CamThread(QThread):
 
             # ── Gamma adaptativo ──────────────────────────────────────────
             mean_brightness = float(np.mean(gray))
-            if mean_brightness < 60:
-                gray_enh = cv2.LUT(clahe.apply(gray), _gamma_lut(0.50))
+            if mean_brightness < 35:
+                gray_enh = cv2.LUT(clahe_dark.apply(gray), _gamma_lut(0.40))
+            elif mean_brightness < 60:
+                gray_enh = cv2.LUT(clahe_dark.apply(gray), _gamma_lut(0.50))
             elif mean_brightness < 95:
-                gray_enh = cv2.LUT(clahe.apply(gray), _gamma_lut(0.68))
+                gray_enh = cv2.LUT(clahe_norm.apply(gray), _gamma_lut(0.68))
             elif mean_brightness < 130:
-                gray_enh = cv2.LUT(clahe.apply(gray), _gamma_lut(0.82))
+                gray_enh = cv2.LUT(clahe_norm.apply(gray), _gamma_lut(0.82))
             else:
-                gray_enh = clahe.apply(gray)
+                gray_enh = clahe_norm.apply(gray)
 
             h_img, w_img = frame.shape[:2]
 
@@ -404,9 +443,12 @@ class CamThread(QThread):
             h_det, w_det = det_gray.shape[:2]
 
             # ── Detección de rostros (Haar cascade) ───────────────────────
+            # En baja luz: menos vecinos y tamaño mínimo menor para mayor sensibilidad
+            _min_neighbors = 4 if mean_brightness < 55 else 5
+            _min_size      = (70, 70) if mean_brightness < 55 else (80, 80)
             casc_raw = fc.detectMultiScale(
-                det_gray, scaleFactor=1.1, minNeighbors=5,
-                minSize=(80, 80), flags=cv2.CASCADE_SCALE_IMAGE
+                det_gray, scaleFactor=1.1, minNeighbors=_min_neighbors,
+                minSize=_min_size, flags=cv2.CASCADE_SCALE_IMAGE
             )
             raw_faces = []
             if len(casc_raw):
@@ -512,9 +554,8 @@ class CamThread(QThread):
             fw = max(1, min(fw, w_img - x))
             fh = max(1, min(fh, h_img - y))
 
-            roi = _apply_eye_blur(
-                cv2.resize(gray_enh[y:y+fh, x:x+fw], (IMG_W, IMG_H))
-            )
+            roi_raw = cv2.resize(gray_enh[y:y+fh, x:x+fw], (IMG_W, IMG_H))
+            roi     = _apply_eye_blur(roi_raw)
 
             # ── Anti-spoofing liveness (solo RECOGNIZE) ───────────────────
             if self.mode == self.RECOGNIZE:
@@ -522,12 +563,17 @@ class CamThread(QThread):
                 liveness_buf.append(roi_f)
                 if len(liveness_buf) > self._LIVENESS_BUF_SIZE:
                     liveness_buf.pop(0)
-                if len(liveness_buf) >= 3:
+                if len(liveness_buf) >= self._LIVENESS_BUF_SIZE:
                     diffs = [
                         float(np.mean(np.abs(liveness_buf[i] - liveness_buf[i-1])))
                         for i in range(1, len(liveness_buf))
                     ]
-                    if float(np.mean(diffs)) < self._LIVENESS_MIN_MOTION:
+                    # Criterio 1: evento de movimiento real en un solo frame
+                    # (respiración, parpadeo, pequeño giro de cabeza → spike > 5.5)
+                    has_event = any(d >= self._LIVENESS_EVENT_THRESHOLD for d in diffs)
+                    # Criterio 2: movimiento moderado sostenido durante la ventana
+                    mean_ok   = float(np.mean(diffs)) >= self._LIVENESS_MIN_MOTION
+                    if not (has_event or mean_ok):
                         self._emit_frame(frame)
                         continue
             else:
@@ -547,6 +593,13 @@ class CamThread(QThread):
 
             # ── RECOGNIZE ─────────────────────────────────────────────────
             elif self.mode == self.RECOGNIZE:
+                # Anti-spoofing: rechazar pantallas de teléfono y fotos planas
+                if _is_spoof_roi(roi_raw):
+                    recog_last_label    = None
+                    recog_confirm_count = 0
+                    liveness_buf.clear()
+                    self._emit_frame(frame)
+                    continue
                 try:
                     lbl_idx, conf = face_model.predict(roi)
                     if conf < self._recog_fast_threshold and lbl_idx in self.labels:

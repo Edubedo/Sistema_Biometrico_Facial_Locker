@@ -434,12 +434,12 @@ class HomePage(QWidget):
         self.btn_lang_es = QPushButton("ES")
         self.btn_lang_es.setCursor(Qt.PointingHandCursor)
         self.btn_lang_es.clicked.connect(lambda: self._set_lang("es", emit=True))
-        self.btn_lang_es.setFixedSize(_dp(104), _dp(58))
+        self.btn_lang_es.setFixedSize(_dp(114), _dp(58))
 
         self.btn_lang_en = QPushButton("EN")
         self.btn_lang_en.setCursor(Qt.PointingHandCursor)
         self.btn_lang_en.clicked.connect(lambda: self._set_lang("en", emit=True))
-        self.btn_lang_en.setFixedSize(_dp(104), _dp(58))
+        self.btn_lang_en.setFixedSize(_dp(114), _dp(58))
 
         swl.addWidget(self.btn_lang_es)
         swl.addWidget(self.btn_lang_en)
