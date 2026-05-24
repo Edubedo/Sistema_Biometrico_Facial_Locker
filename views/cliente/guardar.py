@@ -654,10 +654,23 @@ class GuardarPage(QWidget):
             print(f"[WARN] abrir_locker({num_locker}) falló: {gpio_err}")
             beep_error()
             self.err_lbl.setText(tr("guard.locker_hw_error"))
+            # Revertir estado en BD para no dejar el locker bloqueado permanentemente
+            try:
+                db_close_sesion(id_sesion)
+            except Exception:
+                pass
+            try:
+                db_set_locker_estado(id_locker, "libre")
+            except Exception:
+                pass
+            try:
+                delete_face_data(face_uid)
+            except Exception:
+                pass
             db_log_intento(id_locker, "registro_biometrico", "error_gpio",
-                           f"GPIO falló al abrir locker #{num_locker}: {gpio_err}",
+                           f"GPIO falló al abrir locker #{num_locker}: {gpio_err}. "
+                           f"Sesión {id_sesion} revertida.",
                            id_sesion=id_sesion)
-            # NO emitir done: el locker está abierto, no se puede continuar
             self._capture_started = False
             self._id_locker  = None
             self._num_locker = None
