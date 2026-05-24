@@ -151,7 +151,7 @@ class CamThread(QThread):
     # Cara real: micro-movimientos → variación > umbral.
     # Foto/pantalla estática → variación ≈ 0.
     _LIVENESS_BUF_SIZE   = 3    # frames en el buffer de movimiento
-    _LIVENESS_MIN_MOTION = 4.5  # diff media mínima entre frames consecutivos
+    _LIVENESS_MIN_MOTION = 3.2  # diff media mínima entre frames consecutivos
                                  # Foto estática ≈ 0–3 ; cara real ≈ 8–40
 
     def __init__(self, mode, face_uid="", labels=None, detect_roi=None):
@@ -186,20 +186,20 @@ class CamThread(QThread):
         # LBPH confidence: MENOR = mejor coincidencia.
         n = len(self.labels)
         if n <= 1:
-            self._recog_threshold  = 52
+            self._recog_threshold  = 70
             self._recog_min_frames = 2
         elif n <= 3:
-            self._recog_threshold  = 60
+            self._recog_threshold  = 82
             self._recog_min_frames = 2
         elif n <= 6:
-            self._recog_threshold  = 68
+            self._recog_threshold  = 85
             self._recog_min_frames = 2
         else:
-            self._recog_threshold  = 75
+            self._recog_threshold  = 88
             self._recog_min_frames = 3
 
         # Fast-accept: conf muy baja → coincidencia clara → 1 frame basta.
-        self._recog_fast_threshold = 40
+        self._recog_fast_threshold = 55
 
     # ── Inicialización de cámara OpenCV (fallback) ────────────────────────────
 
@@ -517,6 +517,15 @@ class CamThread(QThread):
             elif self.mode == self.RECOGNIZE:
                 try:
                     lbl_idx, conf = face_model.predict(roi)
+                    print(
+                        "[RECOG] lbl_idx={} uid={} conf={:.2f} thr={} fast={}".format(
+                            lbl_idx,
+                            self.labels.get(lbl_idx),
+                            conf,
+                            self._recog_threshold,
+                            self._recog_fast_threshold,
+                        )
+                    )
 
                     # Fast-accept: coincidencia muy clara → 1 frame basta.
                     # Coincidencia moderada → se exigen más frames seguidos.
@@ -525,6 +534,7 @@ class CamThread(QThread):
                     elif conf < self._recog_threshold and lbl_idx in self.labels:
                         needed = self._recog_min_frames
                     else:
+                        print("[RECOG] REJECT conf={:.2f}".format(conf))
                         recog_last_label    = None
                         recog_confirm_count = 0
                         self._emit_frame(frame)
