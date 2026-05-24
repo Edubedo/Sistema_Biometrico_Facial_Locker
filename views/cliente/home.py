@@ -315,9 +315,9 @@ class BigLockerButton(QWidget):
 
         # ── Subtexto ──────────────────────────────────────────────────────────
         if self._sublabel:
-            sub_top = label_top + int(H * 0.13)
-            sfs = max(6, int(H * 0.040))
-            sfont = QFont("Segoe UI", sfs)
+            sub_top = label_top + int(H * 0.14)
+            sfs = max(6, int(H * 0.053))
+            sfont = QFont("Segoe UI", sfs, QFont.Bold)
             p.setFont(sfont)
 
             # Píldora de fondo para el subtexto
