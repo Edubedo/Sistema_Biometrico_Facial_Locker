@@ -187,7 +187,7 @@ class CamThread(QThread):
         # LBPH confidence: MENOR = mejor coincidencia.
         n = len(self.labels)
         if n <= 1:
-            self._recog_threshold  = 70
+            self._recog_threshold  = 80
             self._recog_min_frames = 2
         elif n <= 3:
             self._recog_threshold  = 82
