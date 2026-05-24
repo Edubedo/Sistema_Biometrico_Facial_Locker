@@ -13,7 +13,9 @@ from db.models.lockers import (
 )
 from db.models.sesiones import db_close_sesion, db_get_all_sesiones_activas
 from db.models.intentos_acceso import db_log_intento
-from biometria.biometria import train_model
+# FIX: importar delete_face_data para borrar los datos biométricos al liberar
+# (igual que hace retirar.py cuando el cliente retira sus cosas)
+from biometria.biometria import train_model, delete_face_data
 from views.style.adminDialogs import DlgError, DlgInfo, DlgInput, DlgLiberar
 from utils.gpio_locker import abrir_locker
 from utils.i18n import tr, get_language
@@ -58,7 +60,7 @@ _STATE = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Icono del locker  (sin cambios — solo se reusa)
+#  Icono del locker
 # ─────────────────────────────────────────────────────────────────────────────
 class LockerIcon(QWidget):
     def __init__(self, estado="ocupado", parent=None):
@@ -145,12 +147,10 @@ class LockerIcon(QWidget):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Diálogo de configuración — rediseñado para touch
+#  Diálogo de configuración
 # ─────────────────────────────────────────────────────────────────────────────
 def _build_dlg_style():
-    INP_H = _dp(52)
-    r10   = _dp(10); r8 = _dp(8); r6 = _dp(6)
-    TH    = _dp(_TOUCH_H)
+    INP_H = _dp(52); r10=_dp(10); r8=_dp(8); r6=_dp(6); TH=_dp(_TOUCH_H)
     return f"""
 QDialog#locker_dlg {{ background: #f0f6ff; }}
 QLabel#dlg_title {{
@@ -233,7 +233,6 @@ class LockerConfigDialog(QDialog):
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0); root.setSpacing(0)
 
-        # ── Cabecera azul ─────────────────────────────────────────────────────
         hdr = QFrame()
         hdr.setStyleSheet(
             f"QFrame{{background:#1565c0;"
@@ -243,16 +242,13 @@ class LockerConfigDialog(QDialog):
         hdr_l = QVBoxLayout(hdr)
         hdr_l.setContentsMargins(_dp(20), _dp(16), _dp(20), _dp(16))
         hdr_l.setSpacing(_dp(3))
-        ttl = QLabel(tr("admin.lockers.dialog.config_head",
-                        n=locker["t_numero_locker"]))
+        ttl = QLabel(tr("admin.lockers.dialog.config_head", n=locker["t_numero_locker"]))
         ttl.setObjectName("dlg_title")
-        sub = QLabel(tr("admin.lockers.dialog.config",
-                        n=locker["t_numero_locker"]))
+        sub = QLabel(tr("admin.lockers.dialog.config", n=locker["t_numero_locker"]))
         sub.setObjectName("dlg_sub")
         hdr_l.addWidget(ttl); hdr_l.addWidget(sub)
         root.addWidget(hdr)
 
-        # ── Cuerpo ────────────────────────────────────────────────────────────
         body = QFrame()
         body.setStyleSheet(
             f"QFrame{{background:#f0f6ff;"
@@ -288,7 +284,6 @@ class LockerConfigDialog(QDialog):
             self.c_est.setCurrentText(locker["t_estado"])
         add_field(tr("admin.lockers.dialog.state"), self.c_est)
 
-        # Botones
         btn_row = QHBoxLayout(); btn_row.setSpacing(_dp(10))
         self.btn_cancel = QPushButton(tr("common.cancel"))
         self.btn_cancel.setObjectName("dlg_cancel")
@@ -327,17 +322,10 @@ class LockerConfigDialog(QDialog):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  LockerCard  — rediseñada para touch en 7"
-#
-#  Cambio clave: los tres botones de acción (Configurar, Liberar, Eliminar)
-#  son ahora botones de ancho completo apilados en una columna en la parte
-#  inferior de la card, con min-height = _TOUCH_H (52 px).
-#  La card es más alta para acomodarlos sin comprimir el contenido.
+#  LockerCard
 # ─────────────────────────────────────────────────────────────────────────────
 class LockerCard(QFrame):
     CARD_W = _dp(260)
-    # Altura calculada: icono(86) + nombre + chips + separador + 3 botones(52×3)
-    # + márgenes + espaciados ≈ 420 px
     CARD_H = _dp(400)
 
     def __init__(self, locker, index, admin_id=None, on_refresh=None, parent=None):
@@ -353,12 +341,9 @@ class LockerCard(QFrame):
         self.setFixedSize(self.CARD_W, self.CARD_H)
         _shadow(self, blur=_dp(14), alpha=22, dy=_dp(3))
 
-        # ── Layout raíz ───────────────────────────────────────────────────────
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-        outer.setSpacing(0)
+        outer.setContentsMargins(0, 0, 0, 0); outer.setSpacing(0)
 
-        # Banda de color superior (10 px) — indica estado de un vistazo
         bar = QWidget(); bar.setFixedHeight(_dp(10))
         bar.setStyleSheet(
             f"background:{accent};"
@@ -367,14 +352,12 @@ class LockerCard(QFrame):
         )
         outer.addWidget(bar)
 
-        # Contenido
         body = QWidget(); body.setStyleSheet("background:transparent;")
         outer.addWidget(body, 1)
         vbox = QVBoxLayout(body)
         vbox.setContentsMargins(_dp(16), _dp(14), _dp(16), _dp(14))
         vbox.setSpacing(0)
 
-        # ── Fila: icono + badge ───────────────────────────────────────────────
         top_row = QHBoxLayout(); top_row.setSpacing(_dp(10))
         icon = LockerIcon(estado="mant" if estado == "mantenimiento" else estado)
         top_row.addWidget(icon)
@@ -396,7 +379,6 @@ class LockerCard(QFrame):
         vbox.addLayout(top_row)
         vbox.addSpacing(_dp(12))
 
-        # ── Nombre ────────────────────────────────────────────────────────────
         num_lbl = QLabel(f"Locker  #{locker['t_numero_locker']}")
         num_lbl.setWordWrap(True)
         num_lbl.setStyleSheet(
@@ -406,7 +388,6 @@ class LockerCard(QFrame):
         vbox.addWidget(num_lbl)
         vbox.addSpacing(_dp(6))
 
-        # ── Chips zona / tamaño ───────────────────────────────────────────────
         zona   = locker.get("t_zona")   or "—"
         tamano = locker.get("t_tamano") or "—"
         chips  = QHBoxLayout(); chips.setSpacing(_dp(6))
@@ -422,7 +403,6 @@ class LockerCard(QFrame):
         vbox.addLayout(chips)
         vbox.addSpacing(_dp(8))
 
-        # ── Fecha ─────────────────────────────────────────────────────────────
         fecha = str(locker.get("d_fecha_registro", "") or "")[:10]
         date_lbl = QLabel(fecha or "—")
         date_lbl.setStyleSheet(
@@ -431,14 +411,11 @@ class LockerCard(QFrame):
         vbox.addWidget(date_lbl)
         vbox.addStretch()
 
-        # ── Separador ─────────────────────────────────────────────────────────
         sep = QFrame(); sep.setFrameShape(QFrame.HLine)
         sep.setStyleSheet("color:#e5e7eb;")
         vbox.addWidget(sep)
         vbox.addSpacing(_dp(10))
 
-        # ── Botones de acción — ancho completo, altura táctil ─────────────────
-        # Botón Configurar
         btn_cfg = QPushButton("⚙   " + tr("admin.lockers.configure"))
         btn_cfg.setFixedHeight(_dp(_TOUCH_H))
         btn_cfg.setStyleSheet(self._btn_css(GRAY_CHIP, GRAY_TEXT, "#cbd5e1"))
@@ -448,7 +425,6 @@ class LockerCard(QFrame):
         vbox.addWidget(btn_cfg)
         vbox.addSpacing(_dp(6))
 
-        # Botón Liberar (solo si está ocupado)
         if estado == "ocupado":
             btn_lib = QPushButton("↩   " + tr("admin.lockers.release"))
             btn_lib.setFixedHeight(_dp(_TOUCH_H))
@@ -459,7 +435,6 @@ class LockerCard(QFrame):
             vbox.addWidget(btn_lib)
             vbox.addSpacing(_dp(6))
 
-        # Botón Eliminar
         btn_del = QPushButton("✕   " + tr("admin.lockers.delete"))
         btn_del.setFixedHeight(_dp(_TOUCH_H))
         btn_del.setStyleSheet(self._btn_css(RED_BG, RED_TEXT, "#fca5a5"))
@@ -468,11 +443,9 @@ class LockerCard(QFrame):
         btn_del.clicked.connect(self._eliminar)
         vbox.addWidget(btn_del)
 
-    # ── CSS compartido para botones de acción ─────────────────────────────────
     @staticmethod
     def _btn_css(bg, fg, border):
-        r = _dp(9)
-        fs = _dp(11)
+        r = _dp(9); fs = _dp(11)
         return (
             f"QPushButton{{background:{bg};color:{fg};"
             f"border:1.5px solid {border};border-radius:{r}px;"
@@ -488,7 +461,6 @@ class LockerCard(QFrame):
         p.drawRoundedRect(1, 1, self.width()-2, self.height()-2, _dp(14), _dp(14))
         p.end()
 
-    # ── Lógica (sin cambios respecto al original) ─────────────────────────────
     def _log(self, tipo, resultado, desc, id_sesion=None):
         db_log_intento(
             id_locker=self.locker["ID_locker"], tipo=tipo,
@@ -497,13 +469,72 @@ class LockerCard(QFrame):
         )
 
     def _close_active_session(self, extra_desc=""):
+        """
+        FIX: cierra las sesiones activas del locker Y borra los datos biométricos
+        asociados, igual que hace retirar.py al ejecutar _do_retirar.
+
+        Sin esta limpieza, el modelo LBPH seguiría reconociendo a la persona
+        liberada y podría acceder al sistema como si aún tuviera un locker.
+        """
         for s in db_get_all_sesiones_activas():
-            if s["ID_locker"] != self.locker["ID_locker"]: continue
+            if s["ID_locker"] != self.locker["ID_locker"]:
+                continue
+
+            # ── Borrar datos biométricos (mismo flujo que retirar.py) ──────
+            face_uid = s.get("b_vector_biometrico_temp") or b""
+            if isinstance(face_uid, bytes):
+                face_uid = face_uid.decode("utf-8", errors="ignore").strip()
+            if face_uid:
+                try:
+                    delete_face_data(face_uid)
+                    print(f"[Admin] Datos biométricos eliminados: '{face_uid}'")
+                except Exception as fe:
+                    print(f"[WARN] No se pudo borrar datos de '{face_uid}': {fe}")
+            # ─────────────────────────────────────────────────────────────────
+
             db_close_sesion(s["ID_sesion"])
             desc = (f"Sesión #{s['ID_sesion']} cerrada al liberar "
                     f"locker #{self.locker['t_numero_locker']}.")
-            if extra_desc: desc += f" Motivo: {extra_desc}"
+            if extra_desc:
+                desc += f" Motivo: {extra_desc}"
             self._log("cierre_sesion_admin", "exitoso", desc, id_sesion=s["ID_sesion"])
+
+    def _liberar(self):
+        """
+        FIX: sigue el mismo orden que retirar.py → _do_retirar:
+          1. Abrir cerradura física (LED encendido solo aquí)
+          2. Borrar datos biométricos de la sesión
+          3. Cerrar sesión en BD
+          4. Marcar locker como 'libre'
+          5. Reentrenar modelo sin esa persona
+        """
+        num = self.locker["t_numero_locker"]
+        confirmed, reason = DlgLiberar.ask(num, parent=self)
+        if not confirmed:
+            return
+        try:
+            # 1. Abrir cerradura → LED solo aquí (dentro de abrir_locker)
+            abrir_locker(str(num))
+
+            # 2 + 3. Borrar biometría y cerrar sesión
+            self._close_active_session(extra_desc=reason)
+
+            # 4. Marcar locker como libre
+            db_set_locker_estado(self.locker["ID_locker"], "libre", self.admin_id)
+
+            desc = f"Admin liberó locker #{num} manualmente."
+            if reason:
+                desc += f" Motivo: {reason}"
+            self._log("liberacion_admin", "exitoso", desc)
+
+            # 5. Reentrenar modelo sin la persona liberada
+            train_model()
+
+            if self.on_refresh:
+                self.on_refresh()
+
+        except Exception as ex:
+            DlgError.show(str(ex), parent=self)
 
     def _config(self):
         dlg = LockerConfigDialog(self.locker, self.admin_id, parent=self)
@@ -524,22 +555,6 @@ class LockerCard(QFrame):
             if d["estado"] == "libre" and self.locker.get("t_estado") != "libre":
                 self._close_active_session()
             DlgInfo.show(tr("admin.lockers.dialog.updated", n=d["numero"]), parent=self)
-            if self.on_refresh: self.on_refresh()
-        except Exception as ex:
-            DlgError.show(str(ex), parent=self)
-
-    def _liberar(self):
-        num = self.locker["t_numero_locker"]
-        confirmed, reason = DlgLiberar.ask(num, parent=self)
-        if not confirmed: return
-        try:
-            abrir_locker(str(num))
-            self._close_active_session(extra_desc=reason)
-            db_set_locker_estado(self.locker["ID_locker"], "libre", self.admin_id)
-            desc = f"Admin liberó locker #{num} manualmente."
-            if reason: desc += f" Motivo: {reason}"
-            self._log("liberacion_admin", "exitoso", desc)
-            train_model()
             if self.on_refresh: self.on_refresh()
         except Exception as ex:
             DlgError.show(str(ex), parent=self)
@@ -599,7 +614,6 @@ QScrollBar::handle:vertical {{
 }}
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
 QLabel#empty {{ color: #b0bec5; font-family: 'Segoe UI'; letter-spacing: 3px; }}
-
 QPushButton#btn_add {{
     background: #1565c0; color: #ffffff; border: none;
     border-radius: {r10}px; font-family: 'Segoe UI';
@@ -608,7 +622,6 @@ QPushButton#btn_add {{
 }}
 QPushButton#btn_add:hover   {{ background: #1976d2; }}
 QPushButton#btn_add:pressed {{ background: #0d47a1; }}
-
 QPushButton#btn_ref {{
     background: #ffffff; color: #1565c0;
     border: 2px solid #90c4f0; border-radius: {r10}px;
@@ -635,7 +648,6 @@ class _AdminLockersPanel(QWidget):
         root.setContentsMargins(m, _dp(8), m, _dp(8))
         root.setSpacing(_dp(7))
 
-        # ── Header ────────────────────────────────────────────────────────────
         hdr = QHBoxLayout(); hdr.setSpacing(_dp(10))
         tc = QVBoxLayout(); tc.setSpacing(_dp(2))
         self.title_lbl = QLabel(tr("admin.lockers.title"))
@@ -662,7 +674,6 @@ class _AdminLockersPanel(QWidget):
 
         div = QFrame(); div.setObjectName("h_div"); root.addWidget(div)
 
-        # ── Contadores ────────────────────────────────────────────────────────
         cr = QHBoxLayout(); cr.setSpacing(_dp(10))
         self._cnt = {}
         for key, label, obj in [
@@ -686,7 +697,6 @@ class _AdminLockersPanel(QWidget):
 
         div2 = QFrame(); div2.setObjectName("h_div"); root.addWidget(div2)
 
-        # ── Grid de cards con scroll táctil ───────────────────────────────────
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)

@@ -271,8 +271,8 @@ _TRANSLATIONS = {
         "flow.bye_sub":        "El locker #{n} ha sido liberado. Recoja sus pertenencias.",
         "flow.keep_title":     "¡Que siga comprando!",
         "flow.keep_sub":       "Sus pertenencias permanecen seguras. Su locker sigue activo.",
-        "flow.no_space_title": "Sin Lockers Disponibles",
-        "flow.no_space_sub":   "No hay lockers disponibles.",
+        "flow.no_space_title": "No hay lockers disponibles",
+        "flow.no_space_sub":   "No hay lockers disponibles",
     },
 
     "en": {
@@ -541,10 +541,9 @@ _TRANSLATIONS = {
         "flow.keep_title":     "Happy Shopping!",
         "flow.keep_sub":       "Your belongings are safe. Your locker remains active.",
         "flow.no_space_title": "No Lockers Available",
-        "flow.no_space_sub":   "All lockers are currently in use. Please try again later.",
+        "flow.no_space_sub":   "No lockers available",
 
 
-        "ret.look_straight" : "MIRA DIRECTO A LA CÁMARA",
         "ret.locker_already_open" : "El acceso ya está abierto, espera un momento"
     },
 }
