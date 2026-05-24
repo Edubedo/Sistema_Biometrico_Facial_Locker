@@ -12,7 +12,7 @@ from db.models.intentos_acceso import db_log_intento
 from db.models.lockers import db_set_locker_estado
 from db.models.sesiones import db_close_sesion, db_get_active_sesion_by_face
 from utils.camera import CamThread
-from utils.gpio_locker import abrir_locker, beep_start_scan, beep_success, beep_error
+from utils.gpio_locker import abrir_locker, beep_start_scan, beep_success, beep_error, locker_esta_abierto
 from utils.helpers import db_get_locker_num_by_id
 from views.style.widgets.widgets import lbl, sep_line, CamWidget
 from utils.i18n import tr, get_language
@@ -856,7 +856,7 @@ class RetirarPage(QWidget):
         else:
             self._id_sesion, self._id_locker = sesion
 
-        # Verificar estado del locker
+        # Verificar estado del locker en BD
         current_estado = _get_locker_estado(self._id_locker)
         if current_estado == "abierto":
             beep_error()
@@ -868,6 +868,26 @@ class RetirarPage(QWidget):
             db_log_intento(self._id_locker, "retirar", "fallido",
                            "Locker ya estaba en estado abierto al intentar acceder.")
             return
+
+        # Verificar estado físico del locker (sensor/switch)
+        num_locker_tmp = db_get_locker_num_by_id(self._id_locker)
+        try:
+            if num_locker_tmp and locker_esta_abierto(str(num_locker_tmp)):
+                beep_error()
+                self.cam.idle()
+                self.scan_frame.setVisible(False); self.scan_line.hide()
+                self.face_guide.setVisible(False)
+                self.scan_title_lbl.setText(tr("ret.scan_title"))
+                self.scan_lbl.setText(
+                    "El locker está abierto físicamente. "
+                    "Ciérralo e inténtalo de nuevo."
+                )
+                db_log_intento(self._id_locker, "retirar", "fallido",
+                               "Locker físicamente abierto al intentar acceder.")
+                self._retry_timer.start(_AUTO_RETRY_SECS * 1000)
+                return
+        except Exception:
+            pass  # Sin GPIO disponible: continuar normalmente
 
         beep_success()
         self.scan_lbl.setText("")
@@ -939,7 +959,10 @@ class RetirarPage(QWidget):
         current_estado = _get_locker_estado(self._id_locker)
         if current_estado != "abierto":
             if num_locker and str(num_locker) != "?":
-                abrir_locker(str(num_locker))
+                try:
+                    abrir_locker(str(num_locker))
+                except ValueError as e:
+                    print(f"[WARN] _do_retirar: locker ya abierto físicamente, continuando: {e}")
             else:
                 print(f"[WARN] _do_retirar: num_locker inválido '{num_locker}' para id_locker={self._id_locker}")
         else:
@@ -965,7 +988,10 @@ class RetirarPage(QWidget):
         current_estado = _get_locker_estado(self._id_locker)
         if current_estado != "abierto":
             if num_locker and str(num_locker) != "?":
-                abrir_locker(str(num_locker))
+                try:
+                    abrir_locker(str(num_locker))
+                except ValueError as e:
+                    print(f"[WARN] _do_seguir: locker ya abierto físicamente, continuando: {e}")
             else:
                 print(f"[WARN] _do_seguir: num_locker inválido '{num_locker}' para id_locker={self._id_locker}")
         else:
