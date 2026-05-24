@@ -1,13 +1,13 @@
 import os
 
-from PyQt5.QtCore import Qt, pyqtSignal, QRectF, QSize, QPoint
+from PyQt5.QtCore import Qt, pyqtSignal, QRectF, QSize
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
-    QStackedWidget, QFrame, QApplication, QToolButton, QMenu
+    QStackedWidget, QFrame, QApplication
 )
 from PyQt5.QtGui import (
     QPainter, QColor, QBrush, QLinearGradient,
-    QRadialGradient, QPixmap, QPainterPath, QPen, QIcon
+    QRadialGradient, QPixmap, QPainterPath, QPen
 )
 
 from views.admin.lockersPanel import _AdminLockersPanel
@@ -154,7 +154,6 @@ class AdminPage(QWidget):
         project_root = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "..", "..")
         )
-        user_icon_path = os.path.join(project_root, "user.png")
         logo_path = os.path.join(project_root, "lockztar.png")
         logo_lbl = QLabel()
         logo_lbl.setFixedSize(_dp(240), _dp(82))
@@ -185,7 +184,7 @@ class AdminPage(QWidget):
 
         hl.addStretch()
 
-        # Badge usuario (nombre) y botón de perfil con menú de acciones
+        # Badge usuario (nombre) y boton de cerrar sesion
         self.badge = QLabel("")
         self.badge.setObjectName("badge_user")
         self.badge.setStyleSheet(
@@ -194,60 +193,13 @@ class AdminPage(QWidget):
         )
         hl.addWidget(self.badge, 0, Qt.AlignVCenter)
 
-        # Perfil circular — despliega menu con 'Salir'
-        self.profile_btn = QToolButton()
-        self.profile_btn.setObjectName("profile_btn")
-        size = _dp(58)
-        self.profile_btn.setFixedSize(size, size)
-        self.profile_btn.setCursor(Qt.PointingHandCursor)
-        self.profile_btn.setStyleSheet(f"""
-            QToolButton#profile_btn {{
-                border-radius: {int(size/2)}px;
-                background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 rgba(70,160,255,0.34), stop:1 rgba(70,160,255,0.20));
-                border: 1px solid rgba(255,255,255,0.08);
-                color: #ffffff;
-                font-weight: 800;
-            }}
-            QToolButton#profile_btn:hover {{
-                background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 rgba(90,175,255,0.42), stop:1 rgba(70,160,255,0.28));
-                border: 1px solid rgba(120,190,255,0.35);
-            }}
-            QToolButton#profile_btn:pressed {{
-                background: qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 rgba(55,140,230,0.42), stop:1 rgba(40,120,210,0.30));
-            }}
-        """)
-        user_icon = QPixmap(user_icon_path)
-        if not user_icon.isNull():
-            self.profile_btn.setIcon(QIcon(user_icon))
-            self.profile_btn.setIconSize(QSize(_dp(30), _dp(30)))
-        else:
-            self.profile_btn.setText("👤")
-        # Menu
-        self._profile_menu = QMenu(self)
-        act_logout = self._profile_menu.addAction(tr("admin.logout"))
-        act_logout.triggered.connect(self.go_back.emit)
-        self._profile_menu.setStyleSheet("""
-            QMenu {
-                background: #17386f;
-                color: #ffffff;
-                border: 1px solid rgba(255,255,255,0.10);
-                border-radius: 10px;
-                padding: 10px;
-            }
-            QMenu::item {
-                padding: 16px 22px;
-                border-radius: 8px;
-                min-width: 180px;
-                min-height: 44px;
-                font-size: 16px;
-                font-weight: 700;
-            }
-            QMenu::item:selected {
-                background: rgba(70,160,255,0.26);
-            }
-        """)
-        self.profile_btn.clicked.connect(self._show_profile_menu)
-        hl.addWidget(self.profile_btn, 0, Qt.AlignVCenter)
+        self.logout_btn = QPushButton(tr("admin.logout"))
+        self.logout_btn.setObjectName("btn_back")
+        self.logout_btn.setFixedHeight(touch_height(56))
+        self.logout_btn.setCursor(Qt.PointingHandCursor)
+        self.logout_btn.setFocusPolicy(Qt.NoFocus)
+        self.logout_btn.clicked.connect(self.go_back.emit)
+        hl.addWidget(self.logout_btn, 0, Qt.AlignVCenter)
 
         vl.addWidget(header)
 
@@ -375,11 +327,7 @@ class AdminPage(QWidget):
 
     # ── Idioma ────────────────────────────────────────────────────────────────
     def set_language(self, lang: str):
-        # Profile button tooltip and menu already provide logout
-        try:
-            self.profile_btn.setToolTip(tr("admin.logout"))
-        except Exception:
-            pass
+        self.logout_btn.setText(tr("admin.logout"))
         self.tit.setText(tr("admin.panel"))
         self.t_lock.setText("🔒  " + tr("admin.tab.lockers"))
         self.t_ses.setText("🧾  "  + tr("admin.tab.sessions"))
@@ -388,10 +336,6 @@ class AdminPage(QWidget):
         for panel in (self.p_lockers, self.p_sesiones, self.p_log, self.p_admins):
             if hasattr(panel, "set_language"):
                 panel.set_language(lang)
-
-    def _show_profile_menu(self):
-        offset = QPoint(0, self.profile_btn.height() + _dp(10))
-        self._profile_menu.popup(self.profile_btn.mapToGlobal(offset))
 
     # ── Tab switch ────────────────────────────────────────────────────────────
     def _tab(self, i: int):

@@ -122,7 +122,7 @@ class CamThread(QThread):
     _ANCHOR_MAX_MISS = 20   # frames sin detección antes de resetear el ancla
 
     # Anti-spoofing (anti-foto): buffer de ROIs para detectar movimiento real
-    _LIVENESS_BUF_SIZE   = 5    # número de frames en el buffer
+    _LIVENESS_BUF_SIZE   = 3    # 3 frames bastan → liveness check más rápido
     _LIVENESS_MIN_MOTION = 4.5  # diferencia mínima media entre frames consecutivos
                                  # Foto/pantalla estática ≈ 0–3; cara real ≈ 8–40
 
@@ -152,24 +152,27 @@ class CamThread(QThread):
         # → Con más personas el modelo mejora y podemos ser más permisivos.
         #
         # LBPH confidence: MENOR = mejor coincidencia.
-        # Fast-accept: si confidence < _recog_fast_threshold acepta en 2 frames
-        # (cara genuina en buenas condiciones → coincidencia muy clara).
+        # _recog_min_frames: cuántos frames consecutivos con buena conf se necesitan.
+        # Para bases pequeñas (≤6) bajamos a 2 frames → detección ~33% más rápida.
+        # Fast-accept: si confidence < _recog_fast_threshold acepta en 1 frame
+        # (coincidencia muy clara en buenas condiciones de iluminación).
         n = len(self.labels)
         if n <= 1:
             self._recog_threshold      = 52
-            self._recog_min_frames     = 3
+            self._recog_min_frames     = 2
         elif n <= 3:
             self._recog_threshold      = 60
-            self._recog_min_frames     = 3
+            self._recog_min_frames     = 2
         elif n <= 6:
             self._recog_threshold      = 68
-            self._recog_min_frames     = 3
+            self._recog_min_frames     = 2
         else:
             self._recog_threshold      = 75
             self._recog_min_frames     = 3
 
-        # Fast-accept: coincidencia muy alta → solo 2 frames necesarios
-        self._recog_fast_threshold = 32
+        # Fast-accept: conf < umbral → solo 1 frame necesario (más generoso que antes)
+        # Se sube de 32 a 40 para que más coincidencias claras lleguen aquí.
+        self._recog_fast_threshold = 40
 
     def _open_cv_capture(self):
         self.cap = None
@@ -465,10 +468,10 @@ class CamThread(QThread):
                     lbl_idx, conf = face_model.predict(roi)
 
                     # Fast-accept: si la coincidencia es muy alta (conf muy baja),
-                    # solo necesitamos 2 frames consecutivos → detección rápida.
+                    # solo necesitamos 1 frame → detección instantánea.
                     # Para coincidencias moderadas exigimos más frames → seguridad.
                     if conf < self._recog_fast_threshold and lbl_idx in self.labels:
-                        needed = 2   # coincidencia clara → rápido
+                        needed = 1   # coincidencia clara → instantáneo
                     elif conf < self._recog_threshold and lbl_idx in self.labels:
                         needed = self._recog_min_frames
                     else:
