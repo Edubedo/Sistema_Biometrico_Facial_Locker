@@ -359,7 +359,7 @@ class StepOverlay(QWidget):
         self._svg.load(svg_data)
         self._text_lbl.setText(tr(_STEP_KEYS[idx]))
         total = len(CAROUSEL_STEPS)
-        self._counter_lbl.setText("PASO {} DE {}".format(idx+1, total))
+        self._counter_lbl.setText(tr("ret.steps.counter", n=idx+1, total=total))
         for i, btn in enumerate(self._dot_btns):
             btn.setObjectName("dot_active" if i == idx else "dot_inactive")
             btn.setStyle(btn.style())
@@ -602,11 +602,11 @@ class RetirarPage(QWidget):
         self.opts.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         ol = QVBoxLayout(self.opts); ol.setContentsMargins(18,18,18,18); ol.setSpacing(12); ol.setAlignment(Qt.AlignCenter)
         btn_row = QHBoxLayout(); btn_row.setSpacing(14); btn_row.setAlignment(Qt.AlignCenter)
-        self.btn_retirar = ActionTile("take", "RETIRAR COSAS", "abierta.png")
+        self.btn_retirar = ActionTile("take", tr("ret.btn_take"), "abierta.png")
         self.btn_retirar.setMinimumSize(280, 320)
         self.btn_retirar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.btn_retirar.clicked.connect(self._do_retirar)
-        self.btn_seguir = ActionTile("keep", "SEGUIR COMPRANDO", "cerrada.png")
+        self.btn_seguir = ActionTile("keep", tr("ret.btn_continue"), "cerrada.png")
         self.btn_seguir.setMinimumSize(280, 320)
         self.btn_seguir.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.btn_seguir.clicked.connect(self._do_seguir)
@@ -657,6 +657,10 @@ class RetirarPage(QWidget):
         self.subtitle_lbl.setText(tr("ret.subtitle"))
         self.scan_title_lbl.setText(tr("ret.scan_title"))
         self.detect_title_lbl.setText(tr("ret.detect_title"))
+        self.btn_retirar.title = tr("ret.btn_take")
+        self.btn_retirar.update()
+        self.btn_seguir.title = tr("ret.btn_continue")
+        self.btn_seguir.update()
         self._step_overlay.set_language(lang)
 
     # ── Modos de visualización ────────────────────────────────────────────────
@@ -880,13 +884,9 @@ class RetirarPage(QWidget):
                 self.scan_frame.setVisible(False); self.scan_line.hide()
                 self.face_guide.setVisible(False)
                 self.scan_title_lbl.setText(tr("ret.scan_title"))
-                self.scan_lbl.setText("⚠  Cierra el locker e inténtalo de nuevo.")
+                self.scan_lbl.setText(tr("ret.locker_open_short"))
                 # Mostrar mensaje prominente en el área de cámara
-                self.cam.set_status(
-                    "El locker está abierto físicamente, Ciérralo.\n"
-                    "",
-                    "#ff4040"
-                )
+                self.cam.set_status(tr("ret.locker_open_physical"), "#ff4040")
                 # Pequeño delay para que el tono actual de la alarma termine
                 # antes de tocar el error — sin lock, sin distorsión
                 QTimer.singleShot(350, beep_error)

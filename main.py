@@ -243,8 +243,8 @@ class MainWindow(QMainWindow):
         self.p_retir.reset()
         self.p_result.show_result(
             "err",
-            "Sin sesión activa",
-            "No tienes ningún locker reservado actualmente.",
+            tr("ret.no_session_title"),
+            tr("ret.no_session_sub"),
             auto=True,
         )
         self._nav(self.RESULT)

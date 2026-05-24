@@ -34,7 +34,12 @@ def _shadow(widget, blur=12, alpha=18, dy=2):
 # ─────────────────────────────────────────────────────────────────────────────
 #  Modelo de tabla  (QAbstractTableModel)
 # ─────────────────────────────────────────────────────────────────────────────
-_COLS = ["Sesión", "Locker", "Fecha / Hora", "Estado"]
+_COL_KEYS = [
+    "admin.sessions.col.id",
+    "admin.sessions.col.locker",
+    "admin.sessions.col.datetime",
+    "admin.sessions.col.state",
+]
 _KEYS = ["ID_sesion", "t_numero_locker", "d_fecha_hora_entrada", "_estado"]
 
 
@@ -55,11 +60,11 @@ class SesionesTableModel(QAbstractTableModel):
         self.endResetModel()
 
     def rowCount(self,    parent=QModelIndex()): return len(self._data)
-    def columnCount(self, parent=QModelIndex()): return len(_COLS)
+    def columnCount(self, parent=QModelIndex()): return len(_COL_KEYS)
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return _COLS[section]
+            return tr(_COL_KEYS[section])
         return QVariant()
 
     def data(self, index, role=Qt.DisplayRole):
@@ -397,9 +402,9 @@ class _AdminSesionesPanel(QWidget):
         pg_lay.addWidget(self.count_lbl, 1)
 
         self.btn_first = QPushButton("«")
-        self.btn_prev  = QPushButton("‹  Ant")
+        self.btn_prev  = QPushButton(tr("admin.pag.prev"))
         self.page_lbl  = QLabel("1 / 1")
-        self.btn_next  = QPushButton("Sig  ›")
+        self.btn_next  = QPushButton(tr("admin.pag.next"))
         self.btn_last  = QPushButton("»")
 
         for b, w in (
@@ -512,3 +517,6 @@ class _AdminSesionesPanel(QWidget):
         self.btn_ref.setText("↻  " + tr("admin.sessions.refresh"))
         self.key_lbl.setText(tr("admin.sessions.count"))
         self.status_lbl.setText(tr("admin.sessions.status"))
+        self.btn_prev.setText(tr("admin.pag.prev"))
+        self.btn_next.setText(tr("admin.pag.next"))
+        self._model.layoutChanged.emit()

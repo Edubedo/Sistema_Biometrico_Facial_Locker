@@ -190,7 +190,7 @@ class ResultPage(QWidget):
         cl.addWidget(icon_w, alignment=Qt.AlignCenter)
         cl.addSpacing(s(4))
 
-        badge = QLabel("⚠  ATENCIÓN")
+        badge = QLabel(tr("result.already_badge"))
         badge.setAlignment(Qt.AlignCenter)
         badge.setStyleSheet(f"""
             background: {cfg['badge_bg'].name()};
@@ -204,7 +204,7 @@ class ResultPage(QWidget):
         badge.setFixedHeight(s(30))
         cl.addWidget(badge, alignment=Qt.AlignCenter)
 
-        t_lbl = QLabel("¡Ya tienes un locker asignado!")
+        t_lbl = QLabel(tr("result.already_title"))
         t_lbl.setAlignment(Qt.AlignCenter)
         t_lbl.setWordWrap(True)
         t_lbl.setStyleSheet(f"""
@@ -213,7 +213,7 @@ class ResultPage(QWidget):
         """)
         cl.addWidget(t_lbl)
 
-        sub = QLabel("No puedes guardar en otro locker\nmientras tengas uno activo.")
+        sub = QLabel(tr("result.already_sub"))
         sub.setAlignment(Qt.AlignCenter)
         sub.setWordWrap(True)
         sub.setStyleSheet(f"""
@@ -264,8 +264,7 @@ class ResultPage(QWidget):
                 return
 
             n = self._already_secs_left
-            seg = "segundo" if n == 1 else "segundos"
-            lbl.setText(f"Regresando al inicio en {n} {seg}...")
+            lbl.setText(tr("ui.return_home", n=n))
 
             if n <= 0:
                 if hasattr(self, "_already_countdown") and self._already_countdown:

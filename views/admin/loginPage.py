@@ -269,7 +269,7 @@ class LeftPanel(QWidget):
         px = QPixmap(logo_path)
         if not px.isNull():
             logo_lbl.setPixmap(
-                px.scaled(_dp(248), _dp(132),
+                px.scaled(_dp(298), _dp(172),
                            Qt.KeepAspectRatio, Qt.SmoothTransformation)
             )
         lay.addWidget(logo_lbl, 0, Qt.AlignCenter)
@@ -281,13 +281,7 @@ class LeftPanel(QWidget):
         lay.addWidget(div)
         lay.addSpacing(_dp(22))
 
-        desc = QLabel(tr("login.panel_sub").replace(" ", "\n", 1))
-        desc.setAlignment(Qt.AlignCenter)
-        desc.setStyleSheet(
-            f"color: rgba(100,155,255,0.65); font-size: {_dp(11)}px;"
-            f"font-family: 'Segoe UI'; font-weight: 800; letter-spacing: 4px;"
-        )
-        lay.addWidget(desc)
+       
 
     def paintEvent(self, _):
         p = QPainter(self)

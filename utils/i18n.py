@@ -250,6 +250,63 @@ _TRANSLATIONS = {
         "flow.keep_sub":       "Sus pertenencias permanecen seguras. Su locker sigue activo.",
         "flow.no_space_title": "No hay lockers disponibles",
         "flow.no_space_sub":   "No hay lockers disponibles",
+
+        # ── Claves de estados físicos y títulos de escaneo ─────────────────────
+        "guard.verifying":            "VERIFICANDO IDENTIDAD...",
+        "guard.locker_open_physical": "El locker asignado está físicamente abierto. Ciérralo antes de continuar.",
+        "guard.locker_hw_error":      "El locker ya está abierto o hay un error de hardware. Ciérralo y vuelve a intentarlo.",
+        "ret.look_straight":          "MIRE DIRECTO A LA CÁMARA",
+        "ret.locker_already_open":    "El locker está físicamente abierto. Ciérralo e inténtalo de nuevo.",
+        "ret.locker_open_physical":   "El locker está abierto físicamente.\nCiérralo e inténtalo de nuevo.",
+        "ret.locker_open_short":      "⚠  Cierra el locker e inténtalo de nuevo.",
+        "admin.users.role_hint":      "Solo los administradores pueden registrar nuevos usuarios.",
+        "admin.users.role_register":  "Registrar nuevo administrador",
+
+        # ── Resultado: ya tiene locker ─────────────────────────────────────
+        "result.already_badge":   "⚠  ATENCIÓN",
+        "result.already_title":   "¡Ya tienes un locker asignado!",
+        "result.already_sub":     "No puedes guardar en otro locker\nmientras tengas uno activo.",
+
+        # ── Retirar: sin sesión ────────────────────────────────────────────
+        "ret.no_session_title":   "Sin sesión activa",
+        "ret.no_session_sub":     "No tienes ningún locker reservado actualmente.",
+
+        # ── Retirar: paso del carrusel ─────────────────────────────────────
+        "ret.steps.counter":      "PASO {n} DE {total}",
+
+        # ── Paginación admin ───────────────────────────────────────────────
+        "admin.pag.prev":         "‹  Ant",
+        "admin.pag.next":         "Sig  ›",
+
+        # ── Locker duplicado ───────────────────────────────────────────────
+        "admin.lockers.duplicate_tag":   "ERROR",
+        "admin.lockers.duplicate_title": "LOCKER #{n} YA EXISTE",
+        "admin.lockers.duplicate_body":  "Ya existe un locker registrado con el número {n}.\nPor favor ingresa un número diferente.",
+        "admin.lockers.duplicate_btn":   "VOLVER AL INICIO",
+        "admin.lockers.status.mant":     "MANT.",
+        "admin.lockers.warn_only_digits": "⚠  Solo se permiten números. Las letras no son válidas.",
+        "admin.lockers.warn_empty":      "⚠  El número de locker no puede estar vacío.",
+
+        # ── Columnas de tabla: sesiones ────────────────────────────────────
+        "admin.sessions.col.id":       "Sesión",
+        "admin.sessions.col.locker":   "Locker",
+        "admin.sessions.col.datetime": "Fecha / Hora",
+        "admin.sessions.col.state":    "Estado",
+
+        # ── Columnas de tabla: log ─────────────────────────────────────────
+        "admin.log.col.type":          "Tipo",
+        "admin.log.col.locker":        "Locker",
+        "admin.log.col.result":        "Resultado",
+        "admin.log.col.datetime":      "Fecha / Hora",
+        "admin.log.col.desc":          "Descripción",
+
+        # ── Columnas de tabla: usuarios ────────────────────────────────────
+        "admin.users.col.num":         "#",
+        "admin.users.col.name":        "Nombre",
+        "admin.users.col.user":        "Usuario",
+        "admin.users.col.role":        "Rol",
+        "admin.users.col.state":       "Estado",
+        "admin.users.col.actions":     "Acciones",
     },
 
     "en": {
@@ -481,29 +538,6 @@ _TRANSLATIONS = {
         "ret.step4":            "Choose: claim your items or keep shopping",
         "ret.step5":            "Your images are permanently deleted when done",
 
-        # ── Login ───────────────────────────────────────────────────────────────
-        "login.back":       "← BACK",
-        "login.user":       "USERNAME",
-        "login.pass":       "PASSWORD",
-        "login.user_ph":    "Username",
-        "login.pass_ph":    "••••••••",
-        "login.enter":      "SIGN IN",
-        "login.fill_fields":"Please fill in all fields.",
-        "login.bad_access": "Invalid username or password.",
-        "login.kbd.space":  "SPACE",
-        "login.kbd.clear":  "CLEAR",
-        "login.kbd.shift":  "SHIFT",
-
-        # ── Admin panel ─────────────────────────────────────────────────────────
-        "admin.logout":        "‹  LOG OUT",
-        "admin.panel":         "ADMIN PANEL",
-        "admin.tab.lockers":   "LOCKERS",
-        "admin.tab.sessions":  "SESSIONS",
-        "admin.tab.log":       "LOG",
-        "admin.tab.admins":    "ADMINS",
-        "admin.read_only":     "Read-only",
-        "admin.manage_admins": "Manage administrators",
-
         # ── Generic results ─────────────────────────────────────────────────────
         "result.ok":   "SUCCESS",
         "result.warn": "WARNING",
@@ -520,8 +554,62 @@ _TRANSLATIONS = {
         "flow.no_space_title": "No Lockers Available",
         "flow.no_space_sub":   "No lockers available",
 
+        # ── Physical state keys and scan titles ────────────────────────────────
+        "guard.verifying":            "VERIFYING IDENTITY...",
+        "guard.locker_open_physical": "The assigned locker is physically open. Please close it before continuing.",
+        "guard.locker_hw_error":      "The locker is already open or there is a hardware error. Close it and try again.",
+        "ret.look_straight":          "LOOK STRAIGHT AT THE CAMERA",
+        "ret.locker_already_open":    "The locker is physically open. Please close it and try again.",
+        "ret.locker_open_physical":   "The locker is physically open.\nClose it and try again.",
+        "ret.locker_open_short":      "⚠  Close the locker and try again.",
+        "admin.users.role_hint":      "Only administrators can register new users.",
+        "admin.users.role_register":  "Register new administrator",
 
-        "ret.locker_already_open" : "El acceso ya está abierto, espera un momento"
+        # ── Result: already has locker ────────────────────────────────────
+        "result.already_badge":   "⚠  WARNING",
+        "result.already_title":   "You already have an assigned locker!",
+        "result.already_sub":     "You can't store items in another locker\nwhile you still have one active.",
+
+        # ── Retrieve: no session ──────────────────────────────────────────
+        "ret.no_session_title":   "No active session",
+        "ret.no_session_sub":     "You don't have any locker reserved at the moment.",
+
+        # ── Retrieve: step carousel ───────────────────────────────────────
+        "ret.steps.counter":      "STEP {n} OF {total}",
+
+        # ── Admin pagination ──────────────────────────────────────────────
+        "admin.pag.prev":         "‹  Prev",
+        "admin.pag.next":         "Next  ›",
+
+        # ── Locker duplicate error ────────────────────────────────────────
+        "admin.lockers.duplicate_tag":   "ERROR",
+        "admin.lockers.duplicate_title": "LOCKER #{n} ALREADY EXISTS",
+        "admin.lockers.duplicate_body":  "A locker with number {n} is already registered.\nPlease enter a different number.",
+        "admin.lockers.duplicate_btn":   "BACK TO HOME",
+        "admin.lockers.status.mant":     "MAINT.",
+        "admin.lockers.warn_only_digits": "⚠  Only numbers are allowed. Letters are not valid.",
+        "admin.lockers.warn_empty":      "⚠  The locker number cannot be empty.",
+
+        # ── Table columns: sessions ───────────────────────────────────────
+        "admin.sessions.col.id":       "Session",
+        "admin.sessions.col.locker":   "Locker",
+        "admin.sessions.col.datetime": "Date / Time",
+        "admin.sessions.col.state":    "Status",
+
+        # ── Table columns: log ────────────────────────────────────────────
+        "admin.log.col.type":          "Type",
+        "admin.log.col.locker":        "Locker",
+        "admin.log.col.result":        "Result",
+        "admin.log.col.datetime":      "Date / Time",
+        "admin.log.col.desc":          "Description",
+
+        # ── Table columns: users ──────────────────────────────────────────
+        "admin.users.col.num":         "#",
+        "admin.users.col.name":        "Name",
+        "admin.users.col.user":        "User",
+        "admin.users.col.role":        "Role",
+        "admin.users.col.state":       "Status",
+        "admin.users.col.actions":     "Actions",
     },
 }
 

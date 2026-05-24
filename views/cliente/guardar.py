@@ -436,10 +436,7 @@ class GuardarPage(QWidget):
             try:
                 from utils.gpio_locker import locker_esta_abierto
                 if locker_esta_abierto(str(self._num_locker)):
-                    self.err_lbl.setText(
-                        "El locker asignado está físicamente abierto. "
-                        "Por favor ciérralo antes de continuar."
-                    )
+                    self.err_lbl.setText(tr("guard.locker_open_physical"))
                     self._locker_check_timer.start()
                     return
             except Exception:
@@ -656,10 +653,7 @@ class GuardarPage(QWidget):
         except Exception as gpio_err:
             print(f"[WARN] abrir_locker({num_locker}) falló: {gpio_err}")
             beep_error()
-            self.err_lbl.setText(
-                "⚠ El locker ya está abierto o hay un error de hardware. "
-                "Ciérralo y vuelve a intentarlo."
-            )
+            self.err_lbl.setText(tr("guard.locker_hw_error"))
             db_log_intento(id_locker, "registro_biometrico", "error_gpio",
                            f"GPIO falló al abrir locker #{num_locker}: {gpio_err}",
                            id_sesion=id_sesion)

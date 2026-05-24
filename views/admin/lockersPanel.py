@@ -243,23 +243,20 @@ class DlgLockerDuplicado(QDialog):
         root.addWidget(icon_outer, alignment=Qt.AlignHCenter)
 
         # ── Tag ERROR ─────────────────────────────────────────────────────
-        tag = QLabel("ERROR")
+        tag = QLabel(tr("admin.lockers.duplicate_tag"))
         tag.setObjectName("tag_error")
         tag.setAlignment(Qt.AlignCenter)
         root.addWidget(tag, alignment=Qt.AlignHCenter)
 
         # ── Título ────────────────────────────────────────────────────────
-        title = QLabel(f"LOCKER #{numero_locker} YA EXISTE")
+        title = QLabel(tr("admin.lockers.duplicate_title", n=numero_locker))
         title.setObjectName("dlg_title")
         title.setAlignment(Qt.AlignCenter)
         title.setWordWrap(True)
         root.addWidget(title, alignment=Qt.AlignHCenter)
 
         # ── Descripción ───────────────────────────────────────────────────
-        body = QLabel(
-            f"Ya existe un locker registrado con el número {numero_locker}.\n"
-            f"Por favor ingresa un número diferente."
-        )
+        body = QLabel(tr("admin.lockers.duplicate_body", n=numero_locker))
         body.setObjectName("dlg_body")
         body.setAlignment(Qt.AlignCenter)
         body.setWordWrap(True)
@@ -268,7 +265,7 @@ class DlgLockerDuplicado(QDialog):
         root.addSpacing(_dp(6))
 
         # ── Botón ─────────────────────────────────────────────────────────
-        btn = QPushButton("VOLVER AL INICIO")
+        btn = QPushButton(tr("admin.lockers.duplicate_btn"))
         btn.setObjectName("btn_ok")
         btn.setCursor(Qt.PointingHandCursor)
         btn.setFocusPolicy(Qt.NoFocus)
@@ -544,13 +541,13 @@ class DlgInputNumero(QDialog):
         # Campo de entrada — solo dígitos via validador
         self.inp = QLineEdit()
         self.inp.setObjectName("num_inp")
-        self.inp.setPlaceholderText("Ej: 101")
+        self.inp.setPlaceholderText(tr("admin.lockers.dialog.placeholder"))
         only_digits = QRegExpValidator(QRegExp(r'^\d+$'), self.inp)
         self.inp.setValidator(only_digits)
         root.addWidget(self.inp)
 
         # Advertencia (oculta inicialmente)
-        self.warn = QLabel("⚠  Solo se permiten números. Las letras no son válidas.")
+        self.warn = QLabel(tr("admin.lockers.warn_only_digits"))
         self.warn.setObjectName("warn_lbl")
         self.warn.setWordWrap(True)
         self.warn.setVisible(False)
@@ -597,7 +594,7 @@ class DlgInputNumero(QDialog):
     def _confirm(self):
         num = self.inp.text().strip()
         if not num:
-            self.warn.setText("⚠  El número de locker no puede estar vacío.")
+            self.warn.setText(tr("admin.lockers.warn_empty"))
             self.warn.setVisible(True)
             return
         self.value = num
@@ -665,7 +662,7 @@ class LockerCard(QFrame):
         badge_txt = {
             "libre":         tr("admin.lockers.libres"),
             "ocupado":       tr("admin.lockers.ocupados"),
-            "mantenimiento": "MANT.",
+            "mantenimiento": tr("admin.lockers.status.mant"),
         }.get(estado, estado.upper())
         badge = QLabel(badge_txt)
         badge.setAlignment(Qt.AlignCenter)
