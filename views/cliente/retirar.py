@@ -12,7 +12,7 @@ from db.models.intentos_acceso import db_log_intento
 from db.models.lockers import db_set_locker_estado
 from db.models.sesiones import db_close_sesion, db_get_active_sesion_by_face
 from utils.camera import CamThread
-from utils.gpio_locker import abrir_locker, beep_start_scan, beep_success, beep_error, locker_esta_abierto
+from utils.gpio_locker import abrir_locker, beep_start_scan, beep_success, beep_error, locker_esta_abierto, detener_monitor
 from utils.helpers import db_get_locker_num_by_id
 from views.style.widgets.widgets import lbl, sep_line, CamWidget
 from utils.i18n import tr, get_language
@@ -725,6 +725,7 @@ class RetirarPage(QWidget):
         """
         if not self._scan_started:   # no hay escaneo activo
             self.scan_lbl.setText("")
+            self.cam.idle()   # limpiar mensaje de error prominente antes del retry
             self._show_steps()
 
     def resizeEvent(self, event):
@@ -873,15 +874,22 @@ class RetirarPage(QWidget):
         num_locker_tmp = db_get_locker_num_by_id(self._id_locker)
         try:
             if num_locker_tmp and locker_esta_abierto(str(num_locker_tmp)):
-                beep_error()
+                # Detener la alarma ANTES del beep de error para evitar distorsión
+                detener_monitor(str(num_locker_tmp))
                 self.cam.idle()
                 self.scan_frame.setVisible(False); self.scan_line.hide()
                 self.face_guide.setVisible(False)
                 self.scan_title_lbl.setText(tr("ret.scan_title"))
-                self.scan_lbl.setText(
-                    "El locker está abierto físicamente. "
-                    "Ciérralo e inténtalo de nuevo."
+                self.scan_lbl.setText("⚠  Cierra el locker e inténtalo de nuevo.")
+                # Mostrar mensaje prominente en el área de cámara
+                self.cam.set_status(
+                    "El locker está abierto físicamente.\n"
+                    "Ciérralo e inténtalo de nuevo.",
+                    "#ff4040"
                 )
+                # Pequeño delay para que el tono actual de la alarma termine
+                # antes de tocar el error — sin lock, sin distorsión
+                QTimer.singleShot(350, beep_error)
                 db_log_intento(self._id_locker, "retirar", "fallido",
                                "Locker físicamente abierto al intentar acceder.")
                 self._retry_timer.start(_AUTO_RETRY_SECS * 1000)
