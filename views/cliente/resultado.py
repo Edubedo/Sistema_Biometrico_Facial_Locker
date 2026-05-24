@@ -209,7 +209,7 @@ class ResultPage(QWidget):
             color: {cfg['badge_fg']};
             border: 1px solid {border_color};
             border-radius: {s(10)}px;
-            font-size: {s(8)}px;
+            font-size: {s(10)}px;
             font-weight: 800;
             font-family: 'Segoe UI';
             letter-spacing: 3px;
@@ -236,7 +236,8 @@ class ResultPage(QWidget):
         s_lbl.setAlignment(Qt.AlignCenter)
         s_lbl.setWordWrap(True)
         s_lbl.setStyleSheet(f"""
-            font-size: {s(13)}px;
+            font-size: {s(25)}px;
+            font-weight: 800;
             color: #000000;
             font-family: 'Segoe UI';
             line-height: 1.6;
@@ -265,15 +266,15 @@ class ResultPage(QWidget):
         # Button
         btn = QPushButton(tr("result.home"))
         btn.setCursor(Qt.PointingHandCursor)
-        btn.setFixedWidth(s(260))
-        btn.setFixedHeight(s(46))
+        btn.setFixedWidth(s(460))
+        btn.setFixedHeight(s(86))
         btn.setStyleSheet(f"""
             QPushButton {{
                 background: #2f80ed;
                 color: #ffffff;
                 border: none;
                 border-radius: {s(10)}px;
-                font-size: {s(14)}px;
+                font-size: {s(18)}px;
                 font-weight: 800;
                 font-family: 'Segoe UI';
                 letter-spacing: 2px;
