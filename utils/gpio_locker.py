@@ -119,7 +119,17 @@ def _monitor_locker_abierto(num_locker, stop_event):
 
 def iniciar_monitor(num_locker):
     """Inicia el monitor de locker abierto para el locker indicado."""
-    return
+    # Cancelar monitor anterior si existe
+    detener_monitor(num_locker)
+    stop_event = threading.Event()
+    _alertas_activas[str(num_locker)] = stop_event
+    t = threading.Thread(
+        target=_monitor_locker_abierto,
+        args=(num_locker, stop_event),
+        daemon=True,
+        name=f"monitor-{num_locker}"
+    )
+    t.start()
 
 def detener_monitor(num_locker):
     """Detiene el monitor de alerta del locker indicado."""
@@ -144,7 +154,11 @@ def abrir_locker(num_locker):
             f"Agrega '\"{ num_locker }\": <pin>' en LOCKER_PINS dentro de utils/gpio_locker.py"
         )
 
-    # Permitir apertura aunque el switch indique abierto
+    if locker_esta_abierto(num_locker):
+        raise ValueError(
+            f"El locker #{num_locker} ya está abierto físicamente.\n"
+            "Ciérralo antes de intentar abrirlo desde el sistema."
+        )
 
     if not GPIO:
         print(f"[SIMULADO] Locker {num_locker} abierto (sin hardware)")
@@ -172,7 +186,8 @@ def abrir_locker(num_locker):
             GPIO.output(LED_PIN, GPIO.HIGH)
             print(f"[GPIO] Relay OFF — locker {num_locker} CERRADO")
 
-            # Monitor de locker abierto deshabilitado temporalmente
+            # Iniciar monitor por si el usuario deja el locker abierto
+            iniciar_monitor(num_locker)
 
         except Exception as e:
             import traceback
