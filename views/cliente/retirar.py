@@ -27,8 +27,8 @@ def _dp(value: float) -> int:
 
 
 # ── Proporciones del marco de escaneo (igual que guardar.py) ─────────────────
-_FRAME_W_FRAC = 0.82   # ampliado
-_FRAME_H_FRAC = 0.92
+_FRAME_W_FRAC = 0.98   # Casi pantalla completa para mayor comodidad
+_FRAME_H_FRAC = 0.98
 _FRAME_X_FRAC = (1.0 - _FRAME_W_FRAC) / 2.0
 _FRAME_Y_FRAC = (1.0 - _FRAME_H_FRAC) / 2.0
 _DETECT_ROI   = (_FRAME_X_FRAC, _FRAME_Y_FRAC, _FRAME_W_FRAC, _FRAME_H_FRAC)
@@ -494,9 +494,11 @@ class InlineResultCard(QWidget):
 
 class RetirarPage(QWidget):
 
-    go_back      = pyqtSignal()
-    retirar_done = pyqtSignal(str, str, int)
-    seguir_done  = pyqtSignal(str, str, int)
+    go_back       = pyqtSignal()
+    retirar_done  = pyqtSignal(str, str, int)
+    seguir_done   = pyqtSignal(str, str, int)
+    # Emitida cuando se reconoce a alguien que NO tiene sesión activa
+    no_session    = pyqtSignal()
 
     _CAM_W = 440
     _CAM_H = 390
@@ -811,7 +813,10 @@ class RetirarPage(QWidget):
             self.face_guide.setVisible(False)
             self.scan_title_lbl.setText(tr("ret.scan_title"))
             self.scan_lbl.setText(tr("ret.no_active_session"))
-            # Sin sesión activa: NO reintentar (la persona genuinamente no tiene locker)
+            # Sin sesión activa: emitir señal para mostrar ResultPage + redirigir a inicio
+            db_log_intento(1, "retirar", "fallido",
+                           "Persona reconocida sin sesion activa en retirar")
+            QTimer.singleShot(800, self.no_session.emit)
             return
 
         self._face_uid = face_uid
