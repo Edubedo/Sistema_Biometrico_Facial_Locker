@@ -13,19 +13,16 @@ from utils.i18n import tr, get_language
 # ─────────────────────────────────────────────────────────────────────────────
 #  Helpers
 # ─────────────────────────────────────────────────────────────────────────────
-# Tamaño mínimo de objetivo táctil recomendado: 48 × 48 px físicos.
-# En una RPi 7" a ~85 DPI la escala queda en 1.0, así que los valores
-# base ya se expresan en px físicos pensados para dedo.
-
 def _dp(value: float) -> int:
     screen = QApplication.primaryScreen()
-    dpi = screen.logicalDotsPerInch() if screen else 96
-    scale = min(dpi / 96, 1.25)          # igual que en el resto del proyecto
+    if screen:
+        scale = screen.logicalDotsPerInch() / 96
+    else:
+        scale = 1.77   # fallback 7" ~170 DPI
     return max(1, round(value * scale))
 
 
-# Área táctil mínima garantizada para cualquier botón interactivo
-_TOUCH_H = 52   # px — altura mínima de botón / control táctil
+_TOUCH_H = 52
 
 
 def _shadow(widget, blur=12, alpha=18, dy=2):
@@ -37,7 +34,7 @@ def _shadow(widget, blur=12, alpha=18, dy=2):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Modelo de tabla  (QAbstractTableModel — sin límite de filas)
+#  Modelo de tabla
 # ─────────────────────────────────────────────────────────────────────────────
 _COLS = ["Tipo", "Locker", "Resultado", "Fecha / Hora", "Descripción"]
 _KEYS = [
@@ -65,7 +62,7 @@ class LogTableModel(QAbstractTableModel):
         self._data = rows
         self.endResetModel()
 
-    def rowCount(self, parent=QModelIndex()):   return len(self._data)
+    def rowCount(self, parent=QModelIndex()):    return len(self._data)
     def columnCount(self, parent=QModelIndex()): return len(_COLS)
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
@@ -104,8 +101,8 @@ class LogTableModel(QAbstractTableModel):
             return int(Qt.AlignLeft | Qt.AlignVCenter)
 
         if role == Qt.FontRole:
-            # Fuente ligeramente mayor para legibilidad en pantalla pequeña
-            f = QFont("Segoe UI", _dp(11) if col != 4 else _dp(10))
+            # FIX: fuente más grande en toda la tabla
+            f = QFont("Segoe UI", _dp(13) if col != 4 else _dp(12))
             if col == 2: f.setBold(True)
             return f
 
@@ -165,36 +162,25 @@ class StatusDot(QWidget):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Botón de filtro toggle (Todos / Exitoso / Fallido)
-#  — área táctil grande, estado visual claro, sin teclado
+#  Botón toggle táctil
 # ─────────────────────────────────────────────────────────────────────────────
 class ToggleBtn(QPushButton):
-    """Botón de dos estados: activo (azul sólido) / inactivo (contorno)."""
-
     _CSS_ON = """
         QPushButton {{
-            background: {bg};
-            color: {fg};
-            border: 2px solid {bg};
-            border-radius: {r}px;
+            background: {bg}; color: {fg};
+            border: 2px solid {bg}; border-radius: {r}px;
             font-family: 'Segoe UI', sans-serif;
-            font-weight: 800;
-            font-size: {fs}px;
-            letter-spacing: 1px;
-            padding: 0 {pad}px;
+            font-weight: 800; font-size: {fs}px;
+            letter-spacing: 1px; padding: 0 {pad}px;
         }}
     """
     _CSS_OFF = """
         QPushButton {{
-            background: #f4f8ff;
-            color: {border};
-            border: 2px solid {border};
-            border-radius: {r}px;
+            background: #f4f8ff; color: {border};
+            border: 2px solid {border}; border-radius: {r}px;
             font-family: 'Segoe UI', sans-serif;
-            font-weight: 700;
-            font-size: {fs}px;
-            letter-spacing: 1px;
-            padding: 0 {pad}px;
+            font-weight: 700; font-size: {fs}px;
+            letter-spacing: 1px; padding: 0 {pad}px;
         }}
         QPushButton:pressed {{ background: #e3f0ff; }}
     """
@@ -211,44 +197,37 @@ class ToggleBtn(QPushButton):
         self._apply()
 
     def set_active(self, val: bool):
-        self._active = val
-        self._apply()
+        self._active = val; self._apply()
 
     def _apply(self):
-        r   = _dp(10)
-        fs  = _dp(11)
-        pad = _dp(18)
+        r = _dp(10); fs = _dp(11); pad = _dp(18)
         if self._active:
-            self.setStyleSheet(self._CSS_ON.format(
-                bg=self._bg, fg=self._fg, r=r, fs=fs, pad=pad))
+            self.setStyleSheet(self._CSS_ON.format(bg=self._bg, fg=self._fg, r=r, fs=fs, pad=pad))
         else:
-            self.setStyleSheet(self._CSS_OFF.format(
-                border=self._border, r=r, fs=fs, pad=pad))
+            self.setStyleSheet(self._CSS_OFF.format(border=self._border, r=r, fs=fs, pad=pad))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Estilos globales del panel
+#  Estilos globales
 # ─────────────────────────────────────────────────────────────────────────────
 def _build_style():
-    TH  = _dp(_TOUCH_H)   # altura táctil
+    TH  = _dp(_TOUCH_H)
     r10 = _dp(10)
     r6  = _dp(6)
 
     return f"""
 QWidget#admin_log_panel {{ background: transparent; }}
 
-/* ── Títulos ── */
 QLabel#section_title {{
     color: #1565c0; font-weight: 900;
     font-family: 'Segoe UI', sans-serif;
-    letter-spacing: 3px; font-size: {_dp(13)}px;
+    letter-spacing: 3px; font-size: {_dp(14)}px;
 }}
 QLabel#section_sub {{
     color: #37474f; font-family: 'Segoe UI', sans-serif;
-    letter-spacing: 1px; font-size: {_dp(11)}px;
+    letter-spacing: 1px; font-size: {_dp(12)}px;
 }}
 
-/* ── Counter ── */
 QFrame#counter_block {{
     background: #ffffff; border: none;
     border-left: 4px solid #1565c0; border-radius: {r10}px;
@@ -259,29 +238,25 @@ QLabel#counter_num {{
 }}
 QLabel#counter_key {{
     color: #37474f; font-family: 'Segoe UI', sans-serif;
-    letter-spacing: 2px; font-size: {_dp(10)}px;
+    letter-spacing: 2px; font-size: {_dp(11)}px;
 }}
 QLabel#status_text {{
     color: #37474f; font-family: 'Segoe UI', sans-serif;
-    letter-spacing: 1px; font-weight: 600; font-size: {_dp(10)}px;
+    letter-spacing: 1px; font-weight: 600; font-size: {_dp(11)}px;
 }}
 
-/* Barra de filtros removida para dar más espacio a la tabla */
-
-/* ── Botón Actualizar ── */
 QPushButton#btn_refresh {{
     background: #1565c0; color: #ffffff;
     border: none; border-radius: {r10}px;
     font-family: 'Segoe UI', sans-serif;
     font-weight: 800; letter-spacing: 2px;
-    font-size: {_dp(11)}px;
-    min-height: {TH}px; min-width: {_dp(140)}px;
+    font-size: {_dp(12)}px;
+    min-height: {TH}px; min-width: {_dp(150)}px;
     padding: 0 {_dp(20)}px;
 }}
 QPushButton#btn_refresh:hover   {{ background: #1976d2; }}
 QPushButton#btn_refresh:pressed {{ background: #0d47a1; }}
 
-/* ── Tabla ── */
 QTableView#admin_log_tbl {{
     background: #ffffff;
     alternate-background-color: #f4f8ff;
@@ -290,58 +265,56 @@ QTableView#admin_log_tbl {{
     gridline-color: #e8f0fb;
     selection-background-color: #bbdefb;
     font-family: 'Segoe UI', sans-serif;
-    font-size: {_dp(11)}px;
+    font-size: {_dp(13)}px;
     color: #000000;
 }}
 QTableView#admin_log_tbl::item {{
-    padding: {_dp(10)}px {_dp(12)}px;
+    padding: {_dp(12)}px {_dp(14)}px;
     border-bottom: 1px solid #f0f4fa;
 }}
 QTableView#admin_log_tbl::item:selected {{
     background: #bbdefb; color: #0d47a1;
 }}
+
+/* FIX: header más alto y texto más grande */
 QHeaderView::section {{
     background: #1565c0; color: #ffffff;
     font-weight: 900; font-family: 'Segoe UI', sans-serif;
-    letter-spacing: 1px; font-size: {_dp(10)}px;
-    padding: {_dp(10)}px {_dp(12)}px;
+    letter-spacing: 2px; font-size: {_dp(14)}px;
+    padding: {_dp(14)}px {_dp(16)}px;
     border: none;
     border-right: 1px solid rgba(255,255,255,0.18);
-    min-height: {_dp(40)}px;
+    min-height: {_dp(56)}px;
 }}
 QHeaderView::section:last  {{ border-right: none; }}
 QHeaderView::section:hover {{ background: #1976d2; }}
 
-/* ── Scrollbars finas ── */
 QScrollBar:vertical {{
-    background: #e8f0fb; width: {_dp(6)}px; margin: 0;
+    background: #e8f0fb; width: {_dp(8)}px; margin: 0;
 }}
 QScrollBar::handle:vertical {{
-    background: #90c4f0; border-radius: {_dp(3)}px; min-height: {_dp(28)}px;
+    background: #90c4f0; border-radius: {_dp(4)}px; min-height: {_dp(32)}px;
 }}
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
 QScrollBar:horizontal {{
-    background: #e8f0fb; height: {_dp(6)}px; margin: 0;
+    background: #e8f0fb; height: {_dp(8)}px; margin: 0;
 }}
 QScrollBar::handle:horizontal {{
-    background: #90c4f0; border-radius: {_dp(3)}px; min-width: {_dp(28)}px;
+    background: #90c4f0; border-radius: {_dp(4)}px; min-width: {_dp(32)}px;
 }}
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{ width: 0; }}
 
-/* ── Barra de paginación ── */
 QFrame#page_bar {{
     background: #ffffff; border: 1px solid #cfd8e3;
     border-radius: {r10}px;
 }}
 QPushButton#btn_page {{
     background: #e3f0ff; color: #1565c0;
-    border: 2px solid #90c4f0;
-    border-radius: {r6}px;
+    border: 2px solid #90c4f0; border-radius: {_dp(8)}px;
     font-family: 'Segoe UI', sans-serif;
-    font-size: {_dp(16)}px; font-weight: 900;
-    min-width:  {_dp(56)}px;
-    min-height: {TH}px;
-    padding: 0 {_dp(6)}px;
+    font-size: {_dp(14)}px; font-weight: 900;
+    min-width: {_dp(60)}px; min-height: {TH}px;
+    padding: 0 {_dp(8)}px;
 }}
 QPushButton#btn_page:hover   {{ background: #bbdefb; border-color: #1565c0; }}
 QPushButton#btn_page:pressed {{ background: #90c4f0; }}
@@ -350,12 +323,12 @@ QPushButton#btn_page:disabled {{
 }}
 QLabel#page_lbl {{
     color: #1565c0; font-family: 'Segoe UI', sans-serif;
-    font-size: {_dp(12)}px; font-weight: 800;
-    min-width: {_dp(100)}px;
+    font-size: {_dp(13)}px; font-weight: 800;
+    min-width: {_dp(110)}px;
 }}
 QLabel#count_lbl {{
     color: #546e7a; font-family: 'Segoe UI', sans-serif;
-    font-size: {_dp(10)}px;
+    font-size: {_dp(12)}px;
 }}
 
 QFrame#h_divider {{
@@ -370,7 +343,8 @@ QFrame#h_divider {{
 # ─────────────────────────────────────────────────────────────────────────────
 class _AdminLogPanel(QWidget):
 
-    _PAGE_SIZE = 50   # filas por página — ajustable para pantalla pequeña
+    _PAGE_SIZE  = 50
+    _PAGE_STEPS = [25, 50, 100, 200]
 
     def __init__(self):
         super().__init__()
@@ -387,8 +361,7 @@ class _AdminLogPanel(QWidget):
         root.setSpacing(_dp(7))
 
         # ── Header ────────────────────────────────────────────────────────────
-        hdr = QHBoxLayout()
-        hdr.setSpacing(_dp(10))
+        hdr = QHBoxLayout(); hdr.setSpacing(_dp(10))
 
         col = QVBoxLayout(); col.setSpacing(_dp(2))
         self.title_lbl = QLabel(tr("admin.log.title"))
@@ -411,12 +384,12 @@ class _AdminLogPanel(QWidget):
         div = QFrame(); div.setObjectName("h_divider")
         root.addWidget(div)
 
-        # ── Counter block ─────────────────────────────────────────────────────
+        # ── Counter ───────────────────────────────────────────────────────────
         cb = QFrame(); cb.setObjectName("counter_block")
         _shadow(cb, _dp(10), 14, _dp(2))
         cb_lay = QHBoxLayout(cb)
-        cb_lay.setContentsMargins(_dp(14), _dp(8), _dp(14), _dp(8))
-        cb_lay.setSpacing(_dp(8))
+        cb_lay.setContentsMargins(_dp(14), _dp(10), _dp(14), _dp(10))
+        cb_lay.setSpacing(_dp(10))
         self.counter_lbl = QLabel("0")
         self.counter_lbl.setObjectName("counter_num")
         self.key_lbl = QLabel(tr("admin.log.counter"))
@@ -430,8 +403,6 @@ class _AdminLogPanel(QWidget):
         cb_lay.addWidget(dot2)
         cb_lay.addWidget(self.status_lbl)
         root.addWidget(cb)
-
-        # Nota: la barra de filtros fue removida para maximizar espacio de tabla.
 
         # ── Tabla ─────────────────────────────────────────────────────────────
         self._model = LogTableModel()
@@ -449,11 +420,13 @@ class _AdminLogPanel(QWidget):
         self.table.setAlternatingRowColors(True)
         self.table.setShowGrid(False)
         self.table.verticalHeader().setVisible(False)
-        # Scroll suave con el dedo
-        self.table.verticalScrollBar().setSingleStep(_dp(48))
-        QScroller.grabGesture(self.table.viewport(), QScroller.LeftMouseButtonGesture)
+        self.table.verticalHeader().setDefaultSectionSize(_dp(56))
+        self.table.verticalScrollBar().setSingleStep(_dp(56))
+        # FIX: touch gesture correcto
         self.table.viewport().setAttribute(Qt.WA_AcceptTouchEvents, True)
-        # Columnas
+        QScroller.grabGesture(self.table.viewport(), QScroller.TouchGesture)
+        QScroller.grabGesture(self.table.viewport(), QScroller.LeftMouseButtonGesture)
+
         hh = self.table.horizontalHeader()
         hh.setHighlightSections(False)
         hh.setMinimumSectionSize(_dp(70))
@@ -463,18 +436,16 @@ class _AdminLogPanel(QWidget):
         hh.setSectionResizeMode(3, QHeaderView.ResizeToContents)
         hh.setSectionResizeMode(4, QHeaderView.Stretch)
         hh.setStretchLastSection(True)
-        # Altura de filas: mayor para que el dedo no se equivoque
-        self.table.verticalHeader().setDefaultSectionSize(_dp(52))
         self.table.setSortingEnabled(True)
 
         root.addWidget(self.table, 1)
 
-        # ── Barra de paginación táctil ────────────────────────────────────────
+        # ── Paginación ────────────────────────────────────────────────────────
         pg_bar = QFrame(); pg_bar.setObjectName("page_bar")
         _shadow(pg_bar, _dp(8), 10, _dp(1))
         pg_lay = QHBoxLayout(pg_bar)
-        pg_lay.setContentsMargins(_dp(12), _dp(6), _dp(12), _dp(6))
-        pg_lay.setSpacing(_dp(8))
+        pg_lay.setContentsMargins(_dp(14), _dp(8), _dp(14), _dp(8))
+        pg_lay.setSpacing(_dp(10))
 
         self.count_lbl = QLabel("")
         self.count_lbl.setObjectName("count_lbl")
@@ -486,12 +457,11 @@ class _AdminLogPanel(QWidget):
         self.btn_next  = QPushButton("Sig  ›")
         self.btn_last  = QPushButton("»")
 
-        # Botones laterales pequeños («  »), botones centrales anchos
         for b, w in (
-            (self.btn_first, _dp(52)),
-            (self.btn_prev,  _dp(110)),
-            (self.btn_next,  _dp(110)),
-            (self.btn_last,  _dp(52)),
+            (self.btn_first, _dp(58)),
+            (self.btn_prev,  _dp(120)),
+            (self.btn_next,  _dp(120)),
+            (self.btn_last,  _dp(58)),
         ):
             b.setObjectName("btn_page")
             b.setFixedSize(w, _dp(_TOUCH_H))
@@ -525,44 +495,29 @@ class _AdminLogPanel(QWidget):
 
     # ── Filtros ───────────────────────────────────────────────────────────────
     def _apply_result_filter(self, val: str):
-        # Aplicar filtro en el proxy; los botones visuales pueden no existir.
-        if hasattr(self, "_tbtn_all"):
-            self._tbtn_all.set_active(val == "")
-        if hasattr(self, "_tbtn_ok"):
-            self._tbtn_ok.set_active(val == "exitoso")
-        if hasattr(self, "_tbtn_fail"):
-            self._tbtn_fail.set_active(val == "fallido")
+        if hasattr(self, "_tbtn_all"):   self._tbtn_all.set_active(val == "")
+        if hasattr(self, "_tbtn_ok"):    self._tbtn_ok.set_active(val == "exitoso")
+        if hasattr(self, "_tbtn_fail"):  self._tbtn_fail.set_active(val == "fallido")
         self._proxy.set_result(val)
         self._page = 0
         self._render_page()
 
-    # ── Tamaño de página con +/- ──────────────────────────────────────────────
-    _PAGE_STEPS = [25, 50, 100, 200]
-
+    # ── Tamaño de página ──────────────────────────────────────────────────────
     def _inc_page_size(self):
-        steps = self._PAGE_STEPS
-        cur = self._page_size
-        nxt = next((s for s in steps if s > cur), steps[-1])
+        nxt = next((s for s in self._PAGE_STEPS if s > self._page_size), self._PAGE_STEPS[-1])
         self._page_size = nxt
-        if hasattr(self, "_pg_size_lbl"):
-            self._pg_size_lbl.setText(str(nxt))
-        self._page = 0
-        self._render_page()
+        if hasattr(self, "_pg_size_lbl"): self._pg_size_lbl.setText(str(nxt))
+        self._page = 0; self._render_page()
 
     def _dec_page_size(self):
-        steps = self._PAGE_STEPS
-        cur = self._page_size
-        prv = next((s for s in reversed(steps) if s < cur), steps[0])
+        prv = next((s for s in reversed(self._PAGE_STEPS) if s < self._page_size), self._PAGE_STEPS[0])
         self._page_size = prv
-        if hasattr(self, "_pg_size_lbl"):
-            self._pg_size_lbl.setText(str(prv))
-        self._page = 0
-        self._render_page()
+        if hasattr(self, "_pg_size_lbl"): self._pg_size_lbl.setText(str(prv))
+        self._page = 0; self._render_page()
 
     # ── Paginación ────────────────────────────────────────────────────────────
     def _total_pages(self) -> int:
-        total = len(self._all_rows)
-        return max(1, (total + self._page_size - 1) // self._page_size)
+        return max(1, (len(self._all_rows) + self._page_size - 1) // self._page_size)
 
     def _go_page(self, page: int):
         self._page = max(0, min(page, self._total_pages() - 1))

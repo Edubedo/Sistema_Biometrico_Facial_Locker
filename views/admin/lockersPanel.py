@@ -14,7 +14,7 @@ from db.models.lockers import (
 from db.models.sesiones import db_close_sesion, db_get_all_sesiones_activas
 from db.models.intentos_acceso import db_log_intento
 from biometria.biometria import train_model, delete_face_data
-from views.style.adminDialogs import DlgError, DlgInfo, DlgInput, DlgLiberar
+from views.style.adminDialogs import DlgLiberar
 from utils.gpio_locker import abrir_locker
 from utils.i18n import tr, get_language
 
@@ -24,7 +24,10 @@ from utils.i18n import tr, get_language
 # ─────────────────────────────────────────────────────────────────────────────
 def _dp(v: float) -> int:
     s = QApplication.primaryScreen()
-    scale = min((s.logicalDotsPerInch() if s else 96) / 96, 1.25)
+    if s:
+        scale = s.logicalDotsPerInch() / 96
+    else:
+        scale = 1.77
     return max(1, round(v * scale))
 
 _TOUCH_H = 52
@@ -57,12 +60,382 @@ _STATE = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+#  Diálogo base estilo "imagen 3"
+#  Reutilizable: cambia colores según tipo (error/success/warning)
+# ─────────────────────────────────────────────────────────────────────────────
+class _StyledDialog(QDialog):
+    """
+    Diálogo con ícono grande centrado, tag, título, cuerpo y botón.
+    tipo: 'error'   → rojo
+          'success' → verde
+          'warning' → naranja
+    """
+    def __init__(self, icon_char, tag_text, title_text, body_text,
+                 btn_text, tipo="error", parent=None):
+        super().__init__(parent)
+        self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
+        self.setModal(True)
+        self.setFixedWidth(_dp(400))
+
+        # Colores por tipo
+        if tipo == "success":
+            c_border   = "#2e7d32"
+            c_icon_bg  = "#e8f5e9"
+            c_icon_fg  = "#2e7d32"
+            c_tag      = "#2e7d32"
+            c_title    = "#2e7d32"
+            c_btn      = "#2e7d32"
+            c_btn_h    = "#388e3c"
+            c_btn_p    = "#1b5e20"
+        elif tipo == "warning":
+            c_border   = "#e65100"
+            c_icon_bg  = "#fff3e0"
+            c_icon_fg  = "#e65100"
+            c_tag      = "#e65100"
+            c_title    = "#e65100"
+            c_btn      = "#e65100"
+            c_btn_h    = "#f57c00"
+            c_btn_p    = "#bf360c"
+        else:  # error
+            c_border   = "#c62828"
+            c_icon_bg  = "#fdecea"
+            c_icon_fg  = "#c62828"
+            c_tag      = "#c62828"
+            c_title    = "#c62828"
+            c_btn      = "#1565c0"
+            c_btn_h    = "#1976d2"
+            c_btn_p    = "#0d47a1"
+
+        self.setStyleSheet(f"""
+            QDialog {{
+                background: #ffffff;
+                border-radius: {_dp(16)}px;
+                border: 2px solid {c_border};
+            }}
+            QLabel#icon_outer {{
+                background: {c_icon_bg};
+                border-radius: {_dp(48)}px;
+                min-width:  {_dp(96)}px; max-width:  {_dp(96)}px;
+                min-height: {_dp(96)}px; max-height: {_dp(96)}px;
+            }}
+            QLabel#icon_inner {{
+                background: {c_icon_fg};
+                border-radius: {_dp(38)}px;
+                min-width:  {_dp(76)}px; max-width:  {_dp(76)}px;
+                min-height: {_dp(76)}px; max-height: {_dp(76)}px;
+                color: #ffffff;
+                font-size: {_dp(34)}px;
+                font-weight: 900;
+                font-family: 'Segoe UI';
+            }}
+            QLabel#tag {{
+                background: transparent;
+                border: 1.5px solid {c_tag};
+                border-radius: {_dp(8)}px;
+                color: {c_tag};
+                font-size: {_dp(9)}px;
+                font-weight: 800;
+                font-family: 'Segoe UI';
+                letter-spacing: 3px;
+                padding: {_dp(3)}px {_dp(14)}px;
+            }}
+            QLabel#dlg_title {{
+                color: {c_title};
+                font-size: {_dp(17)}px;
+                font-weight: 900;
+                font-family: 'Segoe UI';
+                letter-spacing: 1px;
+            }}
+            QLabel#dlg_body {{
+                color: #546e7a;
+                font-size: {_dp(11)}px;
+                font-family: 'Segoe UI';
+                letter-spacing: 0.3px;
+            }}
+            QPushButton#btn_ok {{
+                background: {c_btn};
+                color: #ffffff;
+                border: none;
+                border-radius: {_dp(10)}px;
+                font-family: 'Segoe UI';
+                font-weight: 800;
+                font-size: {_dp(12)}px;
+                letter-spacing: 2px;
+                min-height: {_dp(50)}px;
+                padding: 0 {_dp(44)}px;
+            }}
+            QPushButton#btn_ok:hover   {{ background: {c_btn_h}; }}
+            QPushButton#btn_ok:pressed {{ background: {c_btn_p}; }}
+        """)
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(_dp(30), _dp(34), _dp(30), _dp(36))
+        root.setSpacing(_dp(12))
+        root.setAlignment(Qt.AlignHCenter)
+
+        # ── Ícono ──────────────────────────────────────────────────────────
+        outer = QLabel()
+        outer.setObjectName("icon_outer")
+        outer.setFixedSize(_dp(96), _dp(96))
+        outer.setAlignment(Qt.AlignCenter)
+
+        inner = QLabel(icon_char)
+        inner.setObjectName("icon_inner")
+        inner.setAlignment(Qt.AlignCenter)
+        inner.setFixedSize(_dp(76), _dp(76))
+
+        stack = QVBoxLayout(outer)
+        stack.setContentsMargins(0, 0, 0, 0)
+        stack.setAlignment(Qt.AlignCenter)
+        stack.addWidget(inner, alignment=Qt.AlignCenter)
+        root.addWidget(outer, alignment=Qt.AlignHCenter)
+
+        # ── Tag ────────────────────────────────────────────────────────────
+        tag = QLabel(tag_text)
+        tag.setObjectName("tag")
+        tag.setAlignment(Qt.AlignCenter)
+        root.addWidget(tag, alignment=Qt.AlignHCenter)
+
+        # ── Título ─────────────────────────────────────────────────────────
+        title = QLabel(title_text)
+        title.setObjectName("dlg_title")
+        title.setAlignment(Qt.AlignCenter)
+        title.setWordWrap(True)
+        root.addWidget(title, alignment=Qt.AlignHCenter)
+
+        # ── Cuerpo ─────────────────────────────────────────────────────────
+        body = QLabel(body_text)
+        body.setObjectName("dlg_body")
+        body.setAlignment(Qt.AlignCenter)
+        body.setWordWrap(True)
+        root.addWidget(body, alignment=Qt.AlignHCenter)
+
+        root.addSpacing(_dp(6))
+
+        # ── Botón ──────────────────────────────────────────────────────────
+        btn = QPushButton(btn_text)
+        btn.setObjectName("btn_ok")
+        btn.setCursor(Qt.PointingHandCursor)
+        btn.setFocusPolicy(Qt.NoFocus)
+        btn.clicked.connect(self.accept)
+        root.addWidget(btn, alignment=Qt.AlignHCenter)
+
+    def paintEvent(self, _):
+        from PyQt5.QtCore import QRectF
+        from PyQt5.QtGui import QPainterPath
+        p = QPainter(self); p.setRenderHint(QPainter.Antialiasing)
+        path = QPainterPath()
+        path.addRoundedRect(QRectF(self.rect()), _dp(16), _dp(16))
+        p.fillPath(path, QBrush(QColor("#ffffff")))
+        p.end()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  DlgError  ── reemplaza el importado de adminDialogs para este panel
+# ─────────────────────────────────────────────────────────────────────────────
+class DlgError:
+    @staticmethod
+    def show(msg, title=None, parent=None):
+        dlg = _StyledDialog(
+            icon_char="✕",
+            tag_text="ERROR",
+            title_text=title or "ERROR",
+            body_text=msg,
+            btn_text="VOLVER AL INICIO",
+            tipo="error",
+            parent=parent,
+        )
+        dlg.exec_()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  DlgInfo  ── reemplaza el importado de adminDialogs para este panel
+# ─────────────────────────────────────────────────────────────────────────────
+class DlgInfo:
+    @staticmethod
+    def show(msg, title=None, parent=None):
+        dlg = _StyledDialog(
+            icon_char="✓",
+            tag_text="ÉXITO",
+            title_text=title or "INFORMACIÓN",
+            body_text=msg,
+            btn_text="ACEPTAR",
+            tipo="success",
+            parent=parent,
+        )
+        dlg.exec_()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  DlgConfirm ── diálogo de confirmación con dos botones (estilo imagen 3)
+# ─────────────────────────────────────────────────────────────────────────────
+class DlgConfirm(QDialog):
+    def __init__(self, msg, title="¿CONFIRMAR?", confirm_label="CONFIRMAR",
+                 danger=False, parent=None):
+        super().__init__(parent)
+        self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
+        self.setModal(True)
+        self.setFixedWidth(_dp(400))
+
+        c_icon_bg = "#fdecea" if danger else "#e3f0ff"
+        c_icon_fg = "#c62828" if danger else "#1565c0"
+        c_border  = "#c62828" if danger else "#1565c0"
+        c_title   = "#c62828" if danger else "#1565c0"
+        icon_char = "✕" if danger else "?"
+        tag_text  = "PELIGRO" if danger else "CONFIRMAR"
+        c_btn_ok  = "#c62828" if danger else "#1565c0"
+        c_btn_h   = "#d32f2f" if danger else "#1976d2"
+        c_btn_p   = "#b71c1c" if danger else "#0d47a1"
+
+        self.setStyleSheet(f"""
+            QDialog {{
+                background: #ffffff;
+                border-radius: {_dp(16)}px;
+                border: 2px solid {c_border};
+            }}
+            QLabel#icon_outer {{
+                background: {c_icon_bg};
+                border-radius: {_dp(48)}px;
+                min-width:  {_dp(96)}px; max-width:  {_dp(96)}px;
+                min-height: {_dp(96)}px; max-height: {_dp(96)}px;
+            }}
+            QLabel#icon_inner {{
+                background: {c_icon_fg};
+                border-radius: {_dp(38)}px;
+                min-width:  {_dp(76)}px; max-width:  {_dp(76)}px;
+                min-height: {_dp(76)}px; max-height: {_dp(76)}px;
+                color: #ffffff;
+                font-size: {_dp(30)}px;
+                font-weight: 900;
+                font-family: 'Segoe UI';
+            }}
+            QLabel#tag {{
+                background: transparent;
+                border: 1.5px solid {c_border};
+                border-radius: {_dp(8)}px;
+                color: {c_border};
+                font-size: {_dp(9)}px;
+                font-weight: 800;
+                font-family: 'Segoe UI';
+                letter-spacing: 3px;
+                padding: {_dp(3)}px {_dp(14)}px;
+            }}
+            QLabel#dlg_title {{
+                color: {c_title};
+                font-size: {_dp(16)}px;
+                font-weight: 900;
+                font-family: 'Segoe UI';
+                letter-spacing: 1px;
+            }}
+            QLabel#dlg_body {{
+                color: #546e7a;
+                font-size: {_dp(11)}px;
+                font-family: 'Segoe UI';
+            }}
+            QPushButton#btn_ok {{
+                background: {c_btn_ok};
+                color: #ffffff; border: none;
+                border-radius: {_dp(10)}px;
+                font-family: 'Segoe UI'; font-weight: 800;
+                font-size: {_dp(12)}px; letter-spacing: 2px;
+                min-height: {_dp(50)}px; padding: 0 {_dp(30)}px;
+            }}
+            QPushButton#btn_ok:hover   {{ background: {c_btn_h}; }}
+            QPushButton#btn_ok:pressed {{ background: {c_btn_p}; }}
+            QPushButton#btn_cancel {{
+                background: #ffffff; color: #546e7a;
+                border: 2px solid #cfd8e3;
+                border-radius: {_dp(10)}px;
+                font-family: 'Segoe UI'; font-weight: 700;
+                font-size: {_dp(12)}px; letter-spacing: 1px;
+                min-height: {_dp(50)}px; padding: 0 {_dp(30)}px;
+            }}
+            QPushButton#btn_cancel:hover   {{ background: #f0f6ff; border-color: #90c4f0; }}
+            QPushButton#btn_cancel:pressed {{ background: #e3f0ff; }}
+        """)
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(_dp(30), _dp(34), _dp(30), _dp(36))
+        root.setSpacing(_dp(12))
+        root.setAlignment(Qt.AlignHCenter)
+
+        # Ícono
+        outer = QLabel(); outer.setObjectName("icon_outer")
+        outer.setFixedSize(_dp(96), _dp(96)); outer.setAlignment(Qt.AlignCenter)
+        inner = QLabel(icon_char); inner.setObjectName("icon_inner")
+        inner.setAlignment(Qt.AlignCenter); inner.setFixedSize(_dp(76), _dp(76))
+        stk = QVBoxLayout(outer); stk.setContentsMargins(0,0,0,0)
+        stk.setAlignment(Qt.AlignCenter); stk.addWidget(inner, alignment=Qt.AlignCenter)
+        root.addWidget(outer, alignment=Qt.AlignHCenter)
+
+        tag = QLabel(tag_text); tag.setObjectName("tag"); tag.setAlignment(Qt.AlignCenter)
+        root.addWidget(tag, alignment=Qt.AlignHCenter)
+
+        ttl = QLabel(title); ttl.setObjectName("dlg_title")
+        ttl.setAlignment(Qt.AlignCenter); ttl.setWordWrap(True)
+        root.addWidget(ttl, alignment=Qt.AlignHCenter)
+
+        bdy = QLabel(msg); bdy.setObjectName("dlg_body")
+        bdy.setAlignment(Qt.AlignCenter); bdy.setWordWrap(True)
+        root.addWidget(bdy, alignment=Qt.AlignHCenter)
+
+        root.addSpacing(_dp(6))
+
+        btn_row = QHBoxLayout(); btn_row.setSpacing(_dp(12))
+        btn_cancel = QPushButton("CANCELAR"); btn_cancel.setObjectName("btn_cancel")
+        btn_cancel.setCursor(Qt.PointingHandCursor); btn_cancel.setFocusPolicy(Qt.NoFocus)
+        btn_cancel.clicked.connect(self.reject)
+
+        btn_ok = QPushButton(confirm_label); btn_ok.setObjectName("btn_ok")
+        btn_ok.setCursor(Qt.PointingHandCursor); btn_ok.setFocusPolicy(Qt.NoFocus)
+        btn_ok.clicked.connect(self.accept)
+
+        btn_row.addWidget(btn_cancel, 1)
+        btn_row.addWidget(btn_ok, 1)
+        root.addLayout(btn_row)
+
+    def paintEvent(self, _):
+        from PyQt5.QtCore import QRectF
+        from PyQt5.QtGui import QPainterPath
+        p = QPainter(self); p.setRenderHint(QPainter.Antialiasing)
+        path = QPainterPath()
+        path.addRoundedRect(QRectF(self.rect()), _dp(16), _dp(16))
+        p.fillPath(path, QBrush(QColor("#ffffff"))); p.end()
+
+    @staticmethod
+    def ask(msg, title="¿CONFIRMAR?", confirm_label="CONFIRMAR",
+            danger=False, parent=None):
+        dlg = DlgConfirm(msg, title, confirm_label, danger, parent)
+        return dlg.exec_() == QDialog.Accepted
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  DlgLockerDuplicado  ── fondo blanco, borde rojo
+# ─────────────────────────────────────────────────────────────────────────────
+class DlgLockerDuplicado:
+    @staticmethod
+    def show(numero_locker, parent=None):
+        dlg = _StyledDialog(
+            icon_char="✕",
+            tag_text="ERROR",
+            title_text=f"LOCKER #{numero_locker} YA EXISTE",
+            body_text=(
+                f"Ya existe un locker registrado con el número {numero_locker}.\n"
+                f"Por favor ingresa un número diferente."
+            ),
+            btn_text="VOLVER AL INICIO",
+            tipo="error",
+            parent=parent,
+        )
+        dlg.exec_()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 #  Icono del locker
 # ─────────────────────────────────────────────────────────────────────────────
 class LockerIcon(QWidget):
     def __init__(self, estado="ocupado", parent=None):
         super().__init__(parent)
-        # FIX: ícono más grande (era 72x86)
         self.setFixedSize(88, 104)
         self.estado = estado
         self._bg = QColor(WHITE)
@@ -142,154 +515,6 @@ class LockerIcon(QWidget):
         p.drawLine(22, 42, 32, 52); p.drawLine(32, 42, 22, 52)
         p.setPen(Qt.NoPen); p.setBrush(QBrush(c(GR)))
         p.drawRoundedRect(2, 57, 8, 5, 2, 2); p.drawRoundedRect(44, 57, 8, 5, 2, 2)
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-#  Diálogo de error mejorado para locker duplicado
-# ─────────────────────────────────────────────────────────────────────────────
-class DlgLockerDuplicado(QDialog):
-    """
-    Diálogo estilo imagen 3: fondo oscuro, ícono X rojo grande,
-    título en rojo, descripción y botón azul centrado.
-    """
-    def __init__(self, numero_locker, parent=None):
-        super().__init__(parent)
-        self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
-        self.setModal(True)
-        self.setFixedWidth(_dp(420))
-        self.setStyleSheet(f"""
-            QDialog {{
-                background: #0f1b3d;
-                border-radius: {_dp(16)}px;
-                border: 2px solid #c62828;
-            }}
-            QLabel#icon_circle {{
-                background: #f8d7da;
-                border-radius: {_dp(44)}px;
-                min-width: {_dp(88)}px; max-width: {_dp(88)}px;
-                min-height: {_dp(88)}px; max-height: {_dp(88)}px;
-            }}
-            QLabel#icon_inner {{
-                background: #c62828;
-                border-radius: {_dp(36)}px;
-                min-width: {_dp(72)}px; max-width: {_dp(72)}px;
-                min-height: {_dp(72)}px; max-height: {_dp(72)}px;
-                color: #ffffff;
-                font-size: {_dp(32)}px;
-                font-weight: 900;
-                font-family: 'Segoe UI';
-            }}
-            QLabel#tag_error {{
-                background: transparent;
-                border: 1px solid #c62828;
-                border-radius: {_dp(8)}px;
-                color: #c62828;
-                font-size: {_dp(9)}px;
-                font-weight: 800;
-                font-family: 'Segoe UI';
-                letter-spacing: 3px;
-                padding: {_dp(3)}px {_dp(12)}px;
-            }}
-            QLabel#dlg_title {{
-                color: #c62828;
-                font-size: {_dp(18)}px;
-                font-weight: 900;
-                font-family: 'Segoe UI';
-                letter-spacing: 1px;
-            }}
-            QLabel#dlg_body {{
-                color: #b0bec5;
-                font-size: {_dp(11)}px;
-                font-family: 'Segoe UI';
-                letter-spacing: 0.5px;
-            }}
-            QPushButton#btn_ok {{
-                background: #1565c0;
-                color: #ffffff;
-                border: none;
-                border-radius: {_dp(10)}px;
-                font-family: 'Segoe UI';
-                font-weight: 800;
-                font-size: {_dp(12)}px;
-                letter-spacing: 2px;
-                min-height: {_dp(50)}px;
-                padding: 0 {_dp(40)}px;
-            }}
-            QPushButton#btn_ok:hover   {{ background: #1976d2; }}
-            QPushButton#btn_ok:pressed {{ background: #0d47a1; }}
-        """)
-
-        root = QVBoxLayout(self)
-        root.setContentsMargins(_dp(32), _dp(32), _dp(32), _dp(36))
-        root.setSpacing(_dp(14))
-        root.setAlignment(Qt.AlignHCenter)
-
-        # ── Ícono grande rojo ─────────────────────────────────────────────
-        icon_outer = QLabel()
-        icon_outer.setObjectName("icon_circle")
-        icon_outer.setAlignment(Qt.AlignCenter)
-        icon_outer.setFixedSize(_dp(88), _dp(88))
-
-        icon_inner = QLabel("✕")
-        icon_inner.setObjectName("icon_inner")
-        icon_inner.setAlignment(Qt.AlignCenter)
-        icon_inner.setFixedSize(_dp(72), _dp(72))
-
-        icon_stack = QVBoxLayout(icon_outer)
-        icon_stack.setContentsMargins(0, 0, 0, 0)
-        icon_stack.setAlignment(Qt.AlignCenter)
-        icon_stack.addWidget(icon_inner, alignment=Qt.AlignCenter)
-
-        root.addWidget(icon_outer, alignment=Qt.AlignHCenter)
-
-        # ── Tag ERROR ─────────────────────────────────────────────────────
-        tag = QLabel("ERROR")
-        tag.setObjectName("tag_error")
-        tag.setAlignment(Qt.AlignCenter)
-        root.addWidget(tag, alignment=Qt.AlignHCenter)
-
-        # ── Título ────────────────────────────────────────────────────────
-        title = QLabel(f"LOCKER #{numero_locker} YA EXISTE")
-        title.setObjectName("dlg_title")
-        title.setAlignment(Qt.AlignCenter)
-        title.setWordWrap(True)
-        root.addWidget(title, alignment=Qt.AlignHCenter)
-
-        # ── Descripción ───────────────────────────────────────────────────
-        body = QLabel(
-            f"Ya existe un locker registrado con el número {numero_locker}.\n"
-            f"Por favor ingresa un número diferente."
-        )
-        body.setObjectName("dlg_body")
-        body.setAlignment(Qt.AlignCenter)
-        body.setWordWrap(True)
-        root.addWidget(body, alignment=Qt.AlignHCenter)
-
-        root.addSpacing(_dp(6))
-
-        # ── Botón ─────────────────────────────────────────────────────────
-        btn = QPushButton("VOLVER AL INICIO")
-        btn.setObjectName("btn_ok")
-        btn.setCursor(Qt.PointingHandCursor)
-        btn.setFocusPolicy(Qt.NoFocus)
-        btn.clicked.connect(self.accept)
-        root.addWidget(btn, alignment=Qt.AlignHCenter)
-
-    def paintEvent(self, _):
-        from PyQt5.QtCore import QRectF
-        from PyQt5.QtGui import QPainterPath
-        p = QPainter(self); p.setRenderHint(QPainter.Antialiasing)
-        path = QPainterPath()
-        path.addRoundedRect(QRectF(self.rect()), _dp(16), _dp(16))
-        p.fillPath(path, QBrush(QColor("#0f1b3d")))
-        pen = QPen(QColor("#c62828"), _dp(2))
-        p.setPen(pen); p.drawPath(path)
-        p.end()
-
-    @staticmethod
-    def show(numero_locker, parent=None):
-        dlg = DlgLockerDuplicado(numero_locker, parent)
-        dlg.exec_()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -411,7 +636,6 @@ class LockerConfigDialog(QDialog):
 
         self.e_num = QLineEdit(locker.get("t_numero_locker", ""))
         self.e_num.setObjectName("dlg_inp"); self.e_num.setFixedHeight(_dp(52))
-        # FIX: solo números en el campo número del diálogo de configuración
         self.e_num.setValidator(QRegExpValidator(QRegExp(r'^\d+$'), self.e_num))
         add_field(tr("admin.lockers.dialog.number"), self.e_num)
 
@@ -473,11 +697,6 @@ class LockerConfigDialog(QDialog):
 #  Diálogo de ingreso de número (solo números)
 # ─────────────────────────────────────────────────────────────────────────────
 class DlgInputNumero(QDialog):
-    """
-    Reemplaza DlgInput para agregar un nuevo locker.
-    Solo acepta dígitos; muestra advertencia inmediata si se intenta
-    escribir una letra.
-    """
     def __init__(self, parent=None):
         super().__init__(parent)
         self.value = None
@@ -537,47 +756,35 @@ class DlgInputNumero(QDialog):
         root.addWidget(ttl)
 
         sub = QLabel(tr("admin.lockers.dialog.msg"))
-        sub.setObjectName("dlg_sub")
-        sub.setWordWrap(True)
+        sub.setObjectName("dlg_sub"); sub.setWordWrap(True)
         root.addWidget(sub)
 
-        # Campo de entrada — solo dígitos via validador
         self.inp = QLineEdit()
         self.inp.setObjectName("num_inp")
         self.inp.setPlaceholderText("Ej: 101")
-        only_digits = QRegExpValidator(QRegExp(r'^\d+$'), self.inp)
-        self.inp.setValidator(only_digits)
+        self.inp.setValidator(QRegExpValidator(QRegExp(r'^\d+$'), self.inp))
         root.addWidget(self.inp)
 
-        # Advertencia (oculta inicialmente)
         self.warn = QLabel("⚠  Solo se permiten números. Las letras no son válidas.")
-        self.warn.setObjectName("warn_lbl")
-        self.warn.setWordWrap(True)
+        self.warn.setObjectName("warn_lbl"); self.warn.setWordWrap(True)
         self.warn.setVisible(False)
         root.addWidget(self.warn)
 
-        # Conectar señal para mostrar advertencia si el texto no cambió
-        # (el validador bloquea la entrada, pero necesitamos feedback visual)
         self.inp.textChanged.connect(self._on_text_changed)
 
         btn_row = QHBoxLayout(); btn_row.setSpacing(_dp(10))
         btn_cancel = QPushButton(tr("common.cancel"))
         btn_cancel.setObjectName("btn_cancel")
-        btn_cancel.setCursor(Qt.PointingHandCursor)
-        btn_cancel.setFocusPolicy(Qt.NoFocus)
+        btn_cancel.setCursor(Qt.PointingHandCursor); btn_cancel.setFocusPolicy(Qt.NoFocus)
         btn_cancel.clicked.connect(self.reject)
 
         btn_ok = QPushButton(tr("admin.lockers.new"))
         btn_ok.setObjectName("btn_ok")
-        btn_ok.setCursor(Qt.PointingHandCursor)
-        btn_ok.setFocusPolicy(Qt.NoFocus)
+        btn_ok.setCursor(Qt.PointingHandCursor); btn_ok.setFocusPolicy(Qt.NoFocus)
         btn_ok.clicked.connect(self._confirm)
 
-        btn_row.addWidget(btn_cancel, 1)
-        btn_row.addWidget(btn_ok, 2)
+        btn_row.addWidget(btn_cancel, 1); btn_row.addWidget(btn_ok, 2)
         root.addLayout(btn_row)
-
-        # Interceptar teclado para detectar intentos de letras
         self.inp.installEventFilter(self)
 
     def eventFilter(self, obj, event):
@@ -585,12 +792,10 @@ class DlgInputNumero(QDialog):
         if obj is self.inp and event.type() == QEvent.KeyPress:
             key_text = event.text()
             if key_text and not key_text.isdigit() and key_text not in ('\x08', '\x7f', ''):
-                # El usuario intentó escribir algo que no es dígito
                 self.warn.setVisible(True)
         return super().eventFilter(obj, event)
 
     def _on_text_changed(self, text):
-        # Si el texto es válido (solo dígitos), ocultar advertencia
         if text and text.isdigit():
             self.warn.setVisible(False)
 
@@ -624,7 +829,7 @@ class DlgInputNumero(QDialog):
 # ─────────────────────────────────────────────────────────────────────────────
 class LockerCard(QFrame):
     CARD_W = _dp(260)
-    CARD_H = _dp(420)   # ligeramente más alto por el ícono más grande
+    CARD_H = _dp(420)
 
     def __init__(self, locker, index, admin_id=None, on_refresh=None, parent=None):
         super().__init__(parent)
@@ -657,10 +862,8 @@ class LockerCard(QFrame):
         vbox.setSpacing(0)
 
         top_row = QHBoxLayout(); top_row.setSpacing(_dp(10))
-        # FIX: ícono más grande
         icon = LockerIcon(estado="mant" if estado == "mantenimiento" else estado)
-        top_row.addWidget(icon)
-        top_row.addStretch()
+        top_row.addWidget(icon); top_row.addStretch()
 
         badge_txt = {
             "libre":         tr("admin.lockers.libres"),
@@ -715,12 +918,10 @@ class LockerCard(QFrame):
         vbox.addWidget(sep)
         vbox.addSpacing(_dp(10))
 
-        # FIX: texto centrado en todos los botones (text-align:center)
         btn_cfg = QPushButton("⚙   " + tr("admin.lockers.configure"))
         btn_cfg.setFixedHeight(_dp(_TOUCH_H))
         btn_cfg.setStyleSheet(self._btn_css(GRAY_CHIP, GRAY_TEXT, "#cbd5e1"))
-        btn_cfg.setCursor(Qt.PointingHandCursor)
-        btn_cfg.setFocusPolicy(Qt.NoFocus)
+        btn_cfg.setCursor(Qt.PointingHandCursor); btn_cfg.setFocusPolicy(Qt.NoFocus)
         btn_cfg.clicked.connect(self._config)
         vbox.addWidget(btn_cfg)
         vbox.addSpacing(_dp(6))
@@ -729,8 +930,7 @@ class LockerCard(QFrame):
             btn_lib = QPushButton("↩   " + tr("admin.lockers.release"))
             btn_lib.setFixedHeight(_dp(_TOUCH_H))
             btn_lib.setStyleSheet(self._btn_css("#fff3e8", "#c2410c", "#fbbf24"))
-            btn_lib.setCursor(Qt.PointingHandCursor)
-            btn_lib.setFocusPolicy(Qt.NoFocus)
+            btn_lib.setCursor(Qt.PointingHandCursor); btn_lib.setFocusPolicy(Qt.NoFocus)
             btn_lib.clicked.connect(self._liberar)
             vbox.addWidget(btn_lib)
             vbox.addSpacing(_dp(6))
@@ -738,8 +938,7 @@ class LockerCard(QFrame):
         btn_del = QPushButton("✕   " + tr("admin.lockers.delete"))
         btn_del.setFixedHeight(_dp(_TOUCH_H))
         btn_del.setStyleSheet(self._btn_css(RED_BG, RED_TEXT, "#fca5a5"))
-        btn_del.setCursor(Qt.PointingHandCursor)
-        btn_del.setFocusPolicy(Qt.NoFocus)
+        btn_del.setCursor(Qt.PointingHandCursor); btn_del.setFocusPolicy(Qt.NoFocus)
         btn_del.clicked.connect(self._eliminar)
         vbox.addWidget(btn_del)
 
@@ -750,7 +949,6 @@ class LockerCard(QFrame):
             f"QPushButton{{background:{bg};color:{fg};"
             f"border:1.5px solid {border};border-radius:{r}px;"
             f"font-family:'Segoe UI';font-weight:700;font-size:{fs}px;"
-            # FIX: text-align:center (antes era left)
             f"text-align:center;padding:0 {_dp(14)}px;}}"
             f"QPushButton:pressed{{opacity:0.85;background:{border};}}"
         )
@@ -779,7 +977,6 @@ class LockerCard(QFrame):
             if face_uid:
                 try:
                     delete_face_data(face_uid)
-                    print(f"[Admin] Datos biométricos eliminados: '{face_uid}'")
                 except Exception as fe:
                     print(f"[WARN] No se pudo borrar datos de '{face_uid}': {fe}")
             db_close_sesion(s["ID_sesion"])
@@ -792,19 +989,16 @@ class LockerCard(QFrame):
     def _liberar(self):
         num = self.locker["t_numero_locker"]
         confirmed, reason = DlgLiberar.ask(num, parent=self)
-        if not confirmed:
-            return
+        if not confirmed: return
         try:
             abrir_locker(str(num))
             self._close_active_session(extra_desc=reason)
             db_set_locker_estado(self.locker["ID_locker"], "libre", self.admin_id)
             desc = f"Admin liberó locker #{num} manualmente."
-            if reason:
-                desc += f" Motivo: {reason}"
+            if reason: desc += f" Motivo: {reason}"
             self._log("liberacion_admin", "exitoso", desc)
             train_model()
-            if self.on_refresh:
-                self.on_refresh()
+            if self.on_refresh: self.on_refresh()
         except Exception as ex:
             DlgError.show(str(ex), parent=self)
 
@@ -834,9 +1028,10 @@ class LockerCard(QFrame):
     def _eliminar(self):
         num = self.locker["t_numero_locker"]
         if self.locker.get("t_estado") == "ocupado":
-            DlgError.show(tr("admin.lockers.dialog.too_full", n=num),
-                          title=tr("common.error"), parent=self); return
-        from views.style.adminDialogs import DlgConfirm
+            DlgError.show(
+                tr("admin.lockers.dialog.too_full", n=num),
+                title=tr("common.error"), parent=self
+            ); return
         if not DlgConfirm.ask(
             tr("admin.lockers.dialog.delete_confirm", n=num),
             title=tr("admin.lockers.dialog.delete_title", n=num),
@@ -931,15 +1126,13 @@ class _AdminLockersPanel(QWidget):
 
         self.btn_add = QPushButton("＋  " + tr("admin.lockers.new"))
         self.btn_add.setObjectName("btn_add")
-        self.btn_add.setCursor(Qt.PointingHandCursor)
-        self.btn_add.setFocusPolicy(Qt.NoFocus)
+        self.btn_add.setCursor(Qt.PointingHandCursor); self.btn_add.setFocusPolicy(Qt.NoFocus)
         self.btn_add.clicked.connect(self._agregar)
         hdr.addWidget(self.btn_add)
 
         self.btn_ref = QPushButton("↻  " + tr("admin.lockers.refresh"))
         self.btn_ref.setObjectName("btn_ref")
-        self.btn_ref.setCursor(Qt.PointingHandCursor)
-        self.btn_ref.setFocusPolicy(Qt.NoFocus)
+        self.btn_ref.setCursor(Qt.PointingHandCursor); self.btn_ref.setFocusPolicy(Qt.NoFocus)
         self.btn_ref.clicked.connect(self.refresh)
         hdr.addWidget(self.btn_ref)
         root.addLayout(hdr)
@@ -1040,10 +1233,8 @@ class _AdminLockersPanel(QWidget):
             self.grid.addWidget(card, i // cols, i % cols)
 
     def _agregar(self):
-        # FIX: usar DlgInputNumero en lugar de DlgInput para validar solo números
         num = DlgInputNumero.ask(parent=self)
-        if not num:
-            return
+        if not num: return
         try:
             new_id = db_insert_locker(num, id_admin=self.admin_id)
             db_log_intento(
@@ -1056,7 +1247,6 @@ class _AdminLockersPanel(QWidget):
             self.refresh()
         except Exception as ex:
             err_msg = str(ex)
-            # FIX: detectar error de locker duplicado y mostrar diálogo mejorado
             if "UNIQUE constraint failed" in err_msg and "t_numero_locker" in err_msg:
                 DlgLockerDuplicado.show(num, parent=self)
             else:
@@ -1075,3 +1265,6 @@ class _AdminLockersPanel(QWidget):
         )
         self._cols = self._calculate_cols()
         self._render_lockers()
+
+    def set_admin_context(self, admin_data: dict):
+        self.admin_id = admin_data.get("ID_usuario")

@@ -21,10 +21,13 @@ from utils.i18n import tr, get_language
 # ─────────────────────────────────────────────────────────────────────────────
 def _dp(v: float) -> int:
     s = QApplication.primaryScreen()
-    scale = min((s.logicalDotsPerInch() if s else 96) / 96, 1.25)
+    if s:
+        scale = s.logicalDotsPerInch() / 96
+    else:
+        scale = 1.77   # fallback 7" ~170 DPI
     return max(1, round(v * scale))
 
-_TOUCH_H = 52   # altura mínima táctil en px
+_TOUCH_H = 56   # FIX: aumentado de 52 → 56 para mejor touch en 7"
 
 def _shadow(w, blur=12, alpha=18, dy=2):
     s = QGraphicsDropShadowEffect()
@@ -76,7 +79,7 @@ class AdminTableModel(QAbstractTableModel):
             if col == 2: return f"@{row.get('t_usuario', '')}"
             if col == 3: return (row.get("t_rol", "") or "").upper()
             if col == 4: return estado.upper()
-            if col == 5: return ""   # widgets embebidos
+            if col == 5: return ""
 
         if role == Qt.ForegroundRole:
             if col == 4:
@@ -93,7 +96,8 @@ class AdminTableModel(QAbstractTableModel):
             return int(Qt.AlignLeft | Qt.AlignVCenter)
 
         if role == Qt.FontRole:
-            f = QFont("Segoe UI", _dp(11))
+            # FIX: fuente más grande en toda la tabla
+            f = QFont("Segoe UI", _dp(13))
             if col == 4: f.setBold(True)
             return f
 
@@ -101,7 +105,7 @@ class AdminTableModel(QAbstractTableModel):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  ToggleBtn  (idéntico a los otros paneles)
+#  ToggleBtn
 # ─────────────────────────────────────────────────────────────────────────────
 class ToggleBtn(QPushButton):
     _ON  = "QPushButton{{background:{bg};color:{fg};border:2px solid {bg};border-radius:{r}px;font-family:'Segoe UI';font-weight:800;font-size:{fs}px;letter-spacing:1px;padding:0 {p}px;}}"
@@ -117,7 +121,7 @@ class ToggleBtn(QPushButton):
     def set_active(self, v: bool): self._active = v; self._apply()
 
     def _apply(self):
-        kw = dict(r=_dp(10), fs=_dp(11), p=_dp(18))
+        kw = dict(r=_dp(10), fs=_dp(12), p=_dp(18))
         if self._active:
             self.setStyleSheet(self._ON.format(bg=self._bg, fg=self._fg, **kw))
         else:
@@ -128,20 +132,20 @@ class ToggleBtn(QPushButton):
 #  Estilos globales
 # ─────────────────────────────────────────────────────────────────────────────
 def _build_style():
-    TH  = _dp(_TOUCH_H)
-    r10 = _dp(10); r6 = _dp(6)
-    INP_H = _dp(52)   # altura de inputs en diálogos (misma que botones)
+    TH    = _dp(_TOUCH_H)
+    r10   = _dp(10)
+    INP_H = _dp(56)
 
     return f"""
 QWidget#admin_users_panel {{ background: transparent; }}
 
 QLabel#section_title {{
     color: #1565c0; font-weight: 900;
-    font-family: 'Segoe UI'; letter-spacing: 3px; font-size: {_dp(13)}px;
+    font-family: 'Segoe UI'; letter-spacing: 3px; font-size: {_dp(14)}px;
 }}
 QLabel#section_sub {{
     color: #37474f; font-family: 'Segoe UI';
-    letter-spacing: 1px; font-size: {_dp(11)}px;
+    letter-spacing: 1px; font-size: {_dp(12)}px;
 }}
 QFrame#h_div {{
     background: #cfd8e3; border: none; min-height: 1px; max-height: 1px;
@@ -151,8 +155,8 @@ QFrame#h_div {{
 QPushButton#btn_add {{
     background: #1565c0; color: #ffffff; border: none;
     border-radius: {r10}px; font-family: 'Segoe UI';
-    font-weight: 800; letter-spacing: 2px; font-size: {_dp(11)}px;
-    min-height: {TH}px; min-width: {_dp(140)}px; padding: 0 {_dp(20)}px;
+    font-weight: 800; letter-spacing: 2px; font-size: {_dp(12)}px;
+    min-height: {TH}px; min-width: {_dp(150)}px; padding: 0 {_dp(20)}px;
 }}
 QPushButton#btn_add:hover   {{ background: #1976d2; }}
 QPushButton#btn_add:pressed {{ background: #0d47a1; }}
@@ -162,42 +166,42 @@ QPushButton#btn_refresh {{
     background: #ffffff; color: #1565c0;
     border: 2px solid #90c4f0; border-radius: {r10}px;
     font-family: 'Segoe UI'; font-weight: 800;
-    letter-spacing: 2px; font-size: {_dp(11)}px;
-    min-height: {TH}px; min-width: {_dp(140)}px; padding: 0 {_dp(20)}px;
+    letter-spacing: 2px; font-size: {_dp(12)}px;
+    min-height: {TH}px; min-width: {_dp(150)}px; padding: 0 {_dp(20)}px;
 }}
 QPushButton#btn_refresh:hover   {{ background: #e3f0ff; border-color: #1565c0; }}
 QPushButton#btn_refresh:pressed {{ background: #bbdefb; }}
-
-/* Barra de filtros eliminada para dar más espacio a la tabla */
 
 /* ── Tabla ── */
 QTableView#admin_users_tbl {{
     background: #ffffff; alternate-background-color: #f4f8ff;
     border: 1px solid #cfd8e3; border-radius: {r10}px;
     gridline-color: #e8f0fb; selection-background-color: #bbdefb;
-    font-family: 'Segoe UI'; font-size: {_dp(11)}px; color: #000000;
+    font-family: 'Segoe UI'; font-size: {_dp(13)}px; color: #000000;
 }}
 QTableView#admin_users_tbl::item {{
-    padding: {_dp(10)}px {_dp(12)}px; border-bottom: 1px solid #f0f4fa;
+    padding: {_dp(12)}px {_dp(14)}px; border-bottom: 1px solid #f0f4fa;
 }}
 QTableView#admin_users_tbl::item:selected {{ background: #bbdefb; color: #0d47a1; }}
+
+/* FIX: header más alto y texto más grande */
 QHeaderView::section {{
     background: #1565c0; color: #ffffff;
     font-weight: 900; font-family: 'Segoe UI';
-    letter-spacing: 1px; font-size: {_dp(10)}px;
-    padding: {_dp(10)}px {_dp(12)}px; border: none;
+    letter-spacing: 2px; font-size: {_dp(14)}px;
+    padding: {_dp(14)}px {_dp(16)}px; border: none;
     border-right: 1px solid rgba(255,255,255,0.18);
-    min-height: {_dp(40)}px;
+    min-height: {_dp(56)}px;
 }}
 QHeaderView::section:last  {{ border-right: none; }}
 QHeaderView::section:hover {{ background: #1976d2; }}
 
 /* ── Scrollbars ── */
-QScrollBar:vertical   {{ background: #e8f0fb; width: {_dp(6)}px; margin: 0; }}
-QScrollBar::handle:vertical   {{ background: #90c4f0; border-radius: {_dp(3)}px; min-height: {_dp(28)}px; }}
+QScrollBar:vertical   {{ background: #e8f0fb; width: {_dp(8)}px; margin: 0; }}
+QScrollBar::handle:vertical   {{ background: #90c4f0; border-radius: {_dp(4)}px; min-height: {_dp(32)}px; }}
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
-QScrollBar:horizontal {{ background: #e8f0fb; height: {_dp(6)}px; margin: 0; }}
-QScrollBar::handle:horizontal {{ background: #90c4f0; border-radius: {_dp(3)}px; min-width: {_dp(28)}px; }}
+QScrollBar:horizontal {{ background: #e8f0fb; height: {_dp(8)}px; margin: 0; }}
+QScrollBar::handle:horizontal {{ background: #90c4f0; border-radius: {_dp(4)}px; min-width: {_dp(32)}px; }}
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{ width: 0; }}
 
 /* ── Paginación ── */
@@ -206,36 +210,36 @@ QFrame#page_bar {{
 }}
 QPushButton#btn_page {{
     background: #e3f0ff; color: #1565c0;
-    border: 2px solid #90c4f0; border-radius: {r6}px;
-    font-family: 'Segoe UI'; font-size: {_dp(16)}px; font-weight: 900;
-    min-width: {_dp(56)}px; min-height: {TH}px; padding: 0 {_dp(6)}px;
+    border: 2px solid #90c4f0; border-radius: {_dp(8)}px;
+    font-family: 'Segoe UI'; font-size: {_dp(14)}px; font-weight: 900;
+    min-width: {_dp(60)}px; min-height: {TH}px; padding: 0 {_dp(8)}px;
 }}
 QPushButton#btn_page:hover   {{ background: #bbdefb; border-color: #1565c0; }}
 QPushButton#btn_page:pressed {{ background: #90c4f0; }}
 QPushButton#btn_page:disabled {{ background: #f4f8ff; color: #b0bec5; border-color: #e0e8f0; }}
 QLabel#page_lbl {{
     color: #1565c0; font-family: 'Segoe UI';
-    font-size: {_dp(12)}px; font-weight: 800; min-width: {_dp(100)}px;
+    font-size: {_dp(13)}px; font-weight: 800; min-width: {_dp(110)}px;
 }}
 QLabel#count_lbl {{
-    color: #546e7a; font-family: 'Segoe UI'; font-size: {_dp(10)}px;
+    color: #546e7a; font-family: 'Segoe UI'; font-size: {_dp(12)}px;
 }}
 
-/* ── Botones de acción dentro de la tabla ── */
+/* ── FIX: Botones de acción dentro de la tabla — más grandes para touch ── */
 QPushButton#btn_edit {{
     background: #e3f0ff; color: #1565c0;
-    border: 1.5px solid #90c4f0; border-radius: {_dp(7)}px;
-    font-family: 'Segoe UI'; font-weight: 700; font-size: {_dp(10)}px;
-    min-height: {_dp(40)}px; min-width: {_dp(64)}px; padding: 0 {_dp(8)}px;
+    border: 2px solid #90c4f0; border-radius: {_dp(9)}px;
+    font-family: 'Segoe UI'; font-weight: 800; font-size: {_dp(12)}px;
+    min-height: {_dp(48)}px; min-width: {_dp(90)}px; padding: 0 {_dp(12)}px;
 }}
 QPushButton#btn_edit:hover   {{ background: #bbdefb; border-color: #1565c0; }}
 QPushButton#btn_edit:pressed {{ background: #90c4f0; }}
 
 QPushButton#btn_activate {{
     background: #e8f5e9; color: #1b5e20;
-    border: 1.5px solid #a5d6a7; border-radius: {_dp(7)}px;
-    font-family: 'Segoe UI'; font-weight: 700; font-size: {_dp(10)}px;
-    min-height: {_dp(40)}px; min-width: {_dp(74)}px; padding: 0 {_dp(8)}px;
+    border: 2px solid #a5d6a7; border-radius: {_dp(9)}px;
+    font-family: 'Segoe UI'; font-weight: 800; font-size: {_dp(12)}px;
+    min-height: {_dp(48)}px; min-width: {_dp(110)}px; padding: 0 {_dp(12)}px;
 }}
 QPushButton#btn_activate:hover   {{ background: #c8e6c9; }}
 QPushButton#btn_activate:pressed {{ background: #a5d6a7; }}
@@ -243,33 +247,31 @@ QPushButton#btn_activate:disabled {{ background: #f5f5f5; color: #b0bec5; border
 
 QPushButton#btn_deactivate {{
     background: #ffebee; color: #c62828;
-    border: 1.5px solid #ef9a9a; border-radius: {_dp(7)}px;
-    font-family: 'Segoe UI'; font-weight: 700; font-size: {_dp(10)}px;
-    min-height: {_dp(40)}px; min-width: {_dp(74)}px; padding: 0 {_dp(8)}px;
+    border: 2px solid #ef9a9a; border-radius: {_dp(9)}px;
+    font-family: 'Segoe UI'; font-weight: 800; font-size: {_dp(12)}px;
+    min-height: {_dp(48)}px; min-width: {_dp(110)}px; padding: 0 {_dp(12)}px;
 }}
 QPushButton#btn_deactivate:hover   {{ background: #ffcdd2; }}
 QPushButton#btn_deactivate:pressed {{ background: #ef9a9a; }}
 QPushButton#btn_deactivate:disabled {{ background: #f5f5f5; color: #b0bec5; border-color: #e0e0e0; }}
 
 /* ── Diálogos ── */
-QDialog#admin_dlg {{
-    background: #f0f6ff;
-}}
+QDialog#admin_dlg {{ background: #f0f6ff; }}
 QLabel#dlg_title {{
     color: #1565c0; font-weight: 900; font-family: 'Segoe UI';
-    letter-spacing: 2px; font-size: {_dp(13)}px;
+    letter-spacing: 2px; font-size: {_dp(14)}px;
 }}
 QLabel#dlg_sub {{
-    color: #546e7a; font-family: 'Segoe UI'; font-size: {_dp(10)}px;
+    color: #546e7a; font-family: 'Segoe UI'; font-size: {_dp(11)}px;
 }}
 QLabel#field_lbl {{
     color: #37474f; font-family: 'Segoe UI';
-    font-weight: 700; font-size: {_dp(11)}px; letter-spacing: 1px;
+    font-weight: 700; font-size: {_dp(12)}px; letter-spacing: 1px;
 }}
 QLineEdit#dlg_inp {{
     background: #ffffff; border: 2px solid #cfd8e3;
     border-radius: {_dp(8)}px; color: #1a237e;
-    font-family: 'Segoe UI'; font-size: {_dp(12)}px;
+    font-family: 'Segoe UI'; font-size: {_dp(13)}px;
     padding: 0 {_dp(14)}px; min-height: {INP_H}px;
     selection-background-color: #bbdefb;
 }}
@@ -278,34 +280,34 @@ QLineEdit#dlg_inp:hover  {{ border-color: #90c4f0; }}
 QComboBox#dlg_combo {{
     background: #ffffff; border: 2px solid #cfd8e3;
     border-radius: {_dp(8)}px; color: #1a237e;
-    font-family: 'Segoe UI'; font-size: {_dp(12)}px;
+    font-family: 'Segoe UI'; font-size: {_dp(13)}px;
     padding: 0 {_dp(14)}px; min-height: {INP_H}px;
 }}
 QComboBox#dlg_combo:focus {{ border-color: #1976d2; }}
-QComboBox#dlg_combo::drop-down {{ border: none; width: {_dp(28)}px; }}
+QComboBox#dlg_combo::drop-down {{ border: none; width: {_dp(32)}px; }}
 QComboBox QAbstractItemView {{
     background: #ffffff; border: 1px solid #cfd8e3;
     selection-background-color: #e3f0ff; color: #1a237e;
-    font-family: 'Segoe UI'; font-size: {_dp(12)}px;
-    min-height: {_dp(40)}px;
+    font-family: 'Segoe UI'; font-size: {_dp(13)}px;
+    min-height: {_dp(48)}px;
 }}
 QLabel#dlg_err {{
     color: #c62828; font-family: 'Segoe UI';
-    font-size: {_dp(11)}px; font-weight: 700;
+    font-size: {_dp(12)}px; font-weight: 700;
 }}
 QPushButton#dlg_ok {{
     background: #1565c0; color: #ffffff; border: none;
     border-radius: {_dp(10)}px; font-family: 'Segoe UI';
-    font-weight: 800; font-size: {_dp(12)}px;
-    min-height: {_dp(54)}px; min-width: {_dp(140)}px; padding: 0 {_dp(24)}px;
+    font-weight: 800; font-size: {_dp(13)}px;
+    min-height: {_dp(58)}px; min-width: {_dp(150)}px; padding: 0 {_dp(24)}px;
 }}
 QPushButton#dlg_ok:hover   {{ background: #1976d2; }}
 QPushButton#dlg_ok:pressed {{ background: #0d47a1; }}
 QPushButton#dlg_cancel {{
     background: #ffffff; color: #546e7a;
     border: 2px solid #cfd8e3; border-radius: {_dp(10)}px;
-    font-family: 'Segoe UI'; font-weight: 700; font-size: {_dp(12)}px;
-    min-height: {_dp(54)}px; min-width: {_dp(120)}px; padding: 0 {_dp(20)}px;
+    font-family: 'Segoe UI'; font-weight: 700; font-size: {_dp(13)}px;
+    min-height: {_dp(58)}px; min-width: {_dp(130)}px; padding: 0 {_dp(20)}px;
 }}
 QPushButton#dlg_cancel:hover   {{ background: #e3f0ff; border-color: #90c4f0; }}
 QPushButton#dlg_cancel:pressed {{ background: #bbdefb; }}
@@ -313,16 +315,9 @@ QPushButton#dlg_cancel:pressed {{ background: #bbdefb; }}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Formulario base compartido (registro y edición)
+#  Formulario base compartido
 # ─────────────────────────────────────────────────────────────────────────────
 class _BaseAdminDialog(QDialog):
-    """
-    Diálogo completamente redesignado para 7 pulgadas táctil:
-    — campos altos (52 px) con fuente legible
-    — layout vertical de una sola columna (cabe en pantalla pequeña)
-    — scroll por si la pantalla no alcanza en verticales muy cortas
-    — botones de acción grandes al pie
-    """
     ROLES = ["empleado", "supervisor", "administrador"]
 
     def __init__(self, title: str, subtitle: str, parent=None):
@@ -334,12 +329,11 @@ class _BaseAdminDialog(QDialog):
         self.setStyleSheet(_build_style())
         self.data = None
 
-        # Fondo azul claro
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # ── Cabecera coloreada ────────────────────────────────────────────────
+        # ── Cabecera ──────────────────────────────────────────────────────────
         hdr = QFrame()
         hdr.setStyleSheet(f"""
             QFrame {{
@@ -349,23 +343,23 @@ class _BaseAdminDialog(QDialog):
             }}
         """)
         hdr_lay = QVBoxLayout(hdr)
-        hdr_lay.setContentsMargins(_dp(20), _dp(16), _dp(20), _dp(16))
-        hdr_lay.setSpacing(_dp(3))
+        hdr_lay.setContentsMargins(_dp(20), _dp(18), _dp(20), _dp(18))
+        hdr_lay.setSpacing(_dp(4))
         ttl_lbl = QLabel(title)
         ttl_lbl.setStyleSheet(
             f"color:#ffffff;font-weight:900;font-family:'Segoe UI';"
-            f"font-size:{_dp(14)}px;letter-spacing:2px;background:transparent;"
+            f"font-size:{_dp(15)}px;letter-spacing:2px;background:transparent;"
         )
         sub_lbl = QLabel(subtitle)
         sub_lbl.setStyleSheet(
-            f"color:rgba(255,255,255,0.75);font-family:'Segoe UI';"
-            f"font-size:{_dp(10)}px;background:transparent;"
+            f"color:rgba(255,255,255,0.78);font-family:'Segoe UI';"
+            f"font-size:{_dp(11)}px;background:transparent;"
         )
         hdr_lay.addWidget(ttl_lbl)
         hdr_lay.addWidget(sub_lbl)
         root.addWidget(hdr)
 
-        # ── Cuerpo scrollable ─────────────────────────────────────────────────
+        # ── Cuerpo ────────────────────────────────────────────────────────────
         body_bg = QFrame()
         body_bg.setStyleSheet(
             f"QFrame{{background:#f0f6ff;"
@@ -373,41 +367,48 @@ class _BaseAdminDialog(QDialog):
             f"border-bottom-right-radius:{_dp(12)}px;}}"
         )
         body_outer = QVBoxLayout(body_bg)
-        body_outer.setContentsMargins(_dp(20), _dp(16), _dp(20), _dp(20))
+        body_outer.setContentsMargins(_dp(20), _dp(18), _dp(20), _dp(22))
         body_outer.setSpacing(_dp(14))
 
-        # Área de campos (scroll interno por si el formulario es largo)
+        # FIX: scroll táctil — usar QScrollArea con QScroller correctamente
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll.setFrameShape(QFrame.NoFrame)
         scroll.setStyleSheet(
             "QScrollArea{border:none;background:transparent;}"
-            f"QScrollBar:vertical{{background:#e8f0fb;width:{_dp(6)}px;margin:0;}}"
-            f"QScrollBar::handle:vertical{{background:#90c4f0;border-radius:{_dp(3)}px;min-height:{_dp(28)}px;}}"
+            f"QScrollBar:vertical{{background:#e8f0fb;width:{_dp(8)}px;margin:0;}}"
+            f"QScrollBar::handle:vertical{{background:#90c4f0;border-radius:{_dp(4)}px;min-height:{_dp(32)}px;}}"
             "QScrollBar::add-line:vertical,QScrollBar::sub-line:vertical{height:0;}"
         )
+        # FIX: activar touch events ANTES de grabGesture
+        scroll.viewport().setAttribute(Qt.WA_AcceptTouchEvents, True)
+        QScroller.grabGesture(scroll.viewport(), QScroller.TouchGesture)
+        # También habilitar con mouse para pruebas en escritorio
         QScroller.grabGesture(scroll.viewport(), QScroller.LeftMouseButtonGesture)
 
         fields_w = QWidget()
         fields_w.setStyleSheet("background:transparent;")
+        # FIX: permitir que el widget de campos crezca verticalmente
+        fields_w.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         self.fields_lay = QVBoxLayout(fields_w)
-        self.fields_lay.setContentsMargins(0, 0, _dp(6), 0)
-        self.fields_lay.setSpacing(_dp(12))
+        self.fields_lay.setContentsMargins(_dp(2), _dp(4), _dp(10), _dp(8))
+        self.fields_lay.setSpacing(_dp(14))
         scroll.setWidget(fields_w)
         body_outer.addWidget(scroll, 1)
 
-        # Mensaje de error
+        # Error
         self.err_lbl = QLabel("")
         self.err_lbl.setObjectName("dlg_err")
         self.err_lbl.setAlignment(Qt.AlignCenter)
         self.err_lbl.setWordWrap(True)
-        self.err_lbl.setMinimumHeight(_dp(20))
+        self.err_lbl.setMinimumHeight(_dp(22))
         body_outer.addWidget(self.err_lbl)
 
-        # Botones de acción
+        # Botones
         btn_row = QHBoxLayout()
-        btn_row.setSpacing(_dp(10))
+        btn_row.setSpacing(_dp(12))
         self.btn_cancel = QPushButton(tr("common.cancel"))
         self.btn_cancel.setObjectName("dlg_cancel")
         self.btn_cancel.setCursor(Qt.PointingHandCursor)
@@ -424,14 +425,13 @@ class _BaseAdminDialog(QDialog):
 
         root.addWidget(body_bg, 1)
 
-    # ── Helpers para construir campos táctiles ────────────────────────────────
     def _add_input(self, label: str, placeholder: str = "",
                    password: bool = False) -> QLineEdit:
         lbl = QLabel(label); lbl.setObjectName("field_lbl")
         inp = QLineEdit()
         inp.setObjectName("dlg_inp")
         inp.setPlaceholderText(placeholder)
-        inp.setFixedHeight(_dp(52))
+        inp.setFixedHeight(_dp(56))
         if password:
             inp.setEchoMode(QLineEdit.Password)
         self.fields_lay.addWidget(lbl)
@@ -442,7 +442,7 @@ class _BaseAdminDialog(QDialog):
         lbl = QLabel(label); lbl.setObjectName("field_lbl")
         combo = QComboBox()
         combo.setObjectName("dlg_combo")
-        combo.setFixedHeight(_dp(52))
+        combo.setFixedHeight(_dp(56))
         combo.addItems(items)
         self.fields_lay.addWidget(lbl)
         self.fields_lay.addWidget(combo)
@@ -455,11 +455,10 @@ class _BaseAdminDialog(QDialog):
         raise NotImplementedError
 
     def paintEvent(self, _):
-        p = QPainter(self)
-        p.setRenderHint(QPainter.Antialiasing)
-        from PyQt5.QtGui import QPainterPath, QColor
+        from PyQt5.QtGui import QPainterPath
         from PyQt5.QtCore import QRectF
-        path = __import__('PyQt5.QtGui', fromlist=['QPainterPath']).QPainterPath()
+        p = QPainter(self); p.setRenderHint(QPainter.Antialiasing)
+        path = QPainterPath()
         path.addRoundedRect(QRectF(self.rect()), _dp(12), _dp(12))
         p.fillPath(path, QBrush(QColor("#f0f6ff")))
         p.end()
@@ -534,7 +533,6 @@ class AdminEditDialog(_BaseAdminDialog):
         self.e_pass    = self._add_input(tr("admin.users.field.new_pass"),   tr("admin.users.placeholder.new_pass"),    password=True)
         self.e_pass2   = self._add_input(tr("admin.users.field.confirm"),    tr("admin.users.placeholder.confirm_pass"), password=True)
 
-        # Pre-rellenar con datos actuales
         self.e_nombre.setText(admin.get("t_nombre", ""))
         self.e_ap.setText(admin.get("t_apellido_paterno", ""))
         self.e_am.setText(admin.get("t_apellido_materno", "") or "")
@@ -580,7 +578,7 @@ class _AdminUsersPanel(QWidget):
         self.role            = "empleado"
         self._current_admin  = {}
         self._all_rows:  list[dict] = []
-        self._estado_filter  = ""    # "" | "activo" | "inactivo"
+        self._estado_filter  = ""
         self._page           = 0
         self._page_size      = self._PAGE_SIZE
 
@@ -618,9 +616,51 @@ class _AdminUsersPanel(QWidget):
         root.addLayout(hdr)
         root.addWidget(_divider())
 
-        # Nota: la barra de filtros fue removida para maximizar espacio de tabla.
-        # Se mantiene internamente el filtro por estado iniciado en vacío.
-        self._estado_filter = ""
+        # ── FIX: Contadores de usuarios más grandes y visibles ─────────────
+        stats_row = QHBoxLayout(); stats_row.setSpacing(_dp(12))
+        self._stat_labels = {}
+        stat_defs = [
+            ("total",    tr("admin.users.total")    if hasattr(self, '_tr_ready') else "TOTAL",    "#1565c0", "#e3f0ff", "#1565c0"),
+            ("activo",   tr("admin.users.active")   if hasattr(self, '_tr_ready') else "ACTIVOS",  "#1b5e20", "#e8f5e9", "#2e7d32"),
+            ("inactivo", tr("admin.users.inactive") if hasattr(self, '_tr_ready') else "INACTIVOS","#78909c", "#f5f5f5", "#546e7a"),
+        ]
+        for key, lbl_text, fg, bg, border in stat_defs:
+            card = QFrame()
+            card.setStyleSheet(f"""
+                QFrame {{
+                    background: {bg};
+                    border: 2px solid {border};
+                    border-radius: {_dp(10)}px;
+                }}
+            """)
+            _shadow(card, _dp(8), 14, _dp(2))
+            card_lay = QHBoxLayout(card)
+            card_lay.setContentsMargins(_dp(16), _dp(10), _dp(16), _dp(10))
+            card_lay.setSpacing(_dp(10))
+
+            num_lbl = QLabel("0")
+            num_lbl.setStyleSheet(
+                f"color:{fg};font-family:'Segoe UI';font-weight:900;"
+                f"font-size:{_dp(28)}px;background:transparent;border:none;"
+            )
+            num_lbl.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+
+            txt_lbl = QLabel(lbl_text)
+            txt_lbl.setStyleSheet(
+                f"color:{fg};font-family:'Segoe UI';font-weight:700;"
+                f"font-size:{_dp(11)}px;letter-spacing:2px;"
+                f"background:transparent;border:none;"
+            )
+            txt_lbl.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+
+            card_lay.addWidget(num_lbl)
+            card_lay.addWidget(txt_lbl)
+            card_lay.addStretch()
+            stats_row.addWidget(card, 1)
+            self._stat_labels[key] = num_lbl
+
+        root.addLayout(stats_row)
+        root.addWidget(_divider())
 
         # ── Tabla ─────────────────────────────────────────────────────────────
         self._model = AdminTableModel()
@@ -635,29 +675,32 @@ class _AdminUsersPanel(QWidget):
         self.table.setAlternatingRowColors(True)
         self.table.setShowGrid(False)
         self.table.verticalHeader().setVisible(False)
-        self.table.verticalScrollBar().setSingleStep(_dp(48))
-        QScroller.grabGesture(self.table.viewport(), QScroller.LeftMouseButtonGesture)
+        # FIX: alto de fila más generoso para que los botones de acción quepan
+        self.table.verticalHeader().setDefaultSectionSize(_dp(64))
+        self.table.verticalScrollBar().setSingleStep(_dp(64))
+        # FIX: touch en la tabla también
         self.table.viewport().setAttribute(Qt.WA_AcceptTouchEvents, True)
+        QScroller.grabGesture(self.table.viewport(), QScroller.TouchGesture)
+        QScroller.grabGesture(self.table.viewport(), QScroller.LeftMouseButtonGesture)
         hh = self.table.horizontalHeader()
         hh.setHighlightSections(False)
         hh.setMinimumSectionSize(_dp(50))
-        hh.setSectionResizeMode(0, QHeaderView.ResizeToContents)  # #
-        hh.setSectionResizeMode(1, QHeaderView.Stretch)           # Nombre
-        hh.setSectionResizeMode(2, QHeaderView.ResizeToContents)  # Usuario
-        hh.setSectionResizeMode(3, QHeaderView.ResizeToContents)  # Rol
-        hh.setSectionResizeMode(4, QHeaderView.ResizeToContents)  # Estado
-        hh.setSectionResizeMode(5, QHeaderView.ResizeToContents)  # Acciones
+        hh.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        hh.setSectionResizeMode(1, QHeaderView.Stretch)
+        hh.setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        hh.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        hh.setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        hh.setSectionResizeMode(5, QHeaderView.ResizeToContents)
         hh.setStretchLastSection(False)
-        self.table.verticalHeader().setDefaultSectionSize(_dp(56))
         self.table.setSortingEnabled(False)
         root.addWidget(self.table, 1)
 
-        # ── Barra de paginación ───────────────────────────────────────────────
+        # ── Paginación ────────────────────────────────────────────────────────
         pg_bar = QFrame(); pg_bar.setObjectName("page_bar")
         _shadow(pg_bar, _dp(8), 10, _dp(1))
         pg_lay = QHBoxLayout(pg_bar)
-        pg_lay.setContentsMargins(_dp(12), _dp(6), _dp(12), _dp(6))
-        pg_lay.setSpacing(_dp(8))
+        pg_lay.setContentsMargins(_dp(14), _dp(8), _dp(14), _dp(8))
+        pg_lay.setSpacing(_dp(10))
 
         self.count_lbl = QLabel(""); self.count_lbl.setObjectName("count_lbl")
         pg_lay.addWidget(self.count_lbl, 1)
@@ -668,8 +711,8 @@ class _AdminUsersPanel(QWidget):
         self.btn_next  = QPushButton("Sig  ›")
         self.btn_last  = QPushButton("»")
 
-        for b, w in ((self.btn_first,_dp(52)),(self.btn_prev,_dp(110)),
-                     (self.btn_next,_dp(110)),(self.btn_last,_dp(52))):
+        for b, w in ((self.btn_first,_dp(58)),(self.btn_prev,_dp(120)),
+                     (self.btn_next,_dp(120)),(self.btn_last,_dp(58))):
             b.setObjectName("btn_page")
             b.setFixedSize(w, _dp(_TOUCH_H))
             b.setCursor(Qt.PointingHandCursor)
@@ -702,7 +745,6 @@ class _AdminUsersPanel(QWidget):
     # ── Filtro estado ─────────────────────────────────────────────────────────
     def _apply_estado_filter(self, val: str):
         self._estado_filter = val
-        # Si los botones existen (por compatibilidad), actualízalos.
         if hasattr(self, "_tbtn_all"):
             self._tbtn_all.set_active(val == "")
         if hasattr(self, "_tbtn_active"):
@@ -711,19 +753,6 @@ class _AdminUsersPanel(QWidget):
             self._tbtn_inactive.set_active(val == "inactivo")
         self._page = 0
         self._render_page()
-
-    # ── Tamaño de página ──────────────────────────────────────────────────────
-    def _inc_page_size(self):
-        nxt = next((s for s in self._PAGE_STEPS if s > self._page_size), self._PAGE_STEPS[-1])
-        self._page_size = nxt; self._pg_size_lbl.setText(str(nxt))
-        self._page = 0; self._render_page()
-
-    def _dec_page_size(self):
-        prv = next((s for s in reversed(self._PAGE_STEPS) if s < self._page_size), self._PAGE_STEPS[0])
-        self._page_size = prv
-        if hasattr(self, "_pg_size_lbl"):
-            self._pg_size_lbl.setText(str(prv))
-        self._page = 0; self._render_page()
 
     # ── Paginación ────────────────────────────────────────────────────────────
     def _filtered_rows(self) -> list[dict]:
@@ -746,7 +775,6 @@ class _AdminUsersPanel(QWidget):
         chunk = rows[start:end]
         self._model.load(chunk)
 
-        # Inyectar widgets de acción en la columna 5
         active_count = db_count_active_admins()
         for r, admin in enumerate(chunk):
             if self.role != "administrador":
@@ -755,8 +783,8 @@ class _AdminUsersPanel(QWidget):
             cell = QWidget()
             cell.setStyleSheet("background: transparent;")
             cl = QHBoxLayout(cell)
-            cl.setContentsMargins(_dp(4), _dp(6), _dp(4), _dp(6))
-            cl.setSpacing(_dp(6))
+            cl.setContentsMargins(_dp(6), _dp(8), _dp(6), _dp(8))
+            cl.setSpacing(_dp(8))
 
             btn_edit = QPushButton(tr("common.edit"))
             btn_edit.setObjectName("btn_edit")
@@ -807,6 +835,15 @@ class _AdminUsersPanel(QWidget):
                 (a.get("t_nombre", "") or "").lower(),
             ),
         )
+        # FIX: actualizar contadores
+        total    = len(self._all_rows)
+        activos  = sum(1 for a in self._all_rows if (a.get("t_estado","activo") or "activo").lower() == "activo")
+        inactivos = total - activos
+        if hasattr(self, "_stat_labels"):
+            self._stat_labels["total"].setText(str(total))
+            self._stat_labels["activo"].setText(str(activos))
+            self._stat_labels["inactivo"].setText(str(inactivos))
+
         self._page = 0
         self._render_page()
 
