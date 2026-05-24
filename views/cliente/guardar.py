@@ -141,8 +141,8 @@ CAROUSEL_STEPS = [
 
 _STEP_KEYS  = ["guard.step1", "guard.step2", "guard.step3", "guard.step4"]
 
-_FRAME_W_FRAC = 0.82   # ampliado para que el cliente no tenga que centrarse tanto
-_FRAME_H_FRAC = 0.92
+_FRAME_W_FRAC = 0.98   # Casi pantalla completa → el cliente no necesita centrarse con precisión
+_FRAME_H_FRAC = 0.98
 _FRAME_X_FRAC = (1.0 - _FRAME_W_FRAC) / 2.0
 _FRAME_Y_FRAC = (1.0 - _FRAME_H_FRAC) / 2.0
 _DETECT_ROI   = (_FRAME_X_FRAC, _FRAME_Y_FRAC, _FRAME_W_FRAC, _FRAME_H_FRAC)
@@ -426,6 +426,19 @@ class GuardarPage(QWidget):
         result = db_next_free_locker()
         if result:
             self._id_locker, self._num_locker = result
+            # ── Verificar que el locker no esté físicamente abierto ───────
+            try:
+                from utils.gpio_locker import locker_esta_abierto
+                if locker_esta_abierto(str(self._num_locker)):
+                    self._id_locker  = None
+                    self._num_locker = None
+                    self.err_lbl.setText(
+                        "El locker asignado está físicamente abierto. "
+                        "Por favor ciérralo antes de continuar."
+                    )
+                    return
+            except Exception:
+                pass  # Sin GPIO disponible: continuar normalmente
             self.err_lbl.setText("")
             QTimer.singleShot(400, self._show_steps)
         else:
@@ -502,11 +515,25 @@ class GuardarPage(QWidget):
     def _on_precheck_done(self, face_uid: str):
         """
         Resultado del precheck biométrico.
-        - Reconoce sesión activa → emite `already_has_session` para que
-          MainWindow muestre la ResultPage con aviso y redirección a los 5 s.
-        - No reconoce → procede a captura normal.
+        - CAMERA_ERROR  → mostrar error, NO continuar a captura.
+        - Sesión activa → emitir already_has_session (aviso + redirect 5 s).
+        - No reconoce   → proceder a captura normal.
         """
+        # Ignorar señales obsoletas: si el timeout ya avanzó a fase 2, descartar.
+        if self._phase != "precheck":
+            return
+
         self._pre_check_timer.stop()
+
+        if face_uid == CamThread.CAMERA_ERROR:
+            beep_error()
+            self.scan_frame.setVisible(False)
+            self.scan_line.hide()
+            self.face_guide.setVisible(False)
+            self.scan_title_lbl.setText(tr("guard.scan_title"))
+            self.err_lbl.setText(tr("guard.cam_open_error"))
+            self._capture_started = False
+            return
 
         if face_uid and face_uid != CamThread.CAMERA_ERROR:
             sesion = db_get_active_sesion_by_face(face_uid)
@@ -536,10 +563,6 @@ class GuardarPage(QWidget):
                 return
 
         self._start_phase2_capture()
-
-    def _show_existing_session(self, locker_num):
-        """Delegado al MainWindow vía señal already_has_session."""
-        self.already_has_session.emit(str(locker_num))
 
     # ── Captura fase 2 ────────────────────────────────────────────────────────
 
@@ -613,23 +636,27 @@ class GuardarPage(QWidget):
             abrir_locker(str(num_locker))
         except Exception as gpio_err:
             print(f"[WARN] abrir_locker({num_locker}) falló: {gpio_err}")
-            # El locker se marcó como ocupado; notificar igualmente al flujo.
             beep_error()
-            self.err_lbl.setText("Error al abrir el locker físico. Consulta al administrador.")
+            self.err_lbl.setText(
+                "⚠ El locker ya está abierto o hay un error de hardware. "
+                "Ciérralo y vuelve a intentarlo."
+            )
             db_log_intento(id_locker, "registro_biometrico", "error_gpio",
                            f"GPIO falló al abrir locker #{num_locker}: {gpio_err}",
                            id_sesion=id_sesion)
-            # Aun así continuamos: la sesión quedó creada en BD.
+            # NO emitir done: el locker está abierto, no se puede continuar
+            self._capture_started = False
+            self._id_locker  = None
+            self._num_locker = None
+            return
 
         db_log_intento(id_locker, "registro_biometrico", "exitoso",
                        "Sesion {} creada. Locker #{} asignado.".format(id_sesion, num_locker),
                        id_sesion=id_sesion)
 
-        import threading
-        threading.Thread(target=train_model, daemon=True).start()
-
         self._id_locker  = None
         self._num_locker = None
+        self._face_uid   = None   # limpiar: evita que _cancel() borre sesión ya confirmada
         self.done.emit(face_uid, num_locker, id_sesion)
 
     # ── Cancelar / reset ──────────────────────────────────────────────────────
@@ -638,7 +665,8 @@ class GuardarPage(QWidget):
         self._pre_check_timer.stop()
         self._step_overlay.stop()
         self._stop_cam_thread()
-        if self._face_uid:
+        # Solo borrar si es UID temporal (captura incompleta), nunca una sesión confirmada
+        if self._face_uid and self._face_uid.startswith("tmp_"):
             delete_face_data(self._face_uid)
         self.go_back.emit()
 

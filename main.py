@@ -110,6 +110,7 @@ class MainWindow(QMainWindow):
         self.p_retir.go_back.connect(lambda: self._nav(self.HOME))
         self.p_retir.retirar_done.connect(self._on_retirado)
         self.p_retir.seguir_done.connect(self._on_seguir)
+        self.p_retir.no_session.connect(self._on_retir_no_session)
 
         self.p_result.go_home.connect(lambda: self._nav(self.HOME))
 
@@ -203,20 +204,15 @@ class MainWindow(QMainWindow):
 
     def _on_session_active(self, num_locker: str):
         """
-        El precheck de guardar detectó que la persona ya tiene una sesión activa.
-        Muestra la ResultPage con aviso "warn" (ámbar) y redirige al inicio
-        automáticamente después de 5 segundos.
+        El precheck biométrico detectó que la persona ya tiene locker activo.
+        Muestra aviso visual con countdown de 5 s y regresa al inicio.
         """
         self.p_guard.reset()
-        self.p_result.show_result(
-            "warn",
-            "Ya tienes una sesión activa",
-            f"Tu locker #{num_locker} sigue reservado para ti.",
-            f"LOCKER  #{num_locker}",
-            auto=False,  # usamos nuestro propio timer de 5 s
-        )
         self.stack.setCurrentIndex(self.RESULT)
-        QTimer.singleShot(5000, lambda: self._nav(self.HOME))
+        self.p_result.show_already_has_locker(
+            num_locker=num_locker,
+            on_timeout=lambda: self._nav(self.HOME),
+        )
 
     def _on_retirado(self, face_uid, num_locker, id_sesion):
         self.p_retir.reset()
@@ -236,6 +232,20 @@ class MainWindow(QMainWindow):
             tr("flow.keep_title"),
             tr("flow.keep_sub"),
             detail,
+        )
+        self._nav(self.RESULT)
+
+    def _on_retir_no_session(self):
+        """
+        Se reconoció a alguien en retirar pero NO tiene sesión activa.
+        Muestra ResultPage con aviso de error y redirige al inicio en 5 s.
+        """
+        self.p_retir.reset()
+        self.p_result.show_result(
+            "err",
+            "Sin sesión activa",
+            "No tienes ningún locker reservado actualmente.",
+            auto=True,
         )
         self._nav(self.RESULT)
 

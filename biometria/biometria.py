@@ -83,10 +83,26 @@ def _get_active_face_uids():
         return None
 
 
+def _apply_eye_blur_train(img: np.ndarray) -> np.ndarray:
+    """
+    Difumina la región ocular (25-58% de la altura) durante el entrenamiento.
+    Esto hace que el modelo LBPH sea más tolerante a cambios por lentes,
+    ya que el algoritmo no puede basar el reconocimiento en los detalles del ojo.
+    La misma función se aplica en camera.py durante la predicción.
+    """
+    h, w = img.shape
+    y1 = int(h * 0.25)
+    y2 = int(h * 0.58)
+    result = img.copy()
+    result[y1:y2, :] = cv2.GaussianBlur(img[y1:y2, :], (15, 15), 7)
+    return result
+
+
 def train_model():
     """
     Entrena el reconocedor LBPH con imagenes activas en FACES_DIR.
     Cada subcarpeta es un face_uid = 'sesion_<ID>'.
+    Aplica blur en region ocular para mayor tolerancia a lentes.
     """
     global face_labels
     images, labels, names, idx = [], [], {}, 0
@@ -102,11 +118,14 @@ def train_model():
         for fn in os.listdir(sub):
             img = cv2.imread(os.path.join(sub, fn), 0)
             if img is not None:
-                images.append(cv2.resize(img, (IMG_W, IMG_H)))
+                img_resized = cv2.resize(img, (IMG_W, IMG_H))
+                # Aplicar blur ocular para tolerancia a lentes
+                img_blurred = _apply_eye_blur_train(img_resized)
+                images.append(img_blurred)
                 labels.append(idx)
         idx += 1
 
-    if len(images) > 1:
+    if len(images) >= 1:
         face_model.train(np.array(images), np.array(labels))
     face_labels = names
     return names
@@ -120,4 +139,3 @@ def delete_face_data(face_uid):
     d = face_dir_for(face_uid)
     if os.path.exists(d):
         shutil.rmtree(d)
-
