@@ -141,8 +141,8 @@ CAROUSEL_STEPS = [
 
 _STEP_KEYS  = ["guard.step1", "guard.step2", "guard.step3", "guard.step4"]
 
-_FRAME_W_FRAC = 0.62
-_FRAME_H_FRAC = 0.90
+_FRAME_W_FRAC = 0.82   # ampliado para que el cliente no tenga que centrarse tanto
+_FRAME_H_FRAC = 0.92
 _FRAME_X_FRAC = (1.0 - _FRAME_W_FRAC) / 2.0
 _FRAME_Y_FRAC = (1.0 - _FRAME_H_FRAC) / 2.0
 _DETECT_ROI   = (_FRAME_X_FRAC, _FRAME_Y_FRAC, _FRAME_W_FRAC, _FRAME_H_FRAC)
@@ -282,154 +282,16 @@ class StepOverlay(QWidget):
         self._card.setMinimumWidth(min(300, self.width()-40))
 
 
-class _ExistingSessionOverlay(QWidget):
-    """
-    Se muestra cuando el precheck detecta que la persona YA tiene un locker
-    asignado. En lugar de solo avisar con countdown, ofrece las mismas
-    opciones que retirar.py:
-        • RETIRAR COSAS  → cerrar sesión + liberar locker + borrar biometría
-        • SEGUIR COMPRANDO → abrir locker para que guarde más cosas
-    """
-    retirar_clicked = pyqtSignal()
-    seguir_clicked  = pyqtSignal()
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setVisible(False)
-
-        root = QVBoxLayout(self)
-        root.setContentsMargins(24, 24, 24, 24)
-        root.setAlignment(Qt.AlignCenter)
-
-        # ── Card blanca central ───────────────────────────────────────────────
-        self._card = QFrame()
-        self._card.setMaximumWidth(560)
-        self._card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        cl = QVBoxLayout(self._card)
-        cl.setContentsMargins(40, 36, 40, 36); cl.setSpacing(16)
-        cl.setAlignment(Qt.AlignCenter)
-
-        # Ícono de advertencia (ámbar)
-        icon_lbl = QLabel("●")
-        icon_lbl.setAlignment(Qt.AlignCenter)
-        icon_lbl.setFixedSize(90, 90)
-        icon_lbl.setStyleSheet(
-            "background: rgba(251,191,36,0.15); color: #f59e0b; border-radius: 45px;"
-            "font-size: 44px; font-weight: 900; font-family: 'Segoe UI';"
-        )
-        cl.addWidget(icon_lbl, alignment=Qt.AlignCenter)
-
-        # Badge
-        badge = QLabel("SESIÓN ACTIVA")
-        badge.setAlignment(Qt.AlignCenter)
-        badge.setFixedHeight(28)
-        badge.setStyleSheet(
-            "background: rgba(254,243,199,0.95); color: #92400e;"
-            "border: 1px solid rgba(251,191,36,0.80); border-radius: 10px;"
-            "font-size: 10px; font-weight: 800; font-family: 'Segoe UI';"
-            "letter-spacing: 3px; padding: 4px 16px;"
-        )
-        cl.addWidget(badge, alignment=Qt.AlignCenter)
-
-        # Título
-        title = QLabel("Ya tienes un locker asignado")
-        title.setAlignment(Qt.AlignCenter)
-        title.setWordWrap(True)
-        title.setStyleSheet(
-            "color: #92400e; font-size: 24px; font-weight: 900;"
-            "font-family: 'Segoe UI';"
-        )
-        cl.addWidget(title)
-
-        # Número de locker
-        self._locker_lbl = QLabel("")
-        self._locker_lbl.setAlignment(Qt.AlignCenter)
-        self._locker_lbl.setStyleSheet(
-            "color: #1a1a1a; font-size: 58px; font-weight: 900;"
-            "font-family: 'Segoe UI'; letter-spacing: 2px;"
-        )
-        cl.addWidget(self._locker_lbl)
-
-        # Subtítulo
-        sub = QLabel("¿Qué deseas hacer?")
-        sub.setAlignment(Qt.AlignCenter)
-        sub.setStyleSheet(
-            "color: #374151; font-size: 15px; font-family: 'Segoe UI';"
-        )
-        cl.addWidget(sub)
-
-        # Separador
-        div = QFrame()
-        div.setStyleSheet("background: rgba(251,191,36,0.55); border:none; min-height:1px; max-height:1px;")
-        cl.addWidget(div)
-
-        # Botones de acción
-        btn_row = QHBoxLayout(); btn_row.setSpacing(16)
-        self._btn_retirar = QPushButton("↩  RETIRAR COSAS")
-        self._btn_retirar.setObjectName("btn_ex_red")
-        self._btn_retirar.setCursor(Qt.PointingHandCursor)
-        self._btn_retirar.setFocusPolicy(Qt.NoFocus)
-        self._btn_retirar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self._btn_retirar.clicked.connect(self.retirar_clicked)
-
-        self._btn_seguir = QPushButton("→  SEGUIR COMPRANDO")
-        self._btn_seguir.setObjectName("btn_ex_green")
-        self._btn_seguir.setCursor(Qt.PointingHandCursor)
-        self._btn_seguir.setFocusPolicy(Qt.NoFocus)
-        self._btn_seguir.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self._btn_seguir.clicked.connect(self.seguir_clicked)
-
-        btn_row.addWidget(self._btn_retirar, 1)
-        btn_row.addWidget(self._btn_seguir, 1)
-        cl.addLayout(btn_row)
-
-        root.addWidget(self._card, alignment=Qt.AlignCenter)
-
-    def show_for(self, locker_num):
-        """Muestra el overlay con el número de locker ya asignado."""
-        num_str = str(locker_num) if locker_num else "?"
-        self._locker_lbl.setText(f"#{num_str}")
-        self._btn_retirar.setEnabled(True)
-        self._btn_seguir.setEnabled(True)
-        self.setGeometry(self.parent().rect() if self.parent() else self.rect())
-        self.raise_()
-        self.setVisible(True)
-
-    def disable_buttons(self):
-        """Deshabilita los botones tras pulsar uno (evita doble acción)."""
-        self._btn_retirar.setEnabled(False)
-        self._btn_seguir.setEnabled(False)
-
-    def paintEvent(self, _):
-        p = QPainter(self)
-        # Fondo semitransparente oscuro (mismo tono del diseño)
-        p.fillRect(self.rect(), QColor(10, 20, 45, 220))
-        # Glow ámbar tenue en el centro
-        rg = QRadialGradient(self.width()/2, self.height()/2, self.height()*0.55)
-        glow = QColor(251, 191, 36); glow.setAlpha(22)
-        rg.setColorAt(0.0, glow); rg.setColorAt(1.0, QColor(0, 0, 0, 0))
-        p.fillRect(self.rect(), QBrush(rg))
-        # Estilo de la card (blanco)
-        self._card.setStyleSheet("""
-            QFrame {
-                background: #ffffff;
-                border: 1px solid rgba(251,191,36,0.70);
-                border-top: 4px solid #f59e0b;
-                border-radius: 18px;
-            }
-        """)
-        p.end()
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 
 class GuardarPage(QWidget):
-    done         = pyqtSignal(str, str, int)   # face_uid, num_locker, id_sesion
-    failed       = pyqtSignal(str)
-    go_back      = pyqtSignal()
-    # Emitidos cuando el usuario elige desde la sesión existente detectada
-    retirar_done = pyqtSignal(str, str, int)   # face_uid, num_locker, id_sesion
-    seguir_done  = pyqtSignal(str, str, int)   # face_uid, num_locker, id_sesion
+    done             = pyqtSignal(str, str, int)   # face_uid, num_locker, id_sesion
+    failed           = pyqtSignal(str)
+    go_back          = pyqtSignal()
+    # Emitida cuando el precheck detecta que la persona ya tiene locker activo.
+    # El MainWindow la captura y muestra la ResultPage con la info.
+    already_has_session = pyqtSignal(str)          # num_locker
 
     _CAM_W = 440
     _CAM_H = 390
@@ -446,12 +308,6 @@ class GuardarPage(QWidget):
         self._capture_started = False
         self._phase           = None
         self._action_done     = False
-
-        # Estado de la sesión existente detectada en el precheck
-        self._existing_face_uid  = None
-        self._existing_id_sesion = None
-        self._existing_id_locker = None
-        self._existing_num_locker = None
 
         self._pre_check_timer = QTimer(self)
         self._pre_check_timer.setSingleShot(True)
@@ -531,12 +387,6 @@ class GuardarPage(QWidget):
         self._step_overlay.finished.connect(self._start_capture)
         self._step_overlay.setVisible(False)
 
-        # ExistingSessionOverlay (hijo de self — cubre toda la página)
-        # Reemplaza al BlockedOverlay: en vez de solo avisar, ofrece acción
-        self._existing_overlay = _ExistingSessionOverlay(self)
-        self._existing_overlay.retirar_clicked.connect(self._do_retirar_existing)
-        self._existing_overlay.seguir_clicked.connect(self._do_seguir_existing)
-
         self.set_language(get_language())
 
     # ── Fondo ─────────────────────────────────────────────────────────────────
@@ -588,8 +438,6 @@ class GuardarPage(QWidget):
         QTimer.singleShot(0, self._update_overlay)
         if self._step_overlay.isVisible():
             self._step_overlay.setGeometry(0, 0, self.cam.width(), self.cam.height())
-        if self._existing_overlay.isVisible():
-            self._existing_overlay.setGeometry(self.rect())
 
     # ── Pasos de instrucciones ────────────────────────────────────────────────
 
@@ -654,21 +502,21 @@ class GuardarPage(QWidget):
     def _on_precheck_done(self, face_uid: str):
         """
         Resultado del precheck biométrico.
-        - Si reconoce a alguien con sesión activa → mostrar opciones RETIRAR/SEGUIR
-        - Si no reconoce a nadie (o error) → proceder a captura normal
+        - Reconoce sesión activa → emite `already_has_session` para que
+          MainWindow muestre la ResultPage con aviso y redirección a los 5 s.
+        - No reconoce → procede a captura normal.
         """
         self._pre_check_timer.stop()
 
         if face_uid and face_uid != CamThread.CAMERA_ERROR:
             sesion = db_get_active_sesion_by_face(face_uid)
             if sesion:
-                # ── Persona con locker activo detectada ─────────────────────
                 if isinstance(sesion, dict):
-                    id_locker_e  = sesion.get("ID_locker")
-                    id_sesion_e  = sesion.get("ID_sesion")
+                    id_locker_e = sesion.get("ID_locker")
+                    id_sesion_e = sesion.get("ID_sesion")
                 else:
-                    id_sesion_e  = sesion[0]
-                    id_locker_e  = sesion[1] if len(sesion) > 1 else None
+                    id_sesion_e = sesion[0]
+                    id_locker_e = sesion[1] if len(sesion) > 1 else None
 
                 num_e = db_get_locker_num_by_id(id_locker_e) if id_locker_e else "?"
                 beep_error()
@@ -681,93 +529,17 @@ class GuardarPage(QWidget):
 
                 db_log_intento(
                     id_locker_e or 0, "registro_biometrico", "sesion_activa",
-                    f"Persona ya tiene locker #{num_e} activo. Se ofrecen opciones retirar/seguir."
+                    f"Persona ya tiene locker #{num_e} activo. Se redirige a inicio."
                 )
-
-                # Guardar estado para las acciones posteriores
-                self._existing_face_uid   = face_uid
-                self._existing_id_sesion  = id_sesion_e
-                self._existing_id_locker  = id_locker_e
-                self._existing_num_locker = num_e
-                self._action_done         = False
-
-                # Mostrar overlay con opciones (en lugar de BlockedOverlay con countdown)
-                self._show_existing_session(num_e)
+                # Señal → MainWindow muestra ResultPage con aviso + timer 5 s
+                self.already_has_session.emit(str(num_e))
                 return
 
-        # No hay sesión activa → proceder a captura nueva
         self._start_phase2_capture()
 
     def _show_existing_session(self, locker_num):
-        """
-        Muestra el overlay con las mismas opciones que retirar.py:
-        RETIRAR COSAS o SEGUIR COMPRANDO.
-        """
-        self._existing_overlay.setGeometry(self.rect())
-        self._existing_overlay.raise_()
-        self._existing_overlay.show_for(locker_num)
-
-    # ── Acciones de sesión existente ──────────────────────────────────────────
-
-    def _do_retirar_existing(self):
-        """
-        Cliente quiere retirar sus cosas:
-        1. Abrir cerradura física
-        2. Borrar datos biométricos
-        3. Cerrar sesión en BD
-        4. Marcar locker como libre
-        5. Reentrenar modelo
-        """
-        if self._action_done:
-            return
-        self._action_done = True
-        self._existing_overlay.disable_buttons()
-
-        num  = self._existing_num_locker
-        f_uid = self._existing_face_uid
-        id_s  = self._existing_id_sesion
-        id_l  = self._existing_id_locker
-
-        # Nota: LED solo dentro de abrir_locker() en gpio_locker.py
-        abrir_locker(str(num))
-        delete_face_data(f_uid)
-        db_close_sesion(id_s)
-        db_set_locker_estado(id_l, "libre")
-
-        db_log_intento(id_l, "retirar_desde_guardar", "exitoso",
-                       f"Cliente retiró sus cosas. Sesión {id_s} cerrada desde guardar.")
-
-        import threading
-        threading.Thread(target=train_model, daemon=True).start()
-
-        self._existing_overlay.setVisible(False)
-        self.retirar_done.emit(f_uid, str(num), id_s)
-
-    def _do_seguir_existing(self):
-        """
-        Cliente quiere seguir comprando (no retira todavía):
-        1. Abrir cerradura para que guarde más cosas
-        2. La sesión sigue activa (no se cierra)
-        """
-        if self._action_done:
-            return
-        self._action_done = True
-        self._existing_overlay.disable_buttons()
-
-        num  = self._existing_num_locker
-        f_uid = self._existing_face_uid
-        id_s  = self._existing_id_sesion
-        id_l  = self._existing_id_locker
-
-        # Nota: LED solo dentro de abrir_locker() en gpio_locker.py
-        abrir_locker(str(num))
-
-        db_log_intento(id_l, "seguir_comprando_desde_guardar", "exitoso",
-                       f"Cliente sigue comprando. Locker #{num} abierto desde guardar.",
-                       id_sesion=id_s)
-
-        self._existing_overlay.setVisible(False)
-        self.seguir_done.emit(f_uid, str(num), id_s)
+        """Delegado al MainWindow vía señal already_has_session."""
+        self.already_has_session.emit(str(locker_num))
 
     # ── Captura fase 2 ────────────────────────────────────────────────────────
 
@@ -835,8 +607,19 @@ class GuardarPage(QWidget):
         db_set_locker_estado(id_locker, "ocupado")
 
         # Nota: el LED de apertura SOLO debe encenderse dentro de abrir_locker()
-        # en gpio_locker.py. Verificar que beep_start_scan/beep_success no lo activen.
-        abrir_locker(str(num_locker))
+        # en gpio_locker.py. Se envuelve en try/except para evitar que un error
+        # de GPIO (locker ya abierto o hardware desconectado) saque del sistema.
+        try:
+            abrir_locker(str(num_locker))
+        except Exception as gpio_err:
+            print(f"[WARN] abrir_locker({num_locker}) falló: {gpio_err}")
+            # El locker se marcó como ocupado; notificar igualmente al flujo.
+            beep_error()
+            self.err_lbl.setText("Error al abrir el locker físico. Consulta al administrador.")
+            db_log_intento(id_locker, "registro_biometrico", "error_gpio",
+                           f"GPIO falló al abrir locker #{num_locker}: {gpio_err}",
+                           id_sesion=id_sesion)
+            # Aun así continuamos: la sesión quedó creada en BD.
 
         db_log_intento(id_locker, "registro_biometrico", "exitoso",
                        "Sesion {} creada. Locker #{} asignado.".format(id_sesion, num_locker),
@@ -854,7 +637,6 @@ class GuardarPage(QWidget):
     def _cancel(self):
         self._pre_check_timer.stop()
         self._step_overlay.stop()
-        self._existing_overlay.setVisible(False)
         self._stop_cam_thread()
         if self._face_uid:
             delete_face_data(self._face_uid)
@@ -863,18 +645,13 @@ class GuardarPage(QWidget):
     def reset(self):
         self._pre_check_timer.stop()
         self._step_overlay.stop()
-        self._existing_overlay.setVisible(False)
         self._stop_cam_thread()
-        self._face_uid           = None
-        self._id_locker          = None
-        self._num_locker         = None
-        self._capture_started    = False
-        self._phase              = None
-        self._action_done        = False
-        self._existing_face_uid  = None
-        self._existing_id_sesion = None
-        self._existing_id_locker = None
-        self._existing_num_locker = None
+        self._face_uid        = None
+        self._id_locker       = None
+        self._num_locker      = None
+        self._capture_started = False
+        self._phase           = None
+        self._action_done     = False
         self.err_lbl.setText("")
         self.cam.idle()
         self.scan_frame.setVisible(False)
