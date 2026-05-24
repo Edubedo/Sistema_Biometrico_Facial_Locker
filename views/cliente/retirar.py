@@ -883,7 +883,8 @@ class RetirarPage(QWidget):
                 self.scan_lbl.setText("⚠  Cierra el locker e inténtalo de nuevo.")
                 # Mostrar mensaje prominente en el área de cámara
                 self.cam.set_status(
-                    "El locker está abierto físicamente, Ciérralo."
+                    "El locker está abierto físicamente, Ciérralo.\n"
+                    "",
                     "#ff4040"
                 )
                 # Pequeño delay para que el tono actual de la alarma termine

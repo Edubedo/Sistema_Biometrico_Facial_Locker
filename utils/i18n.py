@@ -139,7 +139,7 @@ _TRANSLATIONS = {
         "admin.sessions.refresh": "  ACTUALIZAR",
         "admin.sessions.no_data": "SIN SESIONES ACTIVAS",
         "admin.sessions.count":   "SESIONES\nEN CURSO",
-        "admin.sessions.status":  "SESIONES ACITIVAS",
+        "admin.sessions.status":  "SESIONES ACTIVAS",
         "admin.sessions.table.id": "🔢 ID",
         "admin.sessions.table.locker": "📦 LOCKER",
         "admin.sessions.table.datetime": "📅 FECHA/HORA",
@@ -234,29 +234,6 @@ _TRANSLATIONS = {
         "ret.step3":            "Se muestra el locker que tiene asignado",
         "ret.step4":            "Elija: retirar sus pertenencias o seguir comprando",
         "ret.step5":            "Sus imágenes se eliminan al finalizar",
-
-        # ── Login ───────────────────────────────────────────────────────────────
-        "login.back":       "← VOLVER",
-        "login.user":       "USUARIO",
-        "login.pass":       "CONTRASEÑA",
-        "login.user_ph":    "Nombre de usuario",
-        "login.pass_ph":    "••••••••",
-        "login.enter":      "INGRESAR",
-        "login.fill_fields":"Complete todos los campos.",
-        "login.bad_access": "Usuario o contraseña incorrectos.",
-        "login.kbd.space":  "ESPACIO",
-        "login.kbd.clear":  "LIMPIAR",
-        "login.kbd.shift":  "MAYÚS",
-
-        # ── Panel de administración ─────────────────────────────────────────────
-        "admin.logout":        "‹  SALIR",
-        "admin.panel":         "PANEL DE ADMINISTRACIÓN",
-        "admin.tab.lockers":   "LOCKERS",
-        "admin.tab.sessions":  "SESIONES",
-        "admin.tab.log":       "REGISTRO",
-        "admin.tab.admins":    "ADMINS",
-        "admin.read_only":     "Solo lectura",
-        "admin.manage_admins": "Gestionar administradores",
 
         # ── Resultados genéricos ────────────────────────────────────────────────
         "result.ok":   "ÉXITO",
