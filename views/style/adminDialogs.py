@@ -24,25 +24,26 @@ def _dp(v):
 
 
 # ── Shared stylesheet ─────────────────────────────────────────────────────────
+# Tamaños base aumentados para display táctil 7" (800×480)
 _STYLE = """
 QDialog { background: #f0f6ff; }
 
 QFrame#h_div {
     background: #cfd8e3; border: none;
-    min-height: 1px; max-height: 1px;
+    min-height: 2px; max-height: 2px;
 }
 
-QLabel#dlg_icon_error  { color: #e53935; font-size: 22px; }
-QLabel#dlg_icon_info   { color: #1976d2; font-size: 22px; }
-QLabel#dlg_icon_warn   { color: #ef6c00; font-size: 22px; }
-QLabel#dlg_icon_ask    { color: #1565c0; font-size: 22px; }
+QLabel#dlg_icon_error  { color: #e53935; font-size: 36px; }
+QLabel#dlg_icon_info   { color: #1976d2; font-size: 36px; }
+QLabel#dlg_icon_warn   { color: #ef6c00; font-size: 36px; }
+QLabel#dlg_icon_ask    { color: #1565c0; font-size: 36px; }
 
 QLabel#dlg_title {
     color: #1565c0; font-weight: 900;
     font-family: 'Segoe UI'; letter-spacing: 2px;
 }
 QLabel#dlg_msg {
-    color: #37474f; font-family: 'Segoe UI'; line-height: 1.5;
+    color: #37474f; font-family: 'Segoe UI'; line-height: 1.6;
 }
 QLabel#dlg_opt_label {
     color: #546e7a; font-family: 'Segoe UI';
@@ -50,15 +51,15 @@ QLabel#dlg_opt_label {
 }
 
 QLineEdit#dlg_input {
-    background: #fff; border: 1px solid #cfd8e3;
-    border-radius: 6px; padding: 7px 10px;
+    background: #fff; border: 2px solid #cfd8e3;
+    border-radius: 10px; padding: 10px 14px;
     color: #1565c0; font-family: 'Segoe UI';
 }
 QLineEdit#dlg_input:focus { border-color: #1976d2; }
 
 QTextEdit#dlg_textarea {
-    background: #fff; border: 1px solid #cfd8e3;
-    border-radius: 6px; padding: 7px 10px;
+    background: #fff; border: 2px solid #cfd8e3;
+    border-radius: 10px; padding: 10px 14px;
     color: #37474f; font-family: 'Segoe UI';
 }
 QTextEdit#dlg_textarea:focus { border-color: #1976d2; }
@@ -66,7 +67,7 @@ QTextEdit#dlg_textarea:focus { border-color: #1976d2; }
 /* ── Buttons ── */
 QPushButton#btn_primary {
     background: #1976d2; color: #fff;
-    border: none; border-radius: 8px;
+    border: none; border-radius: 12px;
     font-family: 'Segoe UI'; font-weight: 700; letter-spacing: 1px;
 }
 QPushButton#btn_primary:hover   { background: #1565c0; }
@@ -74,7 +75,7 @@ QPushButton#btn_primary:pressed { background: #0d47a1; }
 
 QPushButton#btn_danger {
     background: #e53935; color: #fff;
-    border: none; border-radius: 8px;
+    border: none; border-radius: 12px;
     font-family: 'Segoe UI'; font-weight: 700; letter-spacing: 1px;
 }
 QPushButton#btn_danger:hover   { background: #c62828; }
@@ -82,7 +83,7 @@ QPushButton#btn_danger:pressed { background: #b71c1c; }
 
 QPushButton#btn_ghost {
     background: transparent; color: #78909c;
-    border: 1px solid #cfd8e3; border-radius: 8px;
+    border: 2px solid #cfd8e3; border-radius: 12px;
     font-family: 'Segoe UI'; letter-spacing: 1px;
 }
 QPushButton#btn_ghost:hover   { color: #546e7a; border-color: #90a4ae; background: #eceff1; }
@@ -102,33 +103,38 @@ _ICONS = {
 # ─────────────────────────────────────────────────────────────────────────────
 class _BaseDialog(QDialog):
     def __init__(self, title: str, message: str, kind: str = "info",
-                 parent=None, width: int = 380):
+                 parent=None, width: int = 460):
         super().__init__(parent)
         self.setStyleSheet(_STYLE)
         self.setWindowTitle(title)
         self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
         self.setMinimumWidth(_dp(width))
+        self.setMinimumHeight(_dp(240))
         self.setAttribute(Qt.WA_TranslucentBackground, False)
 
         self._root = QVBoxLayout(self)
-        self._root.setContentsMargins(_dp(24), _dp(20), _dp(24), _dp(20))
-        self._root.setSpacing(_dp(12))
+        self._root.setContentsMargins(_dp(28), _dp(24), _dp(28), _dp(24))
+        self._root.setSpacing(_dp(16))
 
         # Title bar
-        bar = QHBoxLayout(); bar.setSpacing(_dp(10))
+        bar = QHBoxLayout(); bar.setSpacing(_dp(12))
         icon_char, icon_obj = _ICONS.get(kind, _ICONS["info"])
         ic = QLabel(icon_char); ic.setObjectName(icon_obj)
-        ic.setStyleSheet(f"font-size:{_dp(18)}px;")
+        ic.setStyleSheet(f"font-size:{_dp(28)}px;")
         bar.addWidget(ic)
 
         ttl = QLabel(title.upper()); ttl.setObjectName("dlg_title")
-        ttl.setStyleSheet(f"font-size:{_dp(11)}px;")
+        ttl.setStyleSheet(f"font-size:{_dp(16)}px;")
         bar.addWidget(ttl); bar.addStretch()
 
-        # Close X
+        # Close X — más grande para el dedo
         bx = QPushButton("✕"); bx.setObjectName("btn_ghost")
-        bx.setFixedSize(_dp(24), _dp(24))
-        bx.setStyleSheet(f"font-size:{_dp(9)}px;border-radius:{_dp(12)}px;")
+        bx.setFixedSize(_dp(44), _dp(44))
+        bx.setStyleSheet(
+            f"font-size:{_dp(14)}px;"
+            f"border-radius:{_dp(22)}px;"
+            f"border:2px solid #cfd8e3;"
+        )
         bx.setCursor(Qt.PointingHandCursor)
         bx.clicked.connect(self.reject)
         bar.addWidget(bx)
@@ -140,20 +146,31 @@ class _BaseDialog(QDialog):
         # Message
         msg = QLabel(message); msg.setObjectName("dlg_msg")
         msg.setWordWrap(True)
-        msg.setStyleSheet(f"font-size:{_dp(10)}px;")
+        msg.setStyleSheet(f"font-size:{_dp(14)}px;")
         self._root.addWidget(msg)
 
     def _btn_row(self):
-        row = QHBoxLayout(); row.setSpacing(_dp(8)); row.addStretch()
+        row = QHBoxLayout()
+        row.setSpacing(_dp(12))
+        row.addStretch()
         return row
 
     def _make_btn(self, text, obj, callback, size=None):
         b = QPushButton(text); b.setObjectName(obj)
-        fs = _dp(9); pad_v = _dp(7); pad_h = _dp(20)
-        b.setStyleSheet(f"font-size:{fs}px;padding:{pad_v}px {pad_h}px;")
+        # Botones grandes para el dedo: 64px de alto mínimo
+        fs      = _dp(14)
+        pad_v   = _dp(0)
+        pad_h   = _dp(28)
+        min_h   = _dp(64)
+        b.setStyleSheet(
+            f"font-size:{fs}px;"
+            f"padding:{pad_v}px {pad_h}px;"
+            f"min-height:{min_h}px;"
+        )
         b.setCursor(Qt.PointingHandCursor)
         b.clicked.connect(callback)
-        if size: b.setFixedWidth(_dp(size))
+        if size:
+            b.setMinimumWidth(_dp(size))
         return b
 
     # Allow dragging the frameless dialog
@@ -172,7 +189,7 @@ class DlgError(_BaseDialog):
     def __init__(self, message: str, title: str = "Error", parent=None):
         super().__init__(title, message, kind="error", parent=parent)
         row = self._btn_row()
-        row.addWidget(self._make_btn(tr("dlg.accept"), "btn_danger", self.accept, 110))
+        row.addWidget(self._make_btn(tr("dlg.accept"), "btn_danger", self.accept, 140))
         self._root.addLayout(row)
 
     @staticmethod
@@ -189,7 +206,7 @@ class DlgInfo(_BaseDialog):
     def __init__(self, message: str, title: str = "Información", parent=None):
         super().__init__(title, message, kind="info", parent=parent)
         row = self._btn_row()
-        row.addWidget(self._make_btn(tr("dlg.accept"), "btn_primary", self.accept, 110))
+        row.addWidget(self._make_btn(tr("dlg.accept"), "btn_primary", self.accept, 140))
         self._root.addLayout(row)
 
     @staticmethod
@@ -208,9 +225,9 @@ class DlgConfirm(_BaseDialog):
                  parent=None):
         super().__init__(title, message, kind="ask", parent=parent)
         row = self._btn_row()
-        row.addWidget(self._make_btn(tr("dlg.cancel"), "btn_ghost", self.reject, 110))
+        row.addWidget(self._make_btn(tr("dlg.cancel"), "btn_ghost",  self.reject, 140))
         obj = "btn_danger" if danger else "btn_primary"
-        row.addWidget(self._make_btn(confirm_label, obj, self.accept, 130))
+        row.addWidget(self._make_btn(confirm_label,    obj,          self.accept, 160))
         self._root.addLayout(row)
 
     @staticmethod
@@ -232,13 +249,19 @@ class DlgInput(_BaseDialog):
         super().__init__(title, message, kind="info", parent=parent)
         self._inp = QLineEdit(); self._inp.setObjectName("dlg_input")
         self._inp.setPlaceholderText(placeholder)
-        self._inp.setStyleSheet(f"font-size:{_dp(10)}px;")
+        self._inp.setMinimumHeight(_dp(60))
+        self._inp.setStyleSheet(
+            f"font-size:{_dp(15)}px;"
+            f"min-height:{_dp(60)}px;"
+            f"border-radius:{_dp(10)}px;"
+            f"padding:0 {_dp(14)}px;"
+        )
         self._inp.returnPressed.connect(self._ok)
         self._root.addWidget(self._inp)
 
         row = self._btn_row()
-        row.addWidget(self._make_btn(tr("dlg.cancel"), "btn_ghost", self.reject, 110))
-        row.addWidget(self._make_btn(tr("dlg.accept"),  "btn_primary", self._ok,   110))
+        row.addWidget(self._make_btn(tr("dlg.cancel"), "btn_ghost",   self.reject, 140))
+        row.addWidget(self._make_btn(tr("dlg.accept"), "btn_primary", self._ok,    140))
         self._root.addLayout(row)
 
     def _ok(self):
@@ -249,8 +272,7 @@ class DlgInput(_BaseDialog):
         return self._inp.text().strip()
 
     @staticmethod
-    def ask(message, title=None, placeholder="",
-            parent=None):
+    def ask(message, title=None, placeholder="", parent=None):
         """Returns the string entered, or None if cancelled."""
         if title is None:
             title = tr("dlg.input")
@@ -274,25 +296,29 @@ class DlgLiberar(_BaseDialog):
             tr("dlg.release_msg", n=locker_num),
             kind="warn",
             parent=parent,
-            width=400,
+            width=480,
         )
         self._reason = ""
 
-        # Optional reason
+        # Optional reason label
         lbl = QLabel(tr("admin.lockers.dialog.remove_reason"))
         lbl.setObjectName("dlg_opt_label")
-        lbl.setStyleSheet(f"font-size:{_dp(8)}px;")
+        lbl.setStyleSheet(f"font-size:{_dp(13)}px;")
         self._root.addWidget(lbl)
 
+        # Textarea más alto para que quepa el dedo
         self._ta = QTextEdit(); self._ta.setObjectName("dlg_textarea")
         self._ta.setPlaceholderText(tr("admin.lockers.dialog.remove_placeholder"))
-        self._ta.setFixedHeight(_dp(68))
-        self._ta.setStyleSheet(f"font-size:{_dp(9)}px;")
+        self._ta.setMinimumHeight(_dp(90))
+        self._ta.setStyleSheet(
+            f"font-size:{_dp(14)}px;"
+            f"min-height:{_dp(90)}px;"
+        )
         self._root.addWidget(self._ta)
 
         row = self._btn_row()
-        row.addWidget(self._make_btn(tr("dlg.cancel"),       "btn_ghost",  self.reject, 110))
-        row.addWidget(self._make_btn(tr("dlg.release_btn"),   "btn_danger", self._ok,   120))
+        row.addWidget(self._make_btn(tr("dlg.cancel"),     "btn_ghost",  self.reject, 140))
+        row.addWidget(self._make_btn(tr("dlg.release_btn"), "btn_danger", self._ok,   160))
         self._root.addLayout(row)
 
     def _ok(self):
