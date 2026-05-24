@@ -154,7 +154,7 @@ class CamThread(QThread):
     _LIVENESS_MIN_MOTION = 3.2  # diff media mínima entre frames consecutivos
                                  # Foto estática ≈ 0–3 ; cara real ≈ 8–40
 
-    def __init__(self, mode, face_uid="", labels=None, detect_roi=None):
+    def __init__(self, mode, face_uid="", labels=None, detect_roi=None, recog_threshold=None):
         """
         Parámetros
         ----------
@@ -162,7 +162,8 @@ class CamThread(QThread):
         face_uid   : identificador del usuario (solo en CAPTURE)
         labels     : dict {lbl_idx: uid} para RECOGNIZE
         detect_roi : (x_frac, y_frac, w_frac, h_frac) en [0..1].
-                     Limita la detección al área del marco verde de la UI.
+                 Limita la detección al área del marco verde de la UI.
+        recog_threshold : umbral fijo de confianza LBPH para RECOGNIZE.
         """
         super().__init__()
         self.mode         = mode
@@ -200,6 +201,9 @@ class CamThread(QThread):
 
         # Fast-accept: conf muy baja → coincidencia clara → 1 frame basta.
         self._recog_fast_threshold = 55
+
+        if isinstance(recog_threshold, (int, float)):
+            self._recog_threshold = float(recog_threshold)
 
     # ── Inicialización de cámara OpenCV (fallback) ────────────────────────────
 

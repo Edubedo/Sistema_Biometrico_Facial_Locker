@@ -918,7 +918,8 @@ class RetirarPage(QWidget):
         self.cam_thread = CamThread(
             CamThread.RECOGNIZE,
             labels=labels,
-            detect_roi=_DETECT_ROI       # ← antes faltaba este argumento
+            detect_roi=_DETECT_ROI,
+            recog_threshold=75
         )
         self.cam_thread.frame_sig.connect(self.cam.update_frame)
         self.cam_thread.rec_done.connect(self._on_recognized)
