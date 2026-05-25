@@ -24,6 +24,9 @@ MP_AVAILABLE = False
 
 from biometria.biometria import CASCADE, face_dir_for, face_model, IMG_H, IMG_W
 
+# Eye cascade — confirma que el ROI facial contiene ojos (protección contra objetos)
+_EYE_CASCADE = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_eye.xml")
+
 # ── Singleton global de Picamera2 ─────────────────────────────────────────────
 _picam_instance = None
 _picam_lock     = __import__("threading").Lock()
@@ -193,13 +196,13 @@ def _is_valid_face(x: int, y: int, fw: int, fh: int,
     if gray is not None:
         roi_g = gray[y1:y2, x1:x2]
         if roi_g.size > 0:
-            if cv2.Laplacian(roi_g, cv2.CV_64F).var() < 20.0:
+            if cv2.Laplacian(roi_g, cv2.CV_64F).var() < 28.0:
                 return False
 
-    # Color piel: al menos 10 % del ROI debe tener tono piel humano.
-    # Solo se aplica a detecciones grandes (>= 120 px) para no afectar
-    # caras pequeñas o alejadas donde el color es menos fiable.
-    if frame_bgr is not None and fw >= 120 and fh >= 120:
+    # Color piel: al menos 18 % del ROI debe tener tono piel humano.
+    # Se aplica a todas las detecciones (>= 80 px) para rechazar pizarrones,
+    # paredes y objetos que no tienen pigmentación similar a la piel.
+    if frame_bgr is not None and fw >= 80 and fh >= 80:
         roi_bgr = frame_bgr[y1:y2, x1:x2]
         if roi_bgr.size > 0:
             roi_hsv = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2HSV)
@@ -209,7 +212,7 @@ def _is_valid_face(x: int, y: int, fw: int, fh: int,
             upper2  = np.array([180, 175, 255], dtype=np.uint8)
             skin    = cv2.bitwise_or(cv2.inRange(roi_hsv, lower1, upper1),
                                      cv2.inRange(roi_hsv, lower2, upper2))
-            if np.count_nonzero(skin) / skin.size < 0.10:
+            if np.count_nonzero(skin) / skin.size < 0.18:
                 return False
 
     return True
@@ -219,6 +222,20 @@ def _is_valid_face(x: int, y: int, fw: int, fh: int,
 _SPOOF_BRIGHT_MEAN  = 210    # Pantalla: brillo medio máximo para "screen glow"
 _SPOOF_BRIGHT_STD   = 20     # Pantalla: std mínima cuando brillo supera umbral
 _SPOOF_MOD_FRAC_MIN = 0.048  # Textura: fracción mínima de gradiente moderado
+
+
+def _has_eyes(roi_gray: np.ndarray) -> bool:
+    """
+    Devuelve True si se detecta al menos un ojo en el ROI facial.
+    Descarta falsos positivos grandes (pizarrones, carteles, manos) que
+    el Haar facial acepta pero que nunca contienen una región ocular.
+    """
+    if _EYE_CASCADE.empty():
+        return True
+    eyes = _EYE_CASCADE.detectMultiScale(
+        roi_gray, scaleFactor=1.1, minNeighbors=3, minSize=(15, 15)
+    )
+    return len(eyes) >= 1
 
 
 def _is_spoof_roi(roi_gray: np.ndarray) -> bool:
@@ -444,10 +461,10 @@ class CamThread(QThread):
             h_det, w_det = det_gray.shape[:2]
 
             # ── Detección de rostros (Haar cascade) ───────────────────────
-            # CAPTURE: siempre estricto (registro controlado, no relajar por luz)
-            # RECOGNIZE: relajar en baja luz para mayor sensibilidad
+            # CAPTURE: máxima restricción — preferimos perder algún frame a guardar
+            #          un objeto. RECOGNIZE puede relajar en baja luz.
             if self.mode == self.CAPTURE:
-                _min_neighbors = 5
+                _min_neighbors = 6
                 _min_size      = (80, 80)
             else:
                 _min_neighbors = 4 if mean_brightness < 55 else 5
@@ -590,11 +607,25 @@ class CamThread(QThread):
 
             # ── CAPTURE ───────────────────────────────────────────────────
             if self.mode == self.CAPTURE:
+                # Imagen plana / pantalla → rechazar
+                if _is_spoof_roi(roi_raw):
+                    capture_consecutive = 0
+                    cv2.rectangle(frame, (x, y), (x+fw, y+fh), (0, 80, 220), 2)
+                    self._emit_frame(frame)
+                    continue
+                # Sin ojos detectables → no es una cara real (pizarrón, cartel…)
+                face_crop_gray = gray_enh[y:y+fh, x:x+fw]
+                if not _has_eyes(face_crop_gray):
+                    capture_consecutive = 0
+                    cv2.rectangle(frame, (x, y), (x+fw, y+fh), (0, 80, 220), 2)
+                    self._emit_frame(frame)
+                    continue
+
                 capture_consecutive += 1
                 cv2.rectangle(frame, (x, y), (x+fw, y+fh), (0, 220, 0), 2)
-                # Requerir 2 frames consecutivos antes de guardar: evita fotos de
-                # detecciones falsas momentáneas (manos, objetos, etc.)
-                if capture_consecutive >= 2:
+                # 4 frames consecutivos requeridos: reduce drasticamente falsas
+                # capturas de objetos que el cascade acepta momentáneamente.
+                if capture_consecutive >= 4:
                     cv2.imwrite(os.path.join(sdir, f"{capture_count}.png"), roi)
                     capture_count += 1
                     self.progress.emit(capture_count)
