@@ -297,7 +297,7 @@ class CamThread(QThread):
     CAMERA_ERROR = "__CAMERA_ERROR__"
     _disable_picamera2 = False
 
-    CAPTURE_TARGET = 8    # LBPH funciona bien con 8 imágenes; era 12
+    CAPTURE_TARGET = 12   # LBPH no mejora significativamente con más de 12 imágenes similares
 
     _ANCHOR_RADIUS   = 200
     _ANCHOR_MAX_MISS = 20
@@ -641,8 +641,8 @@ class CamThread(QThread):
 
                 capture_consecutive += 1
                 cv2.rectangle(frame, (x, y), (x+fw, y+fh), (0, 220, 0), 2)
-                # 2 frames consecutivos requeridos antes de guardar cada foto (era 3)
-                if capture_consecutive >= 2:
+                # 3 frames consecutivos requeridos antes de guardar cada foto
+                if capture_consecutive >= 3:
                     cv2.imwrite(os.path.join(sdir, f"{capture_count}.png"), roi)
                     capture_count += 1
                     self.progress.emit(capture_count)

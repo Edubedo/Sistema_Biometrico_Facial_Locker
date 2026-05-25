@@ -29,8 +29,8 @@ def _dp(v):
 BG_TOP = QColor(10, 20, 45)
 BG_BOT = QColor(16, 32, 68)
 
-# ── Step overlay: 600 ms por paso (era 1400) → ~3.2 s menos de espera ────────
-_STEP_DURATION_MS = 600
+# ── Step overlay: 900 ms por paso (era 1400) → ~1.4 s menos de espera ────────
+_STEP_DURATION_MS = 900
 
 STYLE = """
 QWidget#guardar_page { background: transparent; color: #dceaff; }
@@ -200,7 +200,7 @@ class StepOverlay(QWidget):
     """
     Overlay de pasos sobre la cámara. Avanza automáticamente y emite `finished`
     cuando termina el último paso → arranca el escaneo.
-    Cada paso dura _STEP_DURATION_MS ms (600 ms, era 1400 ms).
+    Cada paso dura _STEP_DURATION_MS ms (900 ms, era 1400 ms).
     """
     finished = pyqtSignal()
 
@@ -295,7 +295,7 @@ class GuardarPage(QWidget):
 
     _CAM_W = 440
     _CAM_H = 390
-    _PRECHECK_TIMEOUT_MS = 2000   # era 4000 → más rápido si no reconoce a nadie
+    _PRECHECK_TIMEOUT_MS = 4000   # era 6000 → más rápido si no reconoce a nadie
 
     def __init__(self):
         super().__init__()
