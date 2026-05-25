@@ -336,7 +336,7 @@ class CamThread(QThread):
         # estricto con impostores. 2 frames de confirmación = fluido y seguro.
         n = len(self.labels)
         if n <= 1:
-            self._recog_threshold  = 85   # 1 usuario: puede tolerar algo más de variación
+            self._recog_threshold  = 80   # 1 usuario: puede tolerar algo más de variación
             self._recog_min_frames = 2
         elif n <= 3:
             self._recog_threshold  = 80   # más usuarios = más riesgo de confusión
