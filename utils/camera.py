@@ -303,14 +303,13 @@ class CamThread(QThread):
     _ANCHOR_MAX_MISS = 20
 
     # Liveness anti-spoofing — dos criterios independientes:
-    #   event: un solo frame con diff muy alto (respiración, parpadeo, giro de cabeza)
-    #   mean:  movimiento moderado sostenido (cabeza que se mueve gradualmente)
-    # Un teléfono con foto quieta: diffs ~0.5-2  → ningún criterio pasa
-    # Un teléfono con temblor leve: diffs ~1.5-3 → ningún criterio pasa (media < 3.5)
-    # Persona real respirando: spikes periódicos de 6-12 → pasa por event
-    _LIVENESS_BUF_SIZE        = 8    # ventana de ~0.5-1s según FPS
-    _LIVENESS_EVENT_THRESHOLD = 5.5  # diff alto de un solo frame = movimiento real
-    _LIVENESS_MIN_MOTION      = 3.5  # media alta sostenida = movimiento continuo
+    #   event: un solo frame con diff alto (parpadeo, respiración, micro-movimiento)
+    #   mean:  movimiento moderado sostenido
+    # Foto quieta: diffs ~0.5-2  → no pasa ningún criterio
+    # Persona real en baja luz: spikes 3-8 → pasa por event o mean
+    _LIVENESS_BUF_SIZE        = 6    # era 8 — buffer más chico = detección más rápida
+    _LIVENESS_EVENT_THRESHOLD = 4.0  # era 5.5 — más sensible a micro-movimientos
+    _LIVENESS_MIN_MOTION      = 2.0  # era 3.5 — umbral más bajo para baja luz
 
     def __init__(self, mode, face_uid="", labels=None,
                  detect_roi=None, recog_threshold=None):
@@ -328,27 +327,28 @@ class CamThread(QThread):
         else:
             self.use_picamera2 = False
 
-        # Umbrales LBPH (distancia LBPH: menor = más parecido).
-        # Prioridad: NO abrir el locker de otra persona.
-        # Con 1 persona registrada el modelo no puede confundirse entre personas
-        # distintas, pero sí puede aceptar un impostor si el umbral es muy alto.
-        # Se reducen los umbrales respecto al original y se exigen 3 frames de
-        # confirmación para que un reconocimiento sea definitivo.
+        # Umbrales LBPH (distancia: menor = más parecido a la foto registrada).
+        # Referencia práctica con LBPH + eye-blur en mall:
+        #   misma persona, condiciones similares : dist ~35-65
+        #   misma persona, luz diferente         : dist ~55-80
+        #   persona distinta                     : dist ~85-120
+        # Se usa un punto medio: permisivo para la persona legítima,
+        # estricto con impostores. 2 frames de confirmación = fluido y seguro.
         n = len(self.labels)
         if n <= 1:
-            self._recog_threshold  = 80   # era 88 — rechaza impostores con más margen
-            self._recog_min_frames = 3    # era 2
+            self._recog_threshold  = 85   # 1 usuario: puede tolerar algo más de variación
+            self._recog_min_frames = 2
         elif n <= 3:
-            self._recog_threshold  = 75   # era 82
-            self._recog_min_frames = 3    # era 2
+            self._recog_threshold  = 80   # más usuarios = más riesgo de confusión
+            self._recog_min_frames = 2
         elif n <= 6:
-            self._recog_threshold  = 70   # era 76
-            self._recog_min_frames = 3    # era 2
+            self._recog_threshold  = 74
+            self._recog_min_frames = 2
         else:
-            self._recog_threshold  = 65   # era 72
-            self._recog_min_frames = 4    # era 3
+            self._recog_threshold  = 70   # muchos usuarios: más estricto
+            self._recog_min_frames = 3
 
-        self._recog_fast_threshold = 50   # era 52 — match casi idéntico → 1 frame
+        self._recog_fast_threshold = 55   # dist muy baja = match casi idéntico → 1 frame
 
         if isinstance(recog_threshold, (int, float)):
             self._recog_threshold = float(recog_threshold)
