@@ -327,28 +327,14 @@ class CamThread(QThread):
         else:
             self.use_picamera2 = False
 
-        # Umbrales LBPH (distancia: menor = más parecido a la foto registrada).
-        # Referencia práctica con LBPH + eye-blur en mall:
-        #   misma persona, condiciones similares : dist ~35-65
-        #   misma persona, luz diferente         : dist ~55-80
-        #   persona distinta                     : dist ~85-120
-        # Se usa un punto medio: permisivo para la persona legítima,
-        # estricto con impostores. 2 frames de confirmación = fluido y seguro.
-        n = len(self.labels)
-        if n <= 1:
-            self._recog_threshold  = 77   # 1 usuario: puede tolerar algo más de variación
-            self._recog_min_frames = 2
-        elif n <= 3:
-            self._recog_threshold  = 77   # más usuarios = más riesgo de confusión
-            self._recog_min_frames = 2
-        elif n <= 6:
-            self._recog_threshold  = 74
-            self._recog_min_frames = 2
-        else:
-            self._recog_threshold  = 70   # muchos usuarios: más estricto
-            self._recog_min_frames = 3
-
-        self._recog_fast_threshold = 55   # dist muy baja = match casi idéntico → 1 frame
+        # Umbral LBPH fijo (distancia: menor = más parecido).
+        # dist ~35-65 → misma persona en condición normal
+        # dist ~65-80 → misma persona con variación de luz o ángulo
+        # dist > 85   → persona diferente
+        # 76 es el punto medio: acepta variaciones naturales, rechaza impostores.
+        self._recog_threshold      = 76
+        self._recog_min_frames     = 2
+        self._recog_fast_threshold = 55   # match casi idéntico → 1 frame
 
         if isinstance(recog_threshold, (int, float)):
             self._recog_threshold = float(recog_threshold)
