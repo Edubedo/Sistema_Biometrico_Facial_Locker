@@ -195,28 +195,34 @@ def _is_valid_face(x: int, y: int, fw: int, fh: int,
     x1 = max(0, x);  y1 = max(0, y)
     x2 = min(w_img, x + fw); y2 = min(h_img, y + fh)
 
-    # Textura: varianza Laplaciana (superficies planas → baja varianza)
+    # Textura: umbral adaptativo al brillo del ROI.
+    # En baja luz (centro comercial) las imágenes son inherentemente más borrosas,
+    # así que exigir menos varianza para no rechazar caras reales.
     if gray is not None:
         roi_g = gray[y1:y2, x1:x2]
         if roi_g.size > 0:
-            if cv2.Laplacian(roi_g, cv2.CV_64F).var() < 28.0:
+            roi_brightness = float(np.mean(roi_g))
+            lap_thresh = 10.0 if roi_brightness < 55 else 22.0
+            if cv2.Laplacian(roi_g, cv2.CV_64F).var() < lap_thresh:
                 return False
 
-    # Color piel: al menos 18 % del ROI debe tener tono piel humano.
-    # Se aplica a todas las detecciones (>= 80 px) para rechazar pizarrones,
-    # paredes y objetos que no tienen pigmentación similar a la piel.
+    # Color piel: solo se aplica con luz suficiente (>= 55 de brillo medio).
+    # En baja luz los colores son poco fiables y el chequeo rechazaría caras reales.
+    # Con buena luz exigimos al menos 13 % de tono piel para filtrar objetos.
     if frame_bgr is not None and fw >= 80 and fh >= 80:
         roi_bgr = frame_bgr[y1:y2, x1:x2]
         if roi_bgr.size > 0:
-            roi_hsv = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2HSV)
-            lower1  = np.array([0,  15,  50], dtype=np.uint8)
-            upper1  = np.array([25, 175, 255], dtype=np.uint8)
-            lower2  = np.array([160, 15, 50], dtype=np.uint8)
-            upper2  = np.array([180, 175, 255], dtype=np.uint8)
-            skin    = cv2.bitwise_or(cv2.inRange(roi_hsv, lower1, upper1),
-                                     cv2.inRange(roi_hsv, lower2, upper2))
-            if np.count_nonzero(skin) / skin.size < 0.13:
-                return False
+            roi_mean_v = float(np.mean(cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2GRAY)))
+            if roi_mean_v >= 55:
+                roi_hsv = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2HSV)
+                lower1  = np.array([0,  15,  50], dtype=np.uint8)
+                upper1  = np.array([25, 175, 255], dtype=np.uint8)
+                lower2  = np.array([160, 15, 50], dtype=np.uint8)
+                upper2  = np.array([180, 175, 255], dtype=np.uint8)
+                skin    = cv2.bitwise_or(cv2.inRange(roi_hsv, lower1, upper1),
+                                         cv2.inRange(roi_hsv, lower2, upper2))
+                if np.count_nonzero(skin) / skin.size < 0.13:
+                    return False
 
     return True
 
@@ -322,24 +328,27 @@ class CamThread(QThread):
         else:
             self.use_picamera2 = False
 
-        # Umbrales LBPH (distancia: menor = mejor match).
-        # Con más usuarios se baja el umbral para no confundir personas.
-        # Con pocos usuarios se sube para tolerar lentes y cambios de apariencia.
+        # Umbrales LBPH (distancia LBPH: menor = más parecido).
+        # Prioridad: NO abrir el locker de otra persona.
+        # Con 1 persona registrada el modelo no puede confundirse entre personas
+        # distintas, pero sí puede aceptar un impostor si el umbral es muy alto.
+        # Se reducen los umbrales respecto al original y se exigen 3 frames de
+        # confirmación para que un reconocimiento sea definitivo.
         n = len(self.labels)
         if n <= 1:
-            self._recog_threshold  = 88
-            self._recog_min_frames = 2
+            self._recog_threshold  = 80   # era 88 — rechaza impostores con más margen
+            self._recog_min_frames = 3    # era 2
         elif n <= 3:
-            self._recog_threshold  = 82
-            self._recog_min_frames = 2
+            self._recog_threshold  = 75   # era 82
+            self._recog_min_frames = 3    # era 2
         elif n <= 6:
-            self._recog_threshold  = 76
-            self._recog_min_frames = 2
+            self._recog_threshold  = 70   # era 76
+            self._recog_min_frames = 3    # era 2
         else:
-            self._recog_threshold  = 72
-            self._recog_min_frames = 3
+            self._recog_threshold  = 65   # era 72
+            self._recog_min_frames = 4    # era 3
 
-        self._recog_fast_threshold = 52
+        self._recog_fast_threshold = 50   # era 52 — match casi idéntico → 1 frame
 
         if isinstance(recog_threshold, (int, float)):
             self._recog_threshold = float(recog_threshold)
