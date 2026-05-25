@@ -297,7 +297,7 @@ class CamThread(QThread):
     CAMERA_ERROR = "__CAMERA_ERROR__"
     _disable_picamera2 = False
 
-    CAPTURE_TARGET = 20   # Fotos a capturar (20 es suficiente y más rápido que 28)
+    CAPTURE_TARGET = 12   # LBPH no mejora significativamente con más de 12 imágenes similares
 
     _ANCHOR_RADIUS   = 200
     _ANCHOR_MAX_MISS = 20
@@ -663,6 +663,13 @@ class CamThread(QThread):
                     continue
                 try:
                     lbl_idx, conf = face_model.predict(roi)
+                    uid_str = self.labels.get(lbl_idx, f"label_{lbl_idx}")
+                    print(
+                        f"[RECONOCIMIENTO] dist={conf:.1f}  umbral={self._recog_threshold}"
+                        f"  fast={self._recog_fast_threshold}"
+                        f"  uid={uid_str}"
+                        f"  {'✓ PASA' if conf < self._recog_threshold else '✗ RECHAZA'}"
+                    )
                     if conf < self._recog_fast_threshold and lbl_idx in self.labels:
                         needed = 1
                     elif conf < self._recog_threshold and lbl_idx in self.labels:
@@ -685,6 +692,10 @@ class CamThread(QThread):
                                 (x, y-8), cv2.FONT_HERSHEY_SIMPLEX,
                                 0.6, (80, 180, 255), 2)
                     if recog_confirm_count >= needed:
+                        print(
+                            f"[RECONOCIMIENTO] *** CONFIRMADO uid={uid_str}"
+                            f"  dist_final={conf:.1f}  frames={recog_confirm_count} ***"
+                        )
                         recognized_uid = self.labels[lbl_idx]
                         self._active   = False
 
