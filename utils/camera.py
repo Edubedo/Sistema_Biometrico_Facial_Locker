@@ -481,6 +481,13 @@ class CamThread(QThread):
                                   w_img, h_img, gray_enh, frame)
             ]
 
+            if self.mode == self.CAPTURE:
+                print(
+                    f"[CAPTURA] brillo={mean_brightness:.0f}"
+                    f"  cascade={len(raw_faces)}  validas={len(faces)}"
+                    f"  fotos={capture_count}/{self.CAPTURE_TARGET}"
+                )
+
             # Ordenar por área: la más grande = más cercana a la cámara
             faces.sort(key=lambda f: f[2] * f[3], reverse=True)
 
@@ -603,22 +610,19 @@ class CamThread(QThread):
 
             # ── CAPTURE ───────────────────────────────────────────────────
             if self.mode == self.CAPTURE:
-                # Imagen plana / pantalla → rechazar de inmediato
-                if _is_spoof_roi(roi_raw):
-                    capture_consecutive = 0
-                    no_eye_streak = 0
-                    cv2.rectangle(frame, (x, y), (x+fw, y+fh), (0, 80, 220), 2)
-                    self._emit_frame(frame)
-                    continue
+                # _is_spoof_roi se omite en CAPTURE: en baja luz las imágenes
+                # tienen gradiente bajo y la función rechazaría caras reales.
+                # El chequeo de ojos ya cubre los objetos (pizarrón, carteles).
 
                 # Chequeo de ojos con racha: solo bloqueamos si 4 frames
-                # consecutivos no tienen ojos. Frames aislados sin detección
-                # (ángulo, lentes, parpadeo) no interrumpen el registro.
+                # consecutivos no tienen ojos detectados.
                 face_crop_gray = gray_enh[y:y+fh, x:x+fw]
-                if _has_eyes(face_crop_gray):
+                has_e = _has_eyes(face_crop_gray)
+                if has_e:
                     no_eye_streak = 0
                 else:
                     no_eye_streak += 1
+                    print(f"[CAPTURA] sin ojos  racha={no_eye_streak}/4  brillo={mean_brightness:.0f}")
                     if no_eye_streak >= 4:
                         capture_consecutive = 0
                         cv2.rectangle(frame, (x, y), (x+fw, y+fh), (0, 80, 220), 2)
